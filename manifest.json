@@ -1,0 +1,17 @@
+{
+  "name": "Chat_CNR Bilgi Merkezi",
+  "short_name": "Chat_CNR",
+  "description": "Doruk Ali Arslan tarafından geliştirilen gelişmiş yapay zeka bilgi merkezi.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0a0a",
+  "theme_color": "#3b82f6",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/2593/2593635.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

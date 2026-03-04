@@ -1,0 +1,9 @@
+{
+  "name": "Chat_CNR Information Hub",
+  "description": "A high-precision, multi-disciplinary AI assistant powered by Gemini 3 Pro with real-time Google Search grounding for accurate, up-to-date information.",
+  "requestFramePermissions": [
+    "geolocation",
+    "camera",
+    "microphone"
+  ]
+}
