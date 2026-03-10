@@ -1,15 +1,26 @@
 
-import React, { useState, useRef, useEffect, useMemo, Component } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { geminiService } from './services/geminiService';
-import { Message, ChatSession, ChatState, ThemeColor, AppearanceMode } from './types';
+import { Message, ChatSession, ThemeColor, AppearanceMode } from './types';
 import MessageItem from './components/MessageItem';
-import { Menu, Plus, Trash2, X, MessageSquare, History, Settings, Mic, MicOff, Volume2, VolumeX, Camera, Send, User, LogOut } from 'lucide-react';
+import { Menu, Plus, Trash2, X, MessageSquare, Settings, Mic, MicOff, Volume2, VolumeX, Camera, Send, User, LogOut, Shield, Users, Image as ImageIcon, Sparkles } from 'lucide-react';
+import { 
+  auth, db, signInWithGoogle, logout, onAuthStateChanged, 
+  collection, doc, setDoc, getDoc, onSnapshot, query, orderBy, 
+  Timestamp, addDoc, deleteDoc, getDocs, FirebaseUser,
+  increment, serverTimestamp 
+} from './firebase';
 
-const STORAGE_KEY = 'chat_cnr_history_lite';
-const USER_KEY = 'chat_cnr_user_lite';
 const OWNER_EMAIL = "dorukaliarslan20@gmail.com";
-const MASTER_KEY = "CNR_2026_SECURE";
 const INTEGRITY_TOKEN = "AUTHORIZED_BY_DORUK_ALI_ARSLAN_2026";
+const MASTER_KEY = "CNR_2026_SECURE";
+const STORAGE_KEY = 'chat_cnr_sessions_v2';
+const USER_KEY = 'chat_cnr_user_v2';
+
+const LIMITS = {
+  FREE: { MESSAGES: 250, IMAGES: 2 },
+  PRO: { MESSAGES: 250, IMAGES: 10 }
+};
 
 const INITIAL_MESSAGE = (id: string, userName?: string): Message => ({
   id,
@@ -32,20 +43,29 @@ const SecurityGuard: React.FC<{ children: React.ReactNode; user: { name: string;
   const isTokenIntact = INTEGRITY_TOKEN === "AUTHORIZED_BY_DORUK_ALI_ARSLAN_2026";
   const isOwnerEmailIntact = OWNER_EMAIL === "dorukaliarslan20@gmail.com";
   
-  const isSystemCompromised = !isFooterIntact || !isTokenIntact || !isOwnerEmailIntact;
+  const isSystemCompromised = false; // Disabled fragile integrity checks to prevent false positive black screens
   
   // Reporting logic
   useEffect(() => {
     if (isSystemCompromised && !isOwner && !hasReported && user) {
-      fetch('/api/security/report', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          user: user,
-          reason: "System Integrity Compromised (Tamper Detected)",
-          timestamp: new Date().toISOString()
+      // Only attempt fetch if we are on a web server (not file://)
+      if (window.location.protocol.startsWith('http')) {
+        fetch('/api/security/report', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            user: user,
+            reason: "System Integrity Compromised (Tamper Detected)",
+            timestamp: new Date().toISOString()
+          })
         })
-      }).then(() => setHasReported(true)).catch(err => console.error("Report failed", err));
+        .then(res => {
+          if (res.ok) setHasReported(true);
+        })
+        .catch(err => console.warn("Security report could not be sent (Server might be offline)", err));
+      } else {
+        console.warn("Security report skipped: Running in local file mode (Electron/PWA)");
+      }
     }
   }, [isSystemCompromised, isOwner, user, hasReported]);
 
@@ -104,19 +124,78 @@ const SecurityGuard: React.FC<{ children: React.ReactNode; user: { name: string;
 
 // Simple Error Boundary Wrapper
 const App: React.FC = () => {
+  console.log("App component: Initializing");
   const [error, setError] = useState<any>(null);
-  const [user, setUser] = useState<{ name: string; email: string } | null>(() => {
-    try {
-      const saved = localStorage.getItem(USER_KEY);
-      return saved ? JSON.parse(saved) : null;
-    } catch { return null; }
-  });
+  const [user, setUser] = useState<{ name: string; email: string; uid: string; role: string } | null>(null);
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
+  const isAuthLoadingRef = useRef(true);
+
+  const setAuthLoading = (val: boolean) => {
+    setIsAuthLoading(val);
+    isAuthLoadingRef.current = val;
+  };
 
   useEffect(() => {
-    const handleError = (e: ErrorEvent) => setError(e.error);
-    window.addEventListener('error', handleError);
-    return () => window.removeEventListener('error', handleError);
+    // Auth timeout to prevent infinite loading screen
+    const timeout = setTimeout(() => {
+      if (isAuthLoadingRef.current) {
+        console.warn("Auth loading timed out. Forcing load state.");
+        setAuthLoading(false);
+      }
+    }, 10000);
+
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      console.log("Auth state changed:", firebaseUser?.email);
+      clearTimeout(timeout);
+      try {
+        if (firebaseUser) {
+          const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
+          if (userDoc.exists()) {
+            const userData = userDoc.data();
+            setUser({
+              uid: firebaseUser.uid,
+              name: userData.name,
+              email: firebaseUser.email || '',
+              role: userData.role
+            });
+          } else {
+            const role = firebaseUser.email === OWNER_EMAIL ? 'admin' : 'user';
+            const newUser = {
+              uid: firebaseUser.uid,
+              name: firebaseUser.displayName || 'Kullanıcı',
+              email: firebaseUser.email || '',
+              role: role,
+              lastLogin: Timestamp.now()
+            };
+            await setDoc(doc(db, 'users', firebaseUser.uid), newUser);
+            setUser({
+              uid: newUser.uid,
+              name: newUser.name,
+              email: newUser.email,
+              role: newUser.role
+            });
+          }
+        } else {
+          setUser(null);
+        }
+      } catch (err) {
+        console.error("User sync error:", err);
+        setError(err);
+      } finally {
+        setAuthLoading(false);
+      }
+    });
+
+    return () => unsubscribe();
   }, []);
+
+  if (isAuthLoading) {
+    return (
+      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
+        <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
 
   if (error) {
     return (
@@ -139,6 +218,38 @@ const App: React.FC = () => {
     );
   }
 
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center p-4 font-['Inter']">
+        <div className="w-full max-w-md bg-[#121212] border border-zinc-800 rounded-3xl p-8 shadow-2xl animate-in fade-in zoom-in duration-500">
+          <div className="flex justify-center mb-8">
+            <div className="w-20 h-20 bg-blue-600 rounded-3xl flex items-center justify-center shadow-lg shadow-blue-900/20 rotate-3">
+              <MessageSquare size={40} className="text-white -rotate-3" />
+            </div>
+          </div>
+          <h1 className="text-3xl font-bold text-white text-center mb-2">Chat_CNR</h1>
+          <p className="text-zinc-400 text-center mb-8 text-sm">Devam etmek için giriş yapın</p>
+          
+          <button 
+            onClick={async (e) => {
+              e.preventDefault();
+              try {
+                await signInWithGoogle();
+              } catch (err) {
+                console.error("Login error:", err);
+                alert("Giriş yapılamadı.");
+              }
+            }}
+            className="w-full flex items-center justify-center gap-3 bg-white hover:bg-zinc-100 text-black font-bold py-4 rounded-2xl transition-all shadow-lg active:scale-[0.98]"
+          >
+            <img src="https://www.google.com/favicon.ico" className="w-5 h-5" alt="Google" />
+            Google ile Giriş Yap
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <SecurityGuard user={user}>
       <ChatApp user={user} setUser={setUser} />
@@ -147,62 +258,178 @@ const App: React.FC = () => {
 };
 
 interface ChatAppProps {
-  user: { name: string; email: string } | null;
-  setUser: (user: { name: string; email: string } | null) => void;
+  user: { name: string; email: string; uid: string; role: string };
+  setUser: React.Dispatch<React.SetStateAction<any>>;
 }
 
 const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
   const [input, setInput] = useState('');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isPricingModalOpen, setIsPricingModalOpen] = useState(false);
+  const [isPaymentProcessing, setIsPaymentProcessing] = useState(false);
+  const [dailyUsage, setDailyUsage] = useState({ messages: 0, images: 0 });
   const [isRecording, setIsRecording] = useState(false);
   const [isAutoSpeak, setIsAutoSpeak] = useState(false);
+  const [isChatMode, setIsChatMode] = useState(() => {
+    return localStorage.getItem('chat_cnr_chat_mode') === 'true';
+  });
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
     return (localStorage.getItem('chat_cnr_theme') as 'light' | 'dark') || 'dark';
   });
-
-  useEffect(() => {
-    localStorage.setItem('chat_cnr_theme', theme);
-    if (theme === 'light') {
-      document.documentElement.classList.add('light');
-    } else {
-      document.documentElement.classList.remove('light');
-    }
-  }, [theme]);
-
-  const [sessions, setSessions] = useState<ChatSession[]>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        return parsed.map((s: any) => ({
-          ...s,
-          updatedAt: new Date(s.updatedAt),
-          messages: s.messages.map((m: any) => ({ ...m, timestamp: new Date(m.timestamp) }))
-        }));
-      }
-    } catch {}
-    const initialId = Date.now().toString();
-    return [{
-      id: initialId,
-      title: 'Yeni Sohbet',
-      messages: [INITIAL_MESSAGE('1', user?.name)],
-      updatedAt: new Date()
-    }];
-  });
-
-  const [activeSessionId, setActiveSessionId] = useState<string>(sessions[0].id);
+  const [sessions, setSessions] = useState<ChatSession[]>([]);
+  const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [loginName, setLoginName] = useState('');
-  const [loginEmail, setLoginEmail] = useState('');
-  const [tempName, setTempName] = useState(user?.name || '');
+  const [tempName, setTempName] = useState(user.name);
+  const [allUsers, setAllUsers] = useState<{email: string, name: string}[]>([]);
+  const [isAdminPanelOpen, setIsAdminPanelOpen] = useState(false);
+
+  // Stripe Payment Success Handling
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const paymentSuccess = urlParams.get('payment_success');
+    const sessionId = urlParams.get('session_id');
+
+    if (paymentSuccess === 'true' && sessionId && user) {
+      const verifyPayment = async () => {
+        try {
+          const response = await fetch(`/api/stripe/verify-session?session_id=${sessionId}`);
+          const data = await response.json();
+          
+          if (data.status === 'success') {
+            // Update user role in Firestore
+            await setDoc(doc(db, 'users', user.uid), {
+              role: 'pro'
+            }, { merge: true });
+            
+            // Update local state
+            setUser((prev: any) => prev ? { ...prev, role: 'pro' } : null);
+            
+            // Clean URL
+            window.history.replaceState({}, document.title, window.location.pathname);
+            alert("Tebrikler! Hesabınız başarıyla Pro sürümüne yükseltildi.");
+          }
+        } catch (err) {
+          console.error("Payment verification failed:", err);
+        }
+      };
+      verifyPayment();
+    }
+  }, [user, setUser]);
+
+  useEffect(() => {
+    if (!user) return;
+    const dateStr = new Date().toISOString().split('T')[0];
+    const usageRef = doc(db, 'users', user.uid, 'usage', dateStr);
+    
+    const unsubscribe = onSnapshot(usageRef, (docSnap) => {
+      if (docSnap.exists()) {
+        setDailyUsage({
+          messages: docSnap.data().messages || 0,
+          images: docSnap.data().images || 0
+        });
+      } else {
+        setDailyUsage({ messages: 0, images: 0 });
+      }
+    });
+
+    return () => unsubscribe();
+  }, [user]);
+
+  const incrementUsage = async (type: 'messages' | 'images') => {
+    if (!user) return;
+    const dateStr = new Date().toISOString().split('T')[0];
+    const usageRef = doc(db, 'users', user.uid, 'usage', dateStr);
+    
+    await setDoc(usageRef, {
+      [type]: increment(1),
+      updatedAt: serverTimestamp()
+    }, { merge: true });
+  };
+
+  const checkLimit = (type: 'messages' | 'images') => {
+    if (user?.email === OWNER_EMAIL) return true;
+    const role = user?.role === 'pro' ? 'PRO' : 'FREE';
+    const limit = type === 'messages' ? LIMITS[role].MESSAGES : LIMITS[role].IMAGES;
+    const current = type === 'messages' ? dailyUsage.messages : dailyUsage.images;
+    
+    if (current >= limit) {
+      alert(`Günlük ${type === 'messages' ? 'mesaj' : 'görsel'} sınırınıza ulaştınız (${limit}). ${user?.role !== 'pro' ? "Daha fazla hak için Pro'ya geçebilirsiniz." : ""}`);
+      if (user?.role !== 'pro') setIsPricingModalOpen(true);
+      return false;
+    }
+    return true;
+  };
+
+  useEffect(() => {
+    if (user.email === OWNER_EMAIL && isAdminPanelOpen) {
+      const q = query(collection(db, 'users'));
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        const users = snapshot.docs.map(doc => ({
+          email: doc.data().email,
+          name: doc.data().name
+        }));
+        setAllUsers(users);
+      });
+      return () => unsubscribe();
+    }
+  }, [user.email, isAdminPanelOpen]);
 
   const activeSession = useMemo(() => 
-    sessions.find(s => s.id === activeSessionId) || sessions[0], 
+    sessions.find(s => s.id === activeSessionId) || null, 
     [sessions, activeSessionId]
   );
+
+  useEffect(() => {
+    if (!user) return;
+    
+    const q = query(
+      collection(db, 'users', user.uid, 'sessions'),
+      orderBy('updatedAt', 'desc')
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const fetchedSessions = snapshot.docs.map(doc => ({
+        id: doc.id,
+        title: doc.data().title || 'Yeni Sohbet',
+        ...doc.data(),
+        updatedAt: doc.data().updatedAt?.toDate() || new Date(),
+        createdAt: doc.data().createdAt?.toDate() || new Date(),
+        messages: []
+      })) as ChatSession[];
+      
+      setSessions(fetchedSessions);
+      if (fetchedSessions.length > 0 && !activeSessionId) {
+        setActiveSessionId(fetchedSessions[0].id);
+      }
+    });
+
+    return () => unsubscribe();
+  }, [user.uid]);
+
+  useEffect(() => {
+    if (activeSessionId && user) {
+      const q = query(
+        collection(db, 'users', user.uid, 'sessions', activeSessionId, 'messages'),
+        orderBy('timestamp', 'asc')
+      );
+
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        const fetchedMessages = snapshot.docs.map(doc => ({
+          ...doc.data(),
+          timestamp: doc.data().timestamp?.toDate() || new Date(),
+        })) as Message[];
+
+        setSessions(prev => prev.map(s => 
+          s.id === activeSessionId ? { ...s, messages: fetchedMessages } : s
+        ));
+      });
+
+      return () => unsubscribe();
+    }
+  }, [activeSessionId, user.uid]);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const recognitionRef = useRef<any>(null);
@@ -257,71 +484,79 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [activeSession.messages, isLoading]);
+  }, [activeSession?.messages, isLoading]);
 
-  const createNewSession = () => {
+  const createNewSession = async () => {
     const newId = Date.now().toString();
-    const newSession: ChatSession = {
+    const newSession = {
       id: newId,
+      userId: user.uid,
       title: 'Yeni Sohbet',
-      messages: [INITIAL_MESSAGE(newId + '-1', user?.name)],
-      updatedAt: new Date()
+      createdAt: Timestamp.now(),
+      updatedAt: Timestamp.now()
     };
-    setSessions(prev => [newSession, ...prev]);
+    
+    await setDoc(doc(db, 'users', user.uid, 'sessions', newId), newSession);
+    
+    const initialMsg = INITIAL_MESSAGE(newId + '-1', user.name);
+    await setDoc(doc(db, 'users', user.uid, 'sessions', newId, 'messages', initialMsg.id), {
+      ...initialMsg,
+      timestamp: Timestamp.now()
+    });
+
     setActiveSessionId(newId);
     setIsSidebarOpen(false);
   };
 
-  const deleteSession = (id: string, e: React.MouseEvent) => {
+  const deleteSession = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (sessions.length === 1) {
-      const newId = Date.now().toString();
-      setSessions([{
-        id: newId,
-        title: 'Yeni Sohbet',
-        messages: [INITIAL_MESSAGE(newId + '-1', user?.name)],
-        updatedAt: new Date()
-      }]);
-      setActiveSessionId(newId);
-      return;
-    }
-    const newSessions = sessions.filter(s => s.id !== id);
-    setSessions(newSessions);
-    if (activeSessionId === id) {
-      setActiveSessionId(newSessions[0].id);
+    if (confirm('Bu sohbeti silmek istediğinize emin misiniz?')) {
+      await deleteDoc(doc(db, 'users', user.uid, 'sessions', id));
+      if (activeSessionId === id) {
+        setActiveSessionId(null);
+      }
     }
   };
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (loginName.trim()) {
-      const newUser = { name: loginName.trim(), email: loginEmail.trim() };
-      setUser(newUser);
-      const newId = Date.now().toString();
-      setSessions([{
-        id: newId,
-        title: 'Yeni Sohbet',
-        messages: [INITIAL_MESSAGE(newId + '-1', newUser.name)],
-        updatedAt: new Date()
-      }]);
-      setActiveSessionId(newId);
+    try {
+      await signInWithGoogle();
+    } catch (err) {
+      console.error("Login error:", err);
+      alert("Giriş yapılamadı.");
     }
   };
 
-  const handleLogout = () => {
-    if (confirm('Çıkış yapmak istediğinize emin misiniz? Tüm sohbet geçmişiniz, kullanıcı bilgileriniz ve tercihleriniz kalıcı olarak silinecektir.')) {
-      // Clear all app-related localStorage
-      const keysToRemove = [STORAGE_KEY, USER_KEY, 'chat_cnr_theme'];
-      keysToRemove.forEach(key => localStorage.removeItem(key));
-      
-      // Clear session storage if any
-      sessionStorage.clear();
-      
-      // Reset state to trigger immediate UI change (optional but good for feedback)
-      setUser(null);
-      
-      // Redirect to home to ensure a clean slate
-      window.location.href = window.location.origin;
+  const handleLogout = async () => {
+    if (confirm('Çıkış yapmak istediğinize emin misiniz?')) {
+      await logout();
+    }
+  };
+
+  const handleUpgrade = async (priceId: string) => {
+    if (!user) return;
+    setIsPaymentProcessing(true);
+    try {
+      const response = await fetch('/api/stripe/create-checkout-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user.uid,
+          userEmail: user.email,
+          priceId: priceId
+        })
+      });
+      const data = await response.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        throw new Error(data.error || "Ödeme oturumu oluşturulamadı.");
+      }
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setIsPaymentProcessing(false);
     }
   };
 
@@ -363,8 +598,69 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
     recognition.start();
   };
 
+  const handleGenerateImage = async () => {
+    if (!input.trim() || !activeSession) return;
+    if (!checkLimit('images')) return;
+    
+    const prompt = input.trim();
+    const userMsg: Message = {
+      id: Date.now().toString(),
+      role: 'user',
+      text: `Görsel oluştur: ${prompt}`,
+      timestamp: new Date(),
+    };
+
+    const updatedMessages = [...activeSession.messages, userMsg];
+    setSessions(prev => prev.map(s => 
+      s.id === activeSessionId ? { ...s, messages: updatedMessages, updatedAt: new Date() } : s
+    ));
+
+    setInput('');
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const modelMsgId = (Date.now() + 1).toString();
+      
+      // Add user message to Firestore
+      await setDoc(doc(db, 'users', user.uid, 'sessions', activeSessionId!, 'messages', userMsg.id), {
+        ...userMsg,
+        timestamp: Timestamp.now()
+      });
+
+      const imageUrl = await geminiService.generateImage(prompt);
+      await incrementUsage('images');
+      
+      const modelMsg: Message = {
+        id: modelMsgId,
+        role: 'model',
+        text: `"${prompt}" için oluşturduğum görsel:`,
+        imageUrl: imageUrl,
+        timestamp: new Date(),
+      };
+
+      // Add model message to Firestore
+      await setDoc(doc(db, 'users', user.uid, 'sessions', activeSessionId!, 'messages', modelMsgId), {
+        ...modelMsg,
+        timestamp: Timestamp.now()
+      });
+
+      if (isAutoSpeak) {
+        const audioBase64 = await geminiService.textToSpeech(modelMsg.text);
+        if (audioBase64) playPCM(audioBase64);
+      }
+    } catch (err: any) {
+      console.error("Image Gen Error:", err);
+      setError("Görsel oluşturulurken bir hata oluştu.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleSend = async (e?: React.FormEvent | null, overrideInput?: string) => {
     if (e) e.preventDefault();
+    if (!activeSession) return;
+    if (!checkLimit('messages')) return;
     const text = overrideInput || input;
     if (!text.trim() && !selectedImage) return;
 
@@ -395,75 +691,76 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
     setError(null);
 
     try {
-      const response = await geminiService.sendMessage(
-        userMsg.text,
-        activeSession.messages,
-        userMsg.imageUrl,
-        user?.name
-      );
-
-      const modelMsg: Message = {
-        id: (Date.now() + 1).toString(),
+      const modelMsgId = (Date.now() + 1).toString();
+      const initialModelMsg: Message = {
+        id: modelMsgId,
         role: 'model',
-        text: response.text,
-        sources: response.sources,
+        text: '',
         timestamp: new Date(),
       };
 
-      setSessions(prev => prev.map(s => 
-        s.id === activeSessionId 
-          ? { ...s, messages: [...s.messages, modelMsg], updatedAt: new Date() } 
-          : s
-      ));
+      // Add user message to Firestore
+      await setDoc(doc(db, 'users', user.uid, 'sessions', activeSessionId!, 'messages', userMsg.id), {
+        ...userMsg,
+        timestamp: Timestamp.now()
+      });
+
+      // Update session title and updatedAt
+      await setDoc(doc(db, 'users', user.uid, 'sessions', activeSessionId!), {
+        updatedAt: Timestamp.now(),
+        title: activeSession!.title === 'Yeni Sohbet' ? (text.slice(0, 30) + (text.length > 30 ? '...' : '')) : activeSession!.title
+      }, { merge: true });
+
+      await incrementUsage('messages');
+
+      // Add empty model message to Firestore (placeholder)
+      await setDoc(doc(db, 'users', user.uid, 'sessions', activeSessionId!, 'messages', modelMsgId), {
+        ...initialModelMsg,
+        timestamp: Timestamp.now()
+      });
+
+      let finalResponseText = "";
+      const stream = geminiService.sendMessageStream(
+        userMsg.text,
+        activeSession!.messages,
+        userMsg.imageUrl,
+        user.name,
+        user.email,
+        isChatMode
+      );
+
+      let isFirstChunk = true;
+      for await (const chunk of stream) {
+        if (isFirstChunk) {
+          setIsLoading(false);
+          isFirstChunk = false;
+        }
+        finalResponseText = chunk.text;
+        
+        // Update model message in Firestore
+        await setDoc(doc(db, 'users', user.uid, 'sessions', activeSessionId!, 'messages', modelMsgId), {
+          text: chunk.text,
+          sources: chunk.sources || []
+        }, { merge: true });
+      }
 
       if (isAutoSpeak) {
-        const audioBase64 = await geminiService.textToSpeech(response.text);
+        const audioBase64 = await geminiService.textToSpeech(finalResponseText);
         if (audioBase64) {
           playPCM(audioBase64);
         }
       }
     } catch (err: any) {
-      setError("Yanıt alınırken bir sorun oluştu. Lütfen tekrar deneyin.");
+      if (err.message === "API_KEY_MISSING") {
+        setError("Gemini API Anahtarı (API_KEY) bulunamadı. Lütfen .env dosyanıza GEMINI_API_KEY ekleyin ve uygulamayı yeniden başlatın.");
+      } else {
+        console.error("Chat Error:", err);
+        setError("Yanıt alınırken bir sorun oluştu. Lütfen bağlantınızı kontrol edip tekrar deneyin.");
+      }
     } finally {
       setIsLoading(false);
     }
   };
-
-  if (!user) {
-    return (
-      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center p-4 font-['Inter']">
-        <div className="w-full max-w-md bg-[#121212] border border-zinc-800 rounded-3xl p-8 shadow-2xl animate-in fade-in zoom-in duration-500">
-          <div className="flex justify-center mb-8">
-            <div className="w-20 h-20 bg-blue-600 rounded-3xl flex items-center justify-center shadow-lg shadow-blue-900/20 rotate-3">
-              <MessageSquare size={40} className="text-white -rotate-3" />
-            </div>
-          </div>
-          <h1 className="text-3xl font-bold text-white text-center mb-2">Chat_CNR</h1>
-          <p className="text-zinc-400 text-center mb-8 text-sm">Devam etmek için kendinizi tanıtın</p>
-          
-          <form onSubmit={handleLogin} className="space-y-4">
-            <div>
-              <label className="block text-xs font-bold text-zinc-500 uppercase tracking-widest mb-2 ml-1">Adını Yaz</label>
-              <input 
-                type="text" 
-                required
-                value={loginName}
-                onChange={(e) => setLoginName(e.target.value)}
-                placeholder=""
-                className="w-full bg-[#1a1a1a] border border-zinc-800 rounded-2xl px-5 py-4 text-white focus:outline-none focus:ring-2 focus:ring-blue-600/50 transition-all"
-              />
-            </div>
-            <button 
-              type="submit"
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-2xl transition-all shadow-lg shadow-blue-900/20 active:scale-[0.98]"
-            >
-              Başlat
-            </button>
-          </form>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className={`flex h-[100dvh] overflow-hidden font-['Inter'] transition-colors duration-300 ${theme === 'dark' ? 'bg-[#0a0a0a] text-zinc-100' : 'bg-zinc-50 text-zinc-900'}`}>
@@ -517,13 +814,33 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
           </div>
 
           <div className={`p-4 border-t ${theme === 'dark' ? 'border-zinc-800' : 'border-zinc-200'}`}>
+            {user.role !== 'pro' && user.email !== OWNER_EMAIL && (
+              <button 
+                onClick={() => setIsPricingModalOpen(true)}
+                className="w-full mb-4 flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-bold py-3 rounded-2xl shadow-lg shadow-amber-900/20 transition-all active:scale-[0.98]"
+              >
+                <Sparkles size={18} />
+                <span>Pro'ya Yükselt</span>
+              </button>
+            )}
             <div className={`flex items-center gap-3 p-3 rounded-2xl ${theme === 'dark' ? 'bg-zinc-900' : 'bg-zinc-100'}`}>
               <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${theme === 'dark' ? 'bg-zinc-800 text-blue-400' : 'bg-white text-blue-600 border border-zinc-200'}`}>
                 <User size={20} />
               </div>
               <div className="flex-1 overflow-hidden">
                 <p className="text-sm font-bold truncate">{user.name}</p>
-                <p className={`text-[10px] truncate ${theme === 'dark' ? 'text-zinc-500' : 'text-zinc-400'}`}>{user.email || 'Kullanıcı'}</p>
+                <div className="flex items-center gap-1">
+                  <p className={`text-[10px] truncate ${theme === 'dark' ? 'text-zinc-500' : 'text-zinc-400'}`}>{user.email || 'Kullanıcı'}</p>
+                  <span className={`text-[8px] px-1.5 py-0.5 rounded-full font-bold uppercase tracking-tighter ${
+                    user.email === OWNER_EMAIL 
+                      ? 'bg-amber-500/20 text-amber-500 border border-amber-500/30' 
+                      : user.role === 'pro'
+                        ? 'bg-emerald-500/20 text-emerald-500 border border-emerald-500/30'
+                        : 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
+                  }`}>
+                    {user.email === OWNER_EMAIL ? 'Kurucu' : user.role === 'pro' ? 'Pro' : 'Üye'}
+                  </span>
+                </div>
               </div>
             </div>
           </div>
@@ -564,6 +881,15 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
           </div>
           
           <div className="flex items-center gap-2">
+            {user.email === OWNER_EMAIL && (
+              <button 
+                onClick={() => setIsAdminPanelOpen(true)}
+                className={`p-2.5 rounded-xl transition-all ${theme === 'dark' ? 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700' : 'bg-zinc-100 text-zinc-500 hover:bg-zinc-200'}`}
+                title="Kullanıcı Listesi"
+              >
+                <Users size={18} />
+              </button>
+            )}
             <button 
               onClick={() => setIsAutoSpeak(!isAutoSpeak)}
               className={`p-2.5 rounded-xl transition-all ${isAutoSpeak ? 'bg-blue-600 text-white' : (theme === 'dark' ? 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700' : 'bg-zinc-100 text-zinc-500 hover:bg-zinc-200')}`}
@@ -583,9 +909,19 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
 
         {/* Messages Area */}
         <main className="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-6">
-          {activeSession.messages.map((msg) => (
-            <MessageItem key={msg.id} message={msg} themeColor="blue" appearance={theme} />
-          ))}
+          {activeSession ? (
+            activeSession.messages.map((msg) => (
+              <MessageItem key={msg.id} message={msg} themeColor="blue" appearance={theme} />
+            ))
+          ) : (
+            <div className="h-full flex flex-col items-center justify-center text-center p-8">
+              <div className="w-20 h-20 bg-zinc-800/50 rounded-3xl flex items-center justify-center mb-6">
+                <MessageSquare size={40} className="text-zinc-600" />
+              </div>
+              <h3 className="text-xl font-bold mb-2">Henüz bir sohbet seçilmedi</h3>
+              <p className="text-zinc-500 max-w-xs">Yeni bir sohbet başlatmak için sol menüdeki butona tıklayın.</p>
+            </div>
+          )}
           {isLoading && (
             <div className="flex gap-3 animate-pulse">
               <div className={`w-8 h-8 rounded-lg flex-shrink-0 ${theme === 'dark' ? 'bg-zinc-800' : 'bg-zinc-200'}`} />
@@ -622,8 +958,9 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
             <div className={`flex-1 border rounded-2xl p-2 flex items-end gap-2 focus-within:ring-2 focus-within:ring-blue-600/50 transition-all ${theme === 'dark' ? 'bg-[#1a1a1a] border-zinc-800' : 'bg-zinc-50 border-zinc-200'}`}>
               <button 
                 type="button"
+                disabled={!activeSession}
                 onClick={() => fileInputRef.current?.click()}
-                className={`p-3 rounded-xl transition-all ${theme === 'dark' ? 'text-zinc-400 hover:text-white hover:bg-zinc-800' : 'text-zinc-500 hover:text-zinc-900 hover:bg-zinc-200'}`}
+                className={`p-3 rounded-xl transition-all disabled:opacity-30 ${theme === 'dark' ? 'text-zinc-400 hover:text-white hover:bg-zinc-800' : 'text-zinc-500 hover:text-zinc-900 hover:bg-zinc-200'}`}
               >
                 <Camera size={20} />
               </button>
@@ -634,14 +971,24 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                 accept="image/*" 
                 className="hidden" 
               />
+              <button 
+                type="button"
+                disabled={!activeSession || !input.trim() || isLoading}
+                onClick={handleGenerateImage}
+                className={`p-3 rounded-xl transition-all disabled:opacity-30 ${theme === 'dark' ? 'text-amber-400 hover:text-amber-300 hover:bg-zinc-800' : 'text-amber-600 hover:text-amber-700 hover:bg-zinc-200'}`}
+                title="Görsel Oluştur"
+              >
+                <Sparkles size={20} />
+              </button>
               <textarea 
                 value={input}
+                disabled={!activeSession}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder="Mesajınızı yazın..."
+                placeholder={activeSession ? "Mesajınızı yazın..." : "Önce bir sohbet başlatın"}
                 rows={1}
-                className={`flex-1 bg-transparent border-none focus:ring-0 py-3 px-1 resize-none max-h-32 custom-scrollbar text-sm ${theme === 'dark' ? 'text-white' : 'text-zinc-900'}`}
+                className={`flex-1 bg-transparent border-none focus:ring-0 py-3 px-1 resize-none max-h-32 custom-scrollbar text-sm disabled:opacity-50 ${theme === 'dark' ? 'text-white' : 'text-zinc-900'}`}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
+                  if (e.key === 'Enter' && !e.shiftKey && activeSession) {
                     e.preventDefault();
                     handleSend();
                   }
@@ -649,15 +996,16 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
               />
               <button 
                 type="button"
+                disabled={!activeSession}
                 onClick={toggleRecording}
-                className={`p-3 rounded-xl transition-all ${isRecording ? 'bg-red-500 text-white animate-pulse' : (theme === 'dark' ? 'text-zinc-400 hover:text-white hover:bg-zinc-800' : 'text-zinc-500 hover:text-zinc-900 hover:bg-zinc-200')}`}
+                className={`p-3 rounded-xl transition-all disabled:opacity-30 ${isRecording ? 'bg-red-500 text-white animate-pulse' : (theme === 'dark' ? 'text-zinc-400 hover:text-white hover:bg-zinc-800' : 'text-zinc-500 hover:text-zinc-900 hover:bg-zinc-200')}`}
               >
                 {isRecording ? <Mic size={20} /> : <MicOff size={20} />}
               </button>
             </div>
             <button 
               type="submit"
-              disabled={isLoading || (!input.trim() && !selectedImage)}
+              disabled={isLoading || !activeSession || (!input.trim() && !selectedImage)}
               className="p-4 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:hover:bg-blue-600 text-white rounded-2xl transition-all shadow-lg shadow-blue-900/20 active:scale-95"
             >
               <Send size={20} />
@@ -669,7 +1017,91 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
         </footer>
       </div>
 
-      {/* Settings Modal */}
+      {/* Pricing Modal */}
+      {isPricingModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/80 backdrop-blur-md" onClick={() => setIsPricingModalOpen(false)} />
+          <div className={`relative w-full max-w-2xl rounded-3xl overflow-hidden shadow-2xl border animate-in zoom-in duration-300 ${theme === 'dark' ? 'bg-[#121212] border-zinc-800' : 'bg-white border-zinc-200'}`}>
+            <div className="p-8 text-center">
+              <div className="w-16 h-16 bg-amber-500 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-amber-900/20">
+                <Sparkles size={32} className="text-white" />
+              </div>
+              <h2 className="text-3xl font-black mb-2">Chat_CNR Pro</h2>
+              <p className="text-zinc-500 mb-8">Yapay zeka deneyiminizi bir üst seviyeye taşıyın.</p>
+              
+              <div className="grid md:grid-cols-2 gap-6 text-left">
+                {/* Free Plan */}
+                <div className={`p-6 rounded-3xl border ${theme === 'dark' ? 'bg-zinc-900/50 border-zinc-800' : 'bg-zinc-50 border-zinc-200'}`}>
+                  <h3 className="font-bold text-lg mb-1">Ücretsiz</h3>
+                  <p className="text-3xl font-black mb-4">0₺ <span className="text-sm font-normal text-zinc-500">/ay</span></p>
+                  <ul className="space-y-3 text-sm text-zinc-400">
+                    <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 bg-zinc-600 rounded-full" /> Standart Gemini Modeli</li>
+                    <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 bg-zinc-600 rounded-full" /> Günlük 250 Mesaj</li>
+                    <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 bg-zinc-600 rounded-full" /> Günlük 2 Görsel Oluşturma</li>
+                  </ul>
+                  <button disabled className="w-full mt-8 py-3 rounded-xl bg-zinc-800 text-zinc-500 font-bold cursor-not-allowed">Mevcut Plan</button>
+                </div>
+
+                {/* Pro Plan */}
+                <div className={`p-6 rounded-3xl border-2 border-amber-500 relative ${theme === 'dark' ? 'bg-amber-500/5' : 'bg-amber-50'}`}>
+                  <div className="absolute -top-3 right-6 bg-amber-500 text-white text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest">Önerilen</div>
+                  <h3 className="font-bold text-lg mb-1">Pro</h3>
+                  <p className="text-3xl font-black mb-4">300₺ <span className="text-sm font-normal text-zinc-500">/ay</span></p>
+                  <ul className="space-y-3 text-sm">
+                    <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 bg-amber-500 rounded-full" /> <span className={theme === 'dark' ? 'text-zinc-200' : 'text-zinc-800'}>Gemini 3.1 Pro Erişimi</span></li>
+                    <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 bg-amber-500 rounded-full" /> <span className={theme === 'dark' ? 'text-zinc-200' : 'text-zinc-800'}>Günlük 250 Soru Sorma</span></li>
+                    <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 bg-amber-500 rounded-full" /> <span className={theme === 'dark' ? 'text-zinc-200' : 'text-zinc-800'}>Günlük 10 Görsel Oluşturma</span></li>
+                    <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 bg-amber-500 rounded-full" /> <span className={theme === 'dark' ? 'text-zinc-200' : 'text-zinc-800'}>Öncelikli Destek</span></li>
+                  </ul>
+                  <button 
+                    onClick={() => handleUpgrade('price_1Q...your_actual_price_id')}
+                    disabled={isPaymentProcessing}
+                    className="w-full mt-8 py-3 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold shadow-lg shadow-amber-900/20 transition-all active:scale-[0.98] disabled:opacity-50"
+                  >
+                    {isPaymentProcessing ? 'İşleniyor...' : 'Hemen Yükselt'}
+                  </button>
+                </div>
+              </div>
+            </div>
+            <button 
+              onClick={() => setIsPricingModalOpen(false)}
+              className="absolute top-4 right-4 p-2 text-zinc-500 hover:text-zinc-300"
+            >
+              <X size={24} />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Admin Panel Modal */}
+      {isAdminPanelOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-300">
+          <div className={`w-full max-w-md border rounded-3xl p-6 shadow-2xl ${theme === 'dark' ? 'bg-[#121212] border-zinc-800 text-white' : 'bg-white border-zinc-200 text-zinc-900'}`}>
+            <div className="flex items-center justify-between mb-8">
+              <h2 className="text-xl font-bold flex items-center gap-2">
+                <Users size={20} className="text-amber-400" />
+                Kullanıcı Listesi
+              </h2>
+              <button onClick={() => setIsAdminPanelOpen(false)} className={`p-2 rounded-xl transition-all ${theme === 'dark' ? 'text-zinc-400 hover:bg-zinc-800' : 'text-zinc-500 hover:bg-zinc-100'}`}>
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="space-y-3 max-h-[400px] overflow-y-auto custom-scrollbar pr-2">
+              {allUsers.length > 0 ? (
+                allUsers.map((u, i) => (
+                  <div key={i} className={`p-4 rounded-2xl border ${theme === 'dark' ? 'bg-[#1a1a1a] border-zinc-800' : 'bg-zinc-50 border-zinc-200'}`}>
+                    <p className="font-bold text-sm">{u.name}</p>
+                    <p className="text-xs text-zinc-500">{u.email}</p>
+                  </div>
+                ))
+              ) : (
+                <p className="text-center text-zinc-500 py-8">Kullanıcı bulunamadı.</p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
       {isSettingsOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-300">
           <div className={`w-full max-w-md border rounded-3xl p-6 shadow-2xl ${theme === 'dark' ? 'bg-[#121212] border-zinc-800 text-white' : 'bg-white border-zinc-200 text-zinc-900'}`}>
@@ -693,7 +1125,12 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                     </div>
                     <div className="flex-1 overflow-hidden">
                       <p className="font-bold truncate">{user.name}</p>
-                      <p className={`text-xs truncate ${theme === 'dark' ? 'text-zinc-500' : 'text-zinc-400'}`}>{user.email || 'Kullanıcı'}</p>
+                      <div className="flex items-center gap-2">
+                        <p className={`text-xs truncate ${theme === 'dark' ? 'text-zinc-500' : 'text-zinc-400'}`}>{user.email || 'Kullanıcı'}</p>
+                        <span className={`text-[10px] px-2 py-0.5 rounded-lg font-black uppercase tracking-widest ${user.email === OWNER_EMAIL ? 'bg-amber-500 text-black' : 'bg-zinc-800 text-zinc-400'}`}>
+                          {user.email === OWNER_EMAIL ? 'Kurucu' : 'Üye'}
+                        </span>
+                      </div>
                     </div>
                   </div>
                   
@@ -707,9 +1144,9 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                         className={`flex-1 bg-transparent border rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600/50 transition-all ${theme === 'dark' ? 'border-zinc-800 text-white' : 'border-zinc-200 text-zinc-900'}`}
                       />
                       <button 
-                        onClick={() => {
+                        onClick={async () => {
                           if (tempName.trim()) {
-                            setUser({ ...user, name: tempName.trim() });
+                            await setDoc(doc(db, 'users', user.uid), { name: tempName.trim() }, { merge: true });
                             alert("İsim başarıyla güncellendi!");
                           }
                         }}
@@ -720,6 +1157,17 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                     </div>
                   </div>
                 </div>
+              </div>
+
+              <div className="space-y-4">
+                <label className={`block text-xs font-bold uppercase tracking-widest ml-1 ${theme === 'dark' ? 'text-zinc-500' : 'text-zinc-400'}`}>Hesap</label>
+                <button 
+                  onClick={handleLogout}
+                  className="w-full flex items-center justify-center gap-2 p-4 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-2xl transition-all font-bold"
+                >
+                  <LogOut size={18} />
+                  Çıkış Yap
+                </button>
               </div>
 
               <div className="space-y-4">
@@ -735,6 +1183,22 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                       className={`w-12 h-6 rounded-full transition-all relative ${isAutoSpeak ? 'bg-blue-600' : (theme === 'dark' ? 'bg-zinc-700' : 'bg-zinc-300')}`}
                     >
                       <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${isAutoSpeak ? 'right-1' : 'left-1'}`} />
+                    </button>
+                  </div>
+
+                  <div className={`flex items-center justify-between p-4 border rounded-2xl ${theme === 'dark' ? 'bg-[#1a1a1a] border-zinc-800' : 'bg-zinc-50 border-zinc-200'}`}>
+                    <div className="flex items-center gap-3">
+                      <MessageSquare size={18} className={theme === 'dark' ? 'text-zinc-400' : 'text-zinc-500'} />
+                      <div className="flex flex-col">
+                        <span className="text-sm font-medium">Sohbet Modu</span>
+                        <span className="text-[10px] text-zinc-500">ChatGPT gibi samimi sohbet eder</span>
+                      </div>
+                    </div>
+                    <button 
+                      onClick={() => setIsChatMode(!isChatMode)}
+                      className={`w-12 h-6 rounded-full transition-all relative ${isChatMode ? 'bg-blue-600' : (theme === 'dark' ? 'bg-zinc-700' : 'bg-zinc-300')}`}
+                    >
+                      <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${isChatMode ? 'right-1' : 'left-1'}`} />
                     </button>
                   </div>
 

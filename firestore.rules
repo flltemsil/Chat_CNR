@@ -1,0 +1,125 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Document ID: {userId}
+    // Fields:
+    //   - uid: string (required) - Firebase Auth UID
+    //   - name: string (required) - Display name
+    //   - email: string (required) - Email address
+    //   - role: string (required, enum: ['admin', 'user']) - User role
+    //   - lastLogin: timestamp (optional)
+    //
+    // Collection: users/{userId}/sessions
+    // Document ID: {sessionId}
+    // Fields:
+    //   - id: string (required)
+    //   - userId: string (required)
+    //   - title: string (required)
+    //   - createdAt: timestamp (required)
+    //   - updatedAt: timestamp (required)
+    //
+    // Collection: users/{userId}/sessions/{sessionId}/messages
+    // Document ID: {messageId}
+    // Fields:
+    //   - id: string (required)
+    //   - role: string (required, enum: ['user', 'model'])
+    //   - text: string (required)
+    //   - imageUrl: string (optional)
+    //   - timestamp: timestamp (required)
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+         (request.auth.token.email == "dorukaliarslan20@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+
+    function isValidUser(data) {
+      return data.keys().hasOnly(['uid', 'name', 'email', 'role', 'lastLogin']) &&
+             data.uid is string && data.uid.size() > 0 &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             data.email is string && isValidEmail(data.email) &&
+             data.role in ['admin', 'user'];
+    }
+
+    function isValidSession(data) {
+      return data.keys().hasOnly(['id', 'userId', 'title', 'createdAt', 'updatedAt']) &&
+             data.id is string && data.userId is string &&
+             data.title is string && data.title.size() < 200 &&
+             data.createdAt is timestamp && data.updatedAt is timestamp;
+    }
+
+    function isValidMessage(data) {
+      return data.keys().hasAll(['id', 'role', 'text', 'timestamp']) &&
+             data.keys().hasOnly(['id', 'role', 'text', 'timestamp', 'imageUrl', 'sources']) &&
+             data.id is string && data.role in ['user', 'model'] &&
+             data.text is string && data.text.size() < 10000 &&
+             data.timestamp is timestamp;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      // Users can only read their own profile, unless admin
+      allow read: if isOwner(userId) || isAdmin();
+      
+      // Create: user can create their own profile as 'user' role
+      allow create: if isOwner(userId) && isValidUser(request.resource.data) && 
+                    (request.resource.data.role == 'user' || isAdmin());
+      
+      // Update: user can update their own profile but NOT their role
+      allow update: if isOwner(userId) && isValidUser(request.resource.data) && 
+                    (request.resource.data.role == resource.data.role || isAdmin());
+    }
+
+    match /users/{userId}/sessions/{sessionId} {
+      allow read, write: if isOwner(userId) || isAdmin();
+      allow create: if isOwner(userId) && isValidSession(request.resource.data);
+      allow update: if isOwner(userId) && isValidSession(request.resource.data);
+    }
+
+    match /users/{userId}/sessions/{sessionId}/messages/{messageId} {
+      allow read, write: if isOwner(userId) || isAdmin();
+      allow create: if isOwner(userId) && isValidMessage(request.resource.data);
+      allow update: if isOwner(userId) && isValidMessage(request.resource.data);
+    }
+
+    // Global admin access to all users (for the developer to see email list)
+    match /users/{anyUser} {
+      allow list: if isAdmin();
+    }
+  }
+}

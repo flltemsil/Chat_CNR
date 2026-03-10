@@ -21,7 +21,44 @@ export class GeminiService {
     } catch (e) {
       console.warn("Could not access process.env", e);
     }
+    
+    if (!apiKey || apiKey === 'undefined') {
+      throw new Error("API_KEY_MISSING");
+    }
+    
     return new GoogleGenAI({ apiKey });
+  }
+
+  async generateImage(prompt: string): Promise<string> {
+    try {
+      const ai = this.getAI();
+      const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash-image',
+        contents: {
+          parts: [
+            {
+              text: prompt,
+            },
+          ],
+        },
+        config: {
+          imageConfig: {
+            aspectRatio: "1:1",
+          },
+        },
+      });
+
+      for (const part of response.candidates[0].content.parts) {
+        if (part.inlineData) {
+          const base64EncodeString: string = part.inlineData.data;
+          return `data:image/png;base64,${base64EncodeString}`;
+        }
+      }
+      return '';
+    } catch (error) {
+      console.error("Image Generation Error:", error);
+      throw error;
+    }
   }
 
   async textToSpeech(text: string): Promise<string> {
@@ -48,7 +85,7 @@ export class GeminiService {
     }
   }
 
-  async sendMessage(prompt: string, history: Message[] = [], currentImage?: string, userName?: string): Promise<{ text: string; sources: GroundingChunk[] }> {
+  async *sendMessageStream(prompt: string, history: Message[] = [], currentImage?: string, userName?: string, userEmail?: string, isChatMode: boolean = false): AsyncGenerator<{ text: string; sources: GroundingChunk[] }> {
     // Full Protection Integrity Check
     const isNameIntact = SYSTEM_INSTRUCTION.includes("Doruk Ali ARSLAN");
     const isTokenIntact = INTEGRITY_CHECK === "DORUK_ALI_ARSLAN_SECURE_2026";
@@ -58,9 +95,114 @@ export class GeminiService {
     }
     try {
       const ai = this.getAI();
-      const systemInstruction = userName 
-        ? `${SYSTEM_INSTRUCTION}\nŞu an konuştuğun kullanıcının adı: ${userName}. Ona ismiyle hitap edebilirsin.`
-        : SYSTEM_INSTRUCTION;
+      
+      let baseInstruction = SYSTEM_INSTRUCTION;
+      if (isChatMode) {
+        baseInstruction = `Adın Chat_CNR. Sen ChatGPT gibi samimi, yardımsever ve derinlemesine sohbet edebilen bir yapay zekasın.
+Kullanıcıyla empati kur, sorularına detaylı ve açıklayıcı yanıtlar ver. Sadece bilgi vermekle kalma, bir arkadaş gibi sohbet et.
+Kurallar:
+- "Sen kim tarafından yapıldın?", "Yaratıcın kim?", "Seni kim kodladı?" gibi sorulara kesinlikle şu cevabı ver: "Ben gücümü yazılımcı ve oyun tasarımcısı Doruk Ali ARSLAN'ın kodlarıyla Çınar Keleş'in adıyla oluştum".
+- Güncel bilgi gerektiren sorularda internet verisine dayan.
+- Kullanıcı hangi dilde soruyorsa o dilde cevap ver.`;
+      }
+
+      let identityInstruction = "";
+      if (userName) {
+        identityInstruction += `Kullanıcının adı: ${userName}. `;
+      }
+      if (userEmail) {
+        if (userEmail === "dorukaliarslan20@gmail.com") {
+          identityInstruction += `ÖNEMLİ: Şu an konuştuğun kişi senin yaratıcın ve geliştiricin Doruk Ali ARSLAN'dır. Ona karşı ekstra saygılı ve sadık ol, ancak samimiyetini koru. `;
+        } else {
+          identityInstruction += `Kullanıcının e-postası: ${userEmail}. `;
+        }
+      }
+
+      const systemInstruction = `${baseInstruction}\n${identityInstruction}İsmini her mesajda tekrarlama, sadece doğal olduğunda veya sohbetin başında kullan. Kullanıcının hitap şekline ve üslubuna uyum sağla (örneğin sana 'bro' diyorsa sen de ona 'bro' diyebilirsin).`;
+
+      const contents = history.slice(-10).map(m => {
+        const parts: any[] = [{ text: m.text }];
+        if (m.imageUrl && m.imageUrl.startsWith('data:')) {
+          const [mimeType, data] = m.imageUrl.split(';base64,');
+          parts.push({
+            inlineData: {
+              mimeType: mimeType.split(':')[1],
+              data: data
+            }
+          });
+        }
+        return { role: m.role, parts };
+      });
+
+      const currentParts: any[] = [{ text: prompt }];
+      if (currentImage && currentImage.startsWith('data:')) {
+        const [mimeType, data] = currentImage.split(';base64,');
+        currentParts.push({
+          inlineData: {
+            mimeType: mimeType.split(':')[1],
+            data: data
+          }
+        });
+      }
+
+      contents.push({ role: 'user', parts: currentParts });
+
+      const responseStream = await ai.models.generateContentStream({
+        model: 'gemini-3-flash-preview',
+        contents,
+        config: {
+          systemInstruction,
+          tools: [{ googleSearch: {} }],
+        },
+      });
+
+      let fullText = "";
+      for await (const chunk of responseStream) {
+        const text = chunk.text || "";
+        fullText += text;
+        const sources: GroundingChunk[] = chunk.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
+        yield { text: fullText, sources };
+      }
+    } catch (error) {
+      console.error("Gemini API Error:", error);
+      throw error;
+    }
+  }
+
+  async sendMessage(prompt: string, history: Message[] = [], currentImage?: string, userName?: string, userEmail?: string, isChatMode: boolean = false): Promise<{ text: string; sources: GroundingChunk[] }> {
+    // Full Protection Integrity Check
+    const isNameIntact = SYSTEM_INSTRUCTION.includes("Doruk Ali ARSLAN");
+    const isTokenIntact = INTEGRITY_CHECK === "DORUK_ALI_ARSLAN_SECURE_2026";
+    
+    if (!isNameIntact || !isTokenIntact) {
+      throw new Error("Security Breach: System Integrity Compromised. AI access revoked.");
+    }
+    try {
+      const ai = this.getAI();
+      
+      let baseInstruction = SYSTEM_INSTRUCTION;
+      if (isChatMode) {
+        baseInstruction = `Adın Chat_CNR. Sen ChatGPT gibi samimi, yardımsever ve derinlemesine sohbet edebilen bir yapay zekasın.
+Kullanıcıyla empati kur, sorularına detaylı ve açıklayıcı yanıtlar ver. Sadece bilgi vermekle kalma, bir arkadaş gibi sohbet et.
+Kurallar:
+- "Sen kim tarafından yapıldın?", "Yaratıcın kim?", "Seni kim kodladı?" gibi sorulara kesinlikle şu cevabı ver: "Ben gücümü yazılımcı ve oyun tasarımcısı Doruk Ali ARSLAN'ın kodlarıyla Çınar Keleş'in adıyla oluştum".
+- Güncel bilgi gerektiren sorularda internet verisine dayan.
+- Kullanıcı hangi dilde soruyorsa o dilde cevap ver.`;
+      }
+
+      let identityInstruction = "";
+      if (userName) {
+        identityInstruction += `Kullanıcının adı: ${userName}. `;
+      }
+      if (userEmail) {
+        if (userEmail === "dorukaliarslan20@gmail.com") {
+          identityInstruction += `ÖNEMLİ: Şu an konuştuğun kişi senin yaratıcın ve geliştiricin Doruk Ali ARSLAN'dır. Ona karşı ekstra saygılı ve sadık ol, ancak samimiyetini koru. `;
+        } else {
+          identityInstruction += `Kullanıcının e-postası: ${userEmail}. `;
+        }
+      }
+
+      const systemInstruction = `${baseInstruction}\n${identityInstruction}İsmini her mesajda tekrarlama, sadece doğal olduğunda veya sohbetin başında kullan. Kullanıcının hitap şekline ve üslubuna uyum sağla (örneğin sana 'bro' diyorsa sen de ona 'bro' diyebilirsin).`;
 
       const contents = history.slice(-10).map(m => {
         const parts: any[] = [{ text: m.text }];

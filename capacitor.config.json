@@ -1,0 +1,9 @@
+{
+  "appId": "com.chatcnr.app",
+  "appName": "Chat_CNR",
+  "webDir": "dist",
+  "bundledWebRuntime": false,
+  "server": {
+    "androidScheme": "https"
+  }
+}
