@@ -43,10 +43,11 @@ const SecurityGuard: React.FC<{ children: React.ReactNode; user: { name: string;
   const isTokenIntact = INTEGRITY_TOKEN === "AUTHORIZED_BY_DORUK_ALI_ARSLAN_2026";
   const isOwnerEmailIntact = OWNER_EMAIL === "dorukaliarslan20@gmail.com";
   
-  const isSystemCompromised = false; // Disabled fragile integrity checks to prevent false positive black screens
+  const isSystemCompromised = false; 
   
   // Reporting logic
   useEffect(() => {
+    console.log("SecurityGuard: System status check", { isSystemCompromised, isOwner });
     if (isSystemCompromised && !isOwner && !hasReported && user) {
       // Only attempt fetch if we are on a web server (not file://)
       if (window.location.protocol.startsWith('http')) {
@@ -128,6 +129,15 @@ const App: React.FC = () => {
   const [error, setError] = useState<any>(null);
   const [user, setUser] = useState<{ name: string; email: string; uid: string; role: string } | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
+  useEffect(() => {
+    console.log("App: Auth loading state", isAuthLoading);
+    
+    // Check for missing API Key in production
+    const apiKey = process.env.GEMINI_API_KEY || '';
+    if (!isAuthLoading && !user && (!apiKey || apiKey === 'undefined')) {
+      console.error("CRITICAL: GEMINI_API_KEY is missing in Environment Variables!");
+    }
+  }, [isAuthLoading, user]);
   const isAuthLoadingRef = useRef(true);
 
   const setAuthLoading = (val: boolean) => {
@@ -263,6 +273,7 @@ interface ChatAppProps {
 }
 
 const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
+  console.log("ChatApp: Initializing for user", user?.email);
   const [input, setInput] = useState('');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -272,11 +283,19 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
   const [isRecording, setIsRecording] = useState(false);
   const [isAutoSpeak, setIsAutoSpeak] = useState(false);
   const [isChatMode, setIsChatMode] = useState(() => {
-    return localStorage.getItem('chat_cnr_chat_mode') === 'true';
+    try {
+      return localStorage.getItem('chat_cnr_chat_mode') === 'true';
+    } catch (e) {
+      return false;
+    }
   });
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
-    return (localStorage.getItem('chat_cnr_theme') as 'light' | 'dark') || 'dark';
+    try {
+      return (localStorage.getItem('chat_cnr_theme') as 'light' | 'dark') || 'dark';
+    } catch (e) {
+      return 'dark';
+    }
   });
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
@@ -377,10 +396,11 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
     }
   }, [user.email, isAdminPanelOpen]);
 
-  const activeSession = useMemo(() => 
-    sessions.find(s => s.id === activeSessionId) || null, 
-    [sessions, activeSessionId]
-  );
+  const activeSession = useMemo(() => {
+    if (!activeSessionId) return null;
+    const session = sessions.find(s => s.id === activeSessionId);
+    return session || null;
+  }, [sessions, activeSessionId]);
 
   useEffect(() => {
     if (!user) return;
@@ -391,6 +411,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
+      console.log("ChatApp: Sessions snapshot received", snapshot.size);
       const fetchedSessions = snapshot.docs.map(doc => ({
         id: doc.id,
         title: doc.data().title || 'Yeni Sohbet',
@@ -417,6 +438,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
       );
 
       const unsubscribe = onSnapshot(q, (snapshot) => {
+        console.log("ChatApp: Messages snapshot received", snapshot.size);
         const fetchedMessages = snapshot.docs.map(doc => ({
           ...doc.data(),
           timestamp: doc.data().timestamp?.toDate() || new Date(),
@@ -536,6 +558,14 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
 
   const handleUpgrade = async (priceId: string) => {
     if (!user) return;
+    
+    // Check if Stripe is configured
+    const stripeKey = process.env.VITE_STRIPE_PUBLISHABLE_KEY || '';
+    if (!stripeKey || stripeKey === 'undefined') {
+      alert("Hata: Ödeme sistemi (Stripe) henüz yapılandırılmamış. Lütfen Vercel üzerinden anahtarları ekleyin.");
+      return;
+    }
+
     setIsPaymentProcessing(true);
     try {
       const response = await fetch('/api/stripe/create-checkout-session', {
@@ -708,7 +738,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
       // Update session title and updatedAt
       await setDoc(doc(db, 'users', user.uid, 'sessions', activeSessionId!), {
         updatedAt: Timestamp.now(),
-        title: activeSession!.title === 'Yeni Sohbet' ? (text.slice(0, 30) + (text.length > 30 ? '...' : '')) : activeSession!.title
+        title: (activeSession?.title || 'Yeni Sohbet') === 'Yeni Sohbet' ? (text.slice(0, 30) + (text.length > 30 ? '...' : '')) : (activeSession?.title || 'Yeni Sohbet')
       }, { merge: true });
 
       await incrementUsage('messages');
@@ -722,7 +752,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
       let finalResponseText = "";
       const stream = geminiService.sendMessageStream(
         userMsg.text,
-        activeSession!.messages,
+        activeSession?.messages || [],
         userMsg.imageUrl,
         user.name,
         user.email,
@@ -871,7 +901,9 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                 <MessageSquare size={20} className="text-white" />
               </div>
               <div>
-                <h1 className="font-bold text-sm truncate max-w-[150px] md:max-w-none">{activeSession.title}</h1>
+        <h1 className="font-bold text-sm truncate max-w-[150px] md:max-w-none">
+          {activeSession?.title || (sessions.length > 0 ? 'Yükleniyor...' : 'Yeni Sohbet')}
+        </h1>
                 <div className="flex items-center gap-1.5">
                   <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></div>
                   <span className={`text-[10px] uppercase tracking-widest font-bold ${theme === 'dark' ? 'text-zinc-500' : 'text-zinc-400'}`}>Çevrimiçi</span>
