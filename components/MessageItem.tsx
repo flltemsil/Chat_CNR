@@ -90,7 +90,7 @@ const MessageItem: React.FC<MessageItemProps> = ({ message, themeColor, appearan
                         rel="noopener noreferrer"
                         className={`group flex items-center gap-2 text-xs ${isDark ? 'bg-zinc-900 hover:bg-zinc-800 border-zinc-800' : 'bg-zinc-50 hover:bg-zinc-100 border-zinc-200'} ${themeClasses.text} border px-3 py-2 rounded-xl transition-all max-w-[240px]`}
                       >
-                        <span className="truncate">{source.web.title || "Kaynak"}</span>
+                        <span className="truncate">{source.web?.title || "Kaynak"}</span>
                         <ExternalLink size={10} className="opacity-0 group-hover:opacity-100 transition-opacity" />
                       </a>
                     )

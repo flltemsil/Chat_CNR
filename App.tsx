@@ -10,6 +10,7 @@ import {
   Timestamp, addDoc, deleteDoc, getDocs, FirebaseUser,
   increment, serverTimestamp 
 } from './firebase';
+import firebaseConfig from './firebase-applet-config.json';
 
 const OWNER_EMAIL = "dorukaliarslan20@gmail.com";
 const INTEGRITY_TOKEN = "AUTHORIZED_BY_DORUK_ALI_ARSLAN_2026";
@@ -131,6 +132,11 @@ const App: React.FC = () => {
   const [isAuthLoading, setIsAuthLoading] = useState(true);
   useEffect(() => {
     console.log("App: Auth loading state", isAuthLoading);
+    console.log("App: Firebase Config Check", {
+      projectId: firebaseConfig.projectId,
+      databaseId: firebaseConfig.firestoreDatabaseId,
+      hasApiKey: !!firebaseConfig.apiKey
+    });
     
     // Check for missing API Key in production
     const apiKey = process.env.GEMINI_API_KEY || '';
@@ -188,9 +194,17 @@ const App: React.FC = () => {
         } else {
           setUser(null);
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error("User sync error:", err);
-        setError(err);
+        
+        let errorMessage = err;
+        if (err?.code === 'auth/unauthorized-domain') {
+          errorMessage = "Hata: Bu alan adı (domain) Firebase üzerinde yetkilendirilmemiş. Lütfen Firebase Console -> Auth -> Settings -> Authorized Domains kısmına Vercel linkinizi ekleyin.";
+        } else if (err?.message?.includes('permission-denied')) {
+          errorMessage = "Hata: Firestore erişim yetkisi reddedildi. Lütfen Security Rules (Güvenlik Kuralları) ayarlarınızı kontrol edin.";
+        }
+        
+        setError(errorMessage);
       } finally {
         setAuthLoading(false);
       }
@@ -215,15 +229,30 @@ const App: React.FC = () => {
         </div>
         <h1 className="text-2xl font-bold mb-2">Bir şeyler ters gitti</h1>
         <p className="text-zinc-400 mb-8 max-w-md">Uygulama başlatılırken bir hata oluştu. Lütfen sayfayı yenilemeyi deneyin.</p>
-        <div className="bg-zinc-900 p-4 rounded-xl text-left mb-8 w-full max-w-lg overflow-auto">
-          <code className="text-xs text-red-400">{error?.toString()}</code>
+        <div className="bg-zinc-900 p-4 rounded-xl text-left mb-8 w-full max-w-lg overflow-auto border border-red-500/30">
+          <p className="text-xs text-zinc-500 mb-2 uppercase tracking-widest font-bold">Hata Detayı:</p>
+          <code className="text-xs text-red-400 whitespace-pre-wrap">
+            {typeof error === 'object' ? JSON.stringify(error, Object.getOwnPropertyNames(error), 2) : error?.toString()}
+          </code>
         </div>
-        <button 
-          onClick={() => window.location.reload()}
-          className="px-8 py-3 bg-blue-600 hover:bg-blue-700 rounded-xl font-bold transition-all"
-        >
-          Sayfayı Yenile
-        </button>
+        <div className="flex gap-4">
+          <button 
+            onClick={() => window.location.reload()}
+            className="px-8 py-3 bg-zinc-800 hover:bg-zinc-700 rounded-xl font-bold transition-all"
+          >
+            Yeniden Dene
+          </button>
+          <button 
+            onClick={() => {
+              // Clear local storage and reload
+              localStorage.clear();
+              window.location.reload();
+            }}
+            className="px-8 py-3 bg-red-600 hover:bg-red-700 rounded-xl font-bold transition-all"
+          >
+            Sıfırla ve Yenile
+          </button>
+        </div>
       </div>
     );
   }
@@ -710,7 +739,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
             ...s, 
             messages: updatedMessages, 
             updatedAt: new Date(),
-            title: s.title === 'Yeni Sohbet' ? (text.slice(0, 30) + (text.length > 30 ? '...' : '')) : s.title
+            title: s?.title === 'Yeni Sohbet' ? (text.slice(0, 30) + (text.length > 30 ? '...' : '')) : s?.title
           } 
         : s
     ));
@@ -820,7 +849,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
           </div>
 
           <div className="flex-1 overflow-y-auto p-4 space-y-2 custom-scrollbar">
-            {sessions.map(session => (
+            {sessions.filter(s => s && s.id).map(session => (
               <div 
                 key={session.id}
                 onClick={() => {
@@ -831,7 +860,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
               >
                 <div className="flex items-center gap-3 overflow-hidden">
                   <MessageSquare size={16} className="flex-shrink-0" />
-                  <span className="text-sm truncate font-medium">{session.title}</span>
+                  <span className="text-sm truncate font-medium">{session?.title}</span>
                 </div>
                 <button 
                   onClick={(e) => deleteSession(session.id, e)}
