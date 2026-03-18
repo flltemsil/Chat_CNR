@@ -443,10 +443,10 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
       console.log("ChatApp: Sessions snapshot received", snapshot.size);
       const fetchedSessions = snapshot.docs.map(doc => ({
         id: doc.id,
-        title: doc.data().title || 'Yeni Sohbet',
+        title: doc.data()?.title || 'Yeni Sohbet',
         ...doc.data(),
-        updatedAt: doc.data().updatedAt?.toDate() || new Date(),
-        createdAt: doc.data().createdAt?.toDate() || new Date(),
+        updatedAt: doc.data()?.updatedAt?.toDate() || new Date(),
+        createdAt: doc.data()?.createdAt?.toDate() || new Date(),
         messages: []
       })) as ChatSession[];
       
@@ -470,11 +470,11 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
         console.log("ChatApp: Messages snapshot received", snapshot.size);
         const fetchedMessages = snapshot.docs.map(doc => ({
           ...doc.data(),
-          timestamp: doc.data().timestamp?.toDate() || new Date(),
+          timestamp: doc.data()?.timestamp?.toDate() || new Date(),
         })) as Message[];
 
         setSessions(prev => prev.map(s => 
-          s.id === activeSessionId ? { ...s, messages: fetchedMessages } : s
+          (s && s.id === activeSessionId) ? { ...s, messages: fetchedMessages } : s
         ));
       });
 
