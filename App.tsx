@@ -375,8 +375,8 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
     const unsubscribe = onSnapshot(usageRef, (docSnap) => {
       if (docSnap.exists()) {
         setDailyUsage({
-          messages: docSnap.data().messages || 0,
-          images: docSnap.data().images || 0
+          messages: docSnap.data()?.messages || 0,
+          images: docSnap.data()?.images || 0
         });
       } else {
         setDailyUsage({ messages: 0, images: 0 });
@@ -658,7 +658,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
   };
 
   const handleGenerateImage = async () => {
-    if (!input.trim() || !activeSession) return;
+    if (!input.trim() || !activeSession || !activeSession.messages) return;
     if (!checkLimit('images')) return;
     
     const prompt = input.trim();
@@ -669,7 +669,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
       timestamp: new Date(),
     };
 
-    const updatedMessages = [...activeSession.messages, userMsg];
+    const updatedMessages = [...(activeSession.messages || []), userMsg];
     setSessions(prev => prev.map(s => 
       s.id === activeSessionId ? { ...s, messages: updatedMessages, updatedAt: new Date() } : s
     ));
@@ -731,7 +731,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
       timestamp: new Date(),
     };
 
-    const updatedMessages = [...activeSession.messages, userMsg];
+    const updatedMessages = [...(activeSession?.messages || []), userMsg];
     
     setSessions(prev => prev.map(s => 
       s.id === activeSessionId 
@@ -970,11 +970,11 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
 
         {/* Messages Area */}
         <main className="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-6">
-          {activeSession ? (
-            activeSession.messages.map((msg) => (
-              <MessageItem key={msg.id} message={msg} themeColor="blue" appearance={theme} />
-            ))
-          ) : (
+        {activeSession && activeSession.messages ? (
+          activeSession.messages.map((msg) => (
+            <MessageItem key={msg.id} message={msg} themeColor="blue" appearance={theme} />
+          ))
+        ) : (
             <div className="h-full flex flex-col items-center justify-center text-center p-8">
               <div className="w-20 h-20 bg-zinc-800/50 rounded-3xl flex items-center justify-center mb-6">
                 <MessageSquare size={40} className="text-zinc-600" />
