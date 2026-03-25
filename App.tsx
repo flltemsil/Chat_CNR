@@ -718,7 +718,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
 
   const handleSend = async (e?: React.FormEvent | null, overrideInput?: string) => {
     if (e) e.preventDefault();
-    if (!activeSession) return;
+    if (!activeSession || !activeSession.messages) return;
     if (!checkLimit('messages')) return;
     const text = overrideInput || input;
     if (!text.trim() && !selectedImage) return;
