@@ -33,6 +33,13 @@ service cloud.firestore {
     //   - imageUrl: string (optional)
     //   - timestamp: timestamp (required)
     //
+    // Collection: users/{userId}/usage/{dateStr}
+    // Document ID: {dateStr} (YYYY-MM-DD)
+    // Fields:
+    //   - messages: number (optional)
+    //   - images: number (optional)
+    //   - updatedAt: timestamp (optional)
+    //
     // ===============================================================
 
     // ===============================================================
@@ -88,6 +95,13 @@ service cloud.firestore {
              data.timestamp is timestamp;
     }
 
+    function isValidUsage(data) {
+      return data.keys().hasOnly(['messages', 'images', 'updatedAt']) &&
+             (!('messages' in data) || data.messages is number) &&
+             (!('images' in data) || data.images is number) &&
+             (!('updatedAt' in data) || data.updatedAt is timestamp);
+    }
+
     // ===============================================================
     // Rules
     // ===============================================================
@@ -115,6 +129,11 @@ service cloud.firestore {
       allow read, write: if isOwner(userId) || isAdmin();
       allow create: if isOwner(userId) && isValidMessage(request.resource.data);
       allow update: if isOwner(userId) && isValidMessage(request.resource.data);
+    }
+
+    match /users/{userId}/usage/{dateStr} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create, update: if isOwner(userId) && isValidUsage(request.resource.data);
     }
 
     // Global admin access to all users (for the developer to see email list)

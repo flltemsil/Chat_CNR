@@ -38,12 +38,26 @@
         "timestamp": { "type": "string", "format": "date-time" }
       },
       "required": ["id", "role", "text", "timestamp"]
+    },
+    "Usage": {
+      "title": "Usage",
+      "description": "Daily usage limits tracking",
+      "type": "object",
+      "properties": {
+        "messages": { "type": "integer", "description": "Number of messages sent today" },
+        "images": { "type": "integer", "description": "Number of images generated today" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      }
     }
   },
   "firestore": {
     "/users/{userId}": {
       "schema": "User",
       "description": "User profiles"
+    },
+    "/users/{userId}/usage/{dateStr}": {
+      "schema": "Usage",
+      "description": "Daily usage tracking for a user"
     },
     "/users/{userId}/sessions/{sessionId}": {
       "schema": "ChatSession",
