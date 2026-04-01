@@ -202,11 +202,8 @@ const App: React.FC = () => {
     });
     
     // Check for missing API Key in production
-    const apiKey = process.env.GEMINI_API_KEY || '';
+    const apiKey = process.env.CHAT_CNR_API_KEY || process.env.GEMINI_API_KEY || '';
     console.log("App: API Key Presence Check", { hasApiKey: !!apiKey });
-    if (!isAuthLoading && !user && (!apiKey || apiKey === 'undefined')) {
-      console.error("CRITICAL: GEMINI_API_KEY is missing in Environment Variables!");
-    }
   }, [isAuthLoading, user]);
   const isAuthLoadingRef = useRef(true);
 

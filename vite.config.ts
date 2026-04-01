@@ -12,8 +12,9 @@ export default defineConfig(({ mode }) => {
       },
       plugins: [react()],
       define: {
-        'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY || env.VITE_GEMINI_API_KEY || ''),
-        'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY || env.VITE_GEMINI_API_KEY || ''),
+        'process.env.API_KEY': JSON.stringify(process.env.GEMINI_API_KEY || env.CHAT_CNR_API_KEY || env.GEMINI_API_KEY || env.VITE_GEMINI_API_KEY || ''),
+        'process.env.GEMINI_API_KEY': JSON.stringify(process.env.GEMINI_API_KEY || env.CHAT_CNR_API_KEY || env.GEMINI_API_KEY || env.VITE_GEMINI_API_KEY || ''),
+        'process.env.CHAT_CNR_API_KEY': JSON.stringify(process.env.CHAT_CNR_API_KEY || process.env.GEMINI_API_KEY || env.CHAT_CNR_API_KEY || env.GEMINI_API_KEY || env.VITE_GEMINI_API_KEY || ''),
         'process.env.VITE_STRIPE_PUBLISHABLE_KEY': JSON.stringify(env.VITE_STRIPE_PUBLISHABLE_KEY || '')
       },
       resolve: {

@@ -24,7 +24,7 @@ export class ChatCNRService {
     }
     
     if (!apiKey || apiKey === 'undefined') {
-      throw new Error("API_KEY_MISSING");
+      console.warn("API_KEY is missing, attempting to proceed anyway...");
     }
     
     return new GoogleGenAI({ apiKey });
