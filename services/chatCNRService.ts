@@ -18,7 +18,7 @@ export class ChatCNRService {
   private getAI() {
     let apiKey = '';
     try {
-      apiKey = process.env.CHAT_CNR_API_KEY || process.env.GEMINI_API_KEY || process.env.API_KEY || '';
+      apiKey = localStorage.getItem('CHAT_CNR_CUSTOM_API_KEY') || process.env.CHAT_CNR_API_KEY || process.env.GEMINI_API_KEY || process.env.API_KEY || '';
     } catch (e) {
       console.warn("Could not access process.env", e);
     }
