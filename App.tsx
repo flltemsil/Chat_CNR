@@ -959,9 +959,9 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
       } catch (e) {}
 
       if (errorMessage.includes("429") || errorMessage.includes("quota") || errorMessage.includes("RESOURCE_EXHAUSTED")) {
-        setError("Günlük kullanım kotanız tamamen doldu. Lütfen yeni bir API anahtarı alıp Ayarlar'dan güncelleyin veya yarın tekrar deneyin.");
+        setError("Günlük kullanım kotanız tamamen doldu. Lütfen AI Studio Build panelindeki Settings kısmından API anahtarlarınızı kontrol edin veya yarın tekrar deneyin.");
       } else if (errorMessage === "API_KEY_MISSING") {
-        setError("API Anahtarı bulunamadı. Lütfen Ayarlar menüsünden anahtarınızı girin.");
+        setError("API Anahtarı bulunamadı. Lütfen AI Studio Build panelindeki Settings kısmından CHAT_CNR_API_KEY değişkenini tanımlayın.");
       } else {
         console.error("Chat Error:", err);
         setError(`Yanıt alınırken bir sorun oluştu: ${errorMessage}. Lütfen bağlantınızı kontrol edip tekrar deneyin.`);
