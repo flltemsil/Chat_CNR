@@ -3,7 +3,7 @@ import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { chatCNRService } from './services/chatCNRService';
 import { Message, ChatSession, ThemeColor, AppearanceMode } from './types';
 import MessageItem from './components/MessageItem';
-import { Menu, Plus, Trash2, X, MessageSquare, Settings, Mic, MicOff, Volume2, VolumeX, Camera, Send, User, LogOut, Shield, Users, Image as ImageIcon, Sparkles } from 'lucide-react';
+import { Menu, Plus, Trash2, X, MessageSquare, Settings, Mic, MicOff, Volume2, VolumeX, Camera, Send, User, LogOut, Shield, Users, Image as ImageIcon, Sparkles, Key, Check } from 'lucide-react';
 import { 
   auth, db, signInWithGoogle, logout, onAuthStateChanged, 
   collection, doc, setDoc, getDoc, onSnapshot, query, orderBy, 
@@ -365,15 +365,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
   const [input, setInput] = useState('');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [customApiKey, setCustomApiKey] = useState(localStorage.getItem('CHAT_CNR_CUSTOM_API_KEY') || '');
 
-  const handleSaveApiKey = () => {
-    if (customApiKey.trim()) {
-      localStorage.setItem('CHAT_CNR_CUSTOM_API_KEY', customApiKey.trim());
-      alert('API Anahtarı kaydedildi! Sayfa yenileniyor...');
-      window.location.reload();
-    }
-  };
   const [isPricingModalOpen, setIsPricingModalOpen] = useState(false);
   const [isPaymentProcessing, setIsPaymentProcessing] = useState(false);
   const [dailyUsage, setDailyUsage] = useState({ messages: 0, images: 0 });
@@ -926,7 +918,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
         user.name,
         user.email,
         isChatMode,
-        selectedModel === 'pro' ? 'gemini-3.1-pro-preview' : 'gemini-3-flash-preview'
+        selectedModel === 'pro' ? 'gemini-3.1-pro-preview' : 'gemini-flash-latest'
       );
 
       let isFirstChunk = true;
@@ -955,11 +947,24 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
         }
       }
     } catch (err: any) {
-      if (err.message === "API_KEY_MISSING") {
-        setError("Chat_CNR API Anahtarı (API_KEY) bulunamadı. Lütfen .env dosyanıza CHAT_CNR_API_KEY ekleyin ve uygulamayı yeniden başlatın.");
+      let errorMessage = err.message || 'Bilinmeyen hata';
+      
+      // Try to parse JSON error if it exists
+      try {
+        if (errorMessage.includes('{')) {
+          const jsonStr = errorMessage.substring(errorMessage.indexOf('{'));
+          const parsed = JSON.parse(jsonStr);
+          if (parsed.error?.message) errorMessage = parsed.error.message;
+        }
+      } catch (e) {}
+
+      if (errorMessage.includes("429") || errorMessage.includes("quota") || errorMessage.includes("RESOURCE_EXHAUSTED")) {
+        setError("Günlük kullanım kotanız tamamen doldu. Lütfen yeni bir API anahtarı alıp Ayarlar'dan güncelleyin veya yarın tekrar deneyin.");
+      } else if (errorMessage === "API_KEY_MISSING") {
+        setError("API Anahtarı bulunamadı. Lütfen Ayarlar menüsünden anahtarınızı girin.");
       } else {
         console.error("Chat Error:", err);
-        setError(`Yanıt alınırken bir sorun oluştu: ${err.message || 'Bilinmeyen hata'}. Lütfen bağlantınızı kontrol edip tekrar deneyin.`);
+        setError(`Yanıt alınırken bir sorun oluştu: ${errorMessage}. Lütfen bağlantınızı kontrol edip tekrar deneyin.`);
       }
     } finally {
       setIsLoading(false);
@@ -1456,40 +1461,6 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                       </button>
                     </div>
                   </div>
-                </div>
-
-                {/* API Key Section */}
-                <div className={`border rounded-2xl p-4 space-y-4 ${theme === 'dark' ? 'bg-[#1a1a1a] border-zinc-800' : 'bg-zinc-50 border-zinc-200'}`}>
-                  <div className="flex items-center gap-2 text-blue-400">
-                    <Key size={18} />
-                    <span className="font-bold text-xs uppercase tracking-widest">API ANAHTARI AYARI</span>
-                  </div>
-                  <p className="text-[10px] text-zinc-500 leading-relaxed">
-                    Eğer "API Key is missing" hatası alıyorsanız, Google AI Studio'dan aldığınız anahtarı buraya yapıştırın.
-                  </p>
-                  <div className="flex gap-2">
-                    <input
-                      type="password"
-                      placeholder="Anahtarı buraya yapıştırın..."
-                      className={`flex-1 bg-transparent border rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600/50 transition-all ${theme === 'dark' ? 'border-zinc-800 text-white' : 'border-zinc-200 text-zinc-900'}`}
-                      value={customApiKey}
-                      onChange={(e) => setCustomApiKey(e.target.value)}
-                    />
-                    <button
-                      onClick={handleSaveApiKey}
-                      className="px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-xl text-white text-xs font-bold transition-all active:scale-[0.95]"
-                    >
-                      Kaydet
-                    </button>
-                  </div>
-                  <a 
-                    href="https://aistudio.google.com/app/apikey" 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="text-[10px] text-blue-500 hover:underline block text-center"
-                  >
-                    Anahtarınız yoksa buraya tıklayarak ücretsiz alabilirsiniz.
-                  </a>
                 </div>
               </div>
 
