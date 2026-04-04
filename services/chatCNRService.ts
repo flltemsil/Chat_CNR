@@ -34,6 +34,7 @@ export class ChatCNRService {
     }
     
     if (apiKeys.length === 0) {
+      console.error(`No API keys found for ${isPro ? 'PRO' : 'STANDARD'} mode.`);
       throw new Error("API_KEY_MISSING");
     }
 
@@ -43,11 +44,29 @@ export class ChatCNRService {
     if (forceNextKey) {
       currentIndex = (currentIndex + 1) % apiKeys.length;
       localStorage.setItem(indexKey, currentIndex.toString());
-      console.log(`Switching to ${isPro ? 'Pro' : 'Standard'} API Key #${currentIndex + 1}`);
     }
 
     const apiKey = apiKeys[currentIndex];
+    
+    // Debug log (masked)
+    const maskedKey = apiKey ? `${apiKey.substring(0, 4)}...${apiKey.substring(apiKey.length - 4)}` : 'null';
+    console.log(`[ChatCNR] Using ${isPro ? 'PRO' : 'STANDARD'} Key #${currentIndex + 1}/${apiKeys.length}: ${maskedKey}`);
+    
     return { ai: new GoogleGenAI({ apiKey }), apiKey, totalKeys: apiKeys.length };
+  }
+
+  getDebugInfo(isPro: boolean = false) {
+    try {
+      const envKey = isPro 
+        ? process.env.CHAT_CNR_PRO_API_KEY 
+        : (process.env.CHAT_CNR_API_KEY || process.env.GEMINI_API_KEY || process.env.API_KEY);
+      
+      if (!envKey) return { totalKeys: 0 };
+      const keys = envKey.split(',').map(k => k.trim()).filter(k => k.length > 0);
+      return { totalKeys: keys.length };
+    } catch (e) {
+      return { totalKeys: 0 };
+    }
   }
 
   async generateImage(prompt: string): Promise<string> {
