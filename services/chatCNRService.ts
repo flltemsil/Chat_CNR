@@ -73,11 +73,12 @@ export class ChatCNRService {
         sourceVar = process.env.CHAT_CNR_API_KEY ? "CHAT_CNR_API_KEY" : (process.env.GEMINI_API_KEY ? "GEMINI_API_KEY" : "API_KEY");
       }
       
-      if (!envKey || envKey === 'undefined' || envKey === 'null') return { totalKeys: 0, sourceVar: "NONE" };
+      if (!envKey || envKey === 'undefined' || envKey === 'null') return { totalKeys: 0, sourceVar: "NONE", maskedKeys: [] };
       const keys = envKey.split(',').map(k => k.trim()).filter(k => k.length > 0);
-      return { totalKeys: keys.length, sourceVar };
+      const maskedKeys = keys.map(k => k.length > 8 ? `${k.substring(0, 4)}...${k.substring(k.length - 4)}` : '****');
+      return { totalKeys: keys.length, sourceVar, maskedKeys };
     } catch (e) {
-      return { totalKeys: 0, sourceVar: "ERROR" };
+      return { totalKeys: 0, sourceVar: "ERROR", maskedKeys: [] };
     }
   }
 
