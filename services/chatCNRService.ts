@@ -18,14 +18,20 @@ export class ChatCNRService {
   private getAI(forceNextKey: boolean = false, isPro: boolean = false) {
     let apiKeys: string[] = [];
     const indexKey = isPro ? 'CHAT_CNR_PRO_KEY_INDEX' : 'CHAT_CNR_KEY_INDEX';
+    let sourceVar = "NONE";
     
     try {
       // Use separate environment variables for Standard and Pro
-      const envKey = isPro 
-        ? process.env.CHAT_CNR_PRO_API_KEY 
-        : (process.env.CHAT_CNR_API_KEY || process.env.GEMINI_API_KEY || process.env.API_KEY);
+      let envKey = "";
+      if (isPro) {
+        envKey = process.env.CHAT_CNR_PRO_API_KEY || (import.meta as any).env?.VITE_CHAT_CNR_PRO_API_KEY || "";
+        sourceVar = "CHAT_CNR_PRO_API_KEY";
+      } else {
+        envKey = process.env.CHAT_CNR_API_KEY || (import.meta as any).env?.VITE_CHAT_CNR_API_KEY || process.env.GEMINI_API_KEY || process.env.API_KEY || "";
+        sourceVar = process.env.CHAT_CNR_API_KEY ? "CHAT_CNR_API_KEY" : (process.env.GEMINI_API_KEY ? "GEMINI_API_KEY" : "API_KEY");
+      }
         
-      if (envKey) {
+      if (envKey && envKey !== 'undefined' && envKey !== 'null') {
         // Support multiple keys separated by commas
         apiKeys = envKey.split(',').map(k => k.trim()).filter(k => k.length > 0);
       }
@@ -34,7 +40,7 @@ export class ChatCNRService {
     }
     
     if (apiKeys.length === 0) {
-      console.error(`No API keys found for ${isPro ? 'PRO' : 'STANDARD'} mode.`);
+      console.error(`[ChatCNR] CRITICAL: No API keys found for ${isPro ? 'PRO' : 'STANDARD'} mode. Source: ${sourceVar}`);
       throw new Error("API_KEY_MISSING");
     }
 
@@ -50,22 +56,28 @@ export class ChatCNRService {
     
     // Debug log (masked)
     const maskedKey = apiKey ? `${apiKey.substring(0, 4)}...${apiKey.substring(apiKey.length - 4)}` : 'null';
-    console.log(`[ChatCNR] Using ${isPro ? 'PRO' : 'STANDARD'} Key #${currentIndex + 1}/${apiKeys.length}: ${maskedKey}`);
+    console.log(`[ChatCNR] Mode: ${isPro ? 'PRO' : 'STANDARD'}, Source: ${sourceVar}, Key: ${currentIndex + 1}/${apiKeys.length} (${maskedKey})`);
     
     return { ai: new GoogleGenAI({ apiKey }), apiKey, totalKeys: apiKeys.length };
   }
 
   getDebugInfo(isPro: boolean = false) {
     try {
-      const envKey = isPro 
-        ? process.env.CHAT_CNR_PRO_API_KEY 
-        : (process.env.CHAT_CNR_API_KEY || process.env.GEMINI_API_KEY || process.env.API_KEY);
+      let envKey = "";
+      let sourceVar = "NONE";
+      if (isPro) {
+        envKey = process.env.CHAT_CNR_PRO_API_KEY || (import.meta as any).env?.VITE_CHAT_CNR_PRO_API_KEY || "";
+        sourceVar = "CHAT_CNR_PRO_API_KEY";
+      } else {
+        envKey = process.env.CHAT_CNR_API_KEY || (import.meta as any).env?.VITE_CHAT_CNR_API_KEY || process.env.GEMINI_API_KEY || process.env.API_KEY || "";
+        sourceVar = process.env.CHAT_CNR_API_KEY ? "CHAT_CNR_API_KEY" : (process.env.GEMINI_API_KEY ? "GEMINI_API_KEY" : "API_KEY");
+      }
       
-      if (!envKey) return { totalKeys: 0 };
+      if (!envKey || envKey === 'undefined' || envKey === 'null') return { totalKeys: 0, sourceVar: "NONE" };
       const keys = envKey.split(',').map(k => k.trim()).filter(k => k.length > 0);
-      return { totalKeys: keys.length };
+      return { totalKeys: keys.length, sourceVar };
     } catch (e) {
-      return { totalKeys: 0 };
+      return { totalKeys: 0, sourceVar: "ERROR" };
     }
   }
 
