@@ -131,9 +131,9 @@ export class ChatCNRService {
     }
   }
 
-  async *sendMessageStream(prompt: string, history: Message[] = [], currentImage?: string, userName?: string, userEmail?: string, isChatMode: boolean = false, modelName: string = 'gemini-2.0-flash-exp'): AsyncGenerator<{ text: string; sources: GroundingChunk[] }> {
-    // Revert to Gemini 2.0 if 3.0 was passed but failing, or use what was passed
-    const activeModel = modelName === 'gemini-3-flash-preview' ? 'gemini-2.0-flash-exp' : modelName;
+  async *sendMessageStream(prompt: string, history: Message[] = [], currentImage?: string, userName?: string, userEmail?: string, isChatMode: boolean = false, modelName: string = 'gemini-3.1-flash-lite-preview'): AsyncGenerator<{ text: string; sources: GroundingChunk[] }> {
+    // Use the requested model or fallback to Lite if 3.0 Flash is still problematic
+    const activeModel = (modelName === 'gemini-3-flash-preview' || modelName === 'gemini-2.0-flash-exp') ? 'gemini-3.1-flash-lite-preview' : modelName;
     const isPro = activeModel.includes('pro');
     
     let attempts = 0;
@@ -227,7 +227,7 @@ ${SYSTEM_INSTRUCTION.split('Kurallar:')[1]}`;
     }
   }
 
-  async sendMessage(prompt: string, history: Message[] = [], currentImage?: string, userName?: string, userEmail?: string, isChatMode: boolean = false, modelName: string = 'gemini-2.0-flash-exp'): Promise<{ text: string; sources: GroundingChunk[] }> {
+  async sendMessage(prompt: string, history: Message[] = [], currentImage?: string, userName?: string, userEmail?: string, isChatMode: boolean = false, modelName: string = 'gemini-3.1-flash-lite-preview'): Promise<{ text: string; sources: GroundingChunk[] }> {
     // Full Protection Integrity Check
     const isNameIntact = SYSTEM_INSTRUCTION.includes("Doruk Ali ARSLAN");
     const isTokenIntact = INTEGRITY_CHECK === "DORUK_ALI_ARSLAN_SECURE_2026";
@@ -236,7 +236,7 @@ ${SYSTEM_INSTRUCTION.split('Kurallar:')[1]}`;
       throw new Error("Security Breach: System Integrity Compromised. AI access revoked.");
     }
 
-    const activeModel = modelName === 'gemini-3-flash-preview' ? 'gemini-2.0-flash-exp' : modelName;
+    const activeModel = (modelName === 'gemini-3-flash-preview' || modelName === 'gemini-2.0-flash-exp') ? 'gemini-3.1-flash-lite-preview' : modelName;
     const isPro = activeModel.includes('pro');
     let attempts = 0;
     const { totalKeys } = this.getAI(false, isPro);
