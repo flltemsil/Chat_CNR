@@ -918,7 +918,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
         user.name,
         user.email,
         isChatMode,
-        selectedModel === 'pro' ? 'gemini-3.1-pro-preview' : 'gemini-flash-latest'
+        selectedModel === 'pro' ? 'gemini-3.1-pro-preview' : 'gemini-2.0-flash-exp'
       );
 
       let isFirstChunk = true;
