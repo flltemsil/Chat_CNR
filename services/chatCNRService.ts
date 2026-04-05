@@ -214,12 +214,14 @@ ${SYSTEM_INSTRUCTION.split('Kurallar:')[1]}`;
         }
         return; // Success, exit loop
       } catch (error: any) {
-        if (error.message?.includes('429') && attempts < totalKeys - 1) {
+        const isQuotaError = error.message?.includes('429') || error.message?.includes('quota') || error.message?.includes('RESOURCE_EXHAUSTED');
+        if (isQuotaError && attempts < totalKeys - 1) {
           attempts++;
-          console.warn(`Quota exceeded for ${isPro ? 'Pro' : 'Standard'} key #${attempts}. Retrying with next key...`);
+          console.warn(`[ChatCNR] Quota exceeded for ${isPro ? 'PRO' : 'STANDARD'} key #${attempts}. Waiting 2s before retry...`);
+          await new Promise(resolve => setTimeout(resolve, 2000));
           continue;
         }
-        console.error("Chat_CNR API Error:", error);
+        console.error("[ChatCNR] API Error (Stream):", error);
         throw error;
       }
     }
@@ -309,12 +311,14 @@ ${SYSTEM_INSTRUCTION.split('Kurallar:')[1]}`;
 
         return { text, sources };
       } catch (error: any) {
-        if (error.message?.includes('429') && attempts < totalKeys - 1) {
+        const isQuotaError = error.message?.includes('429') || error.message?.includes('quota') || error.message?.includes('RESOURCE_EXHAUSTED');
+        if (isQuotaError && attempts < totalKeys - 1) {
           attempts++;
-          console.warn(`Quota exceeded for ${isPro ? 'Pro' : 'Standard'} key #${attempts}. Retrying with next key...`);
+          console.warn(`[ChatCNR] Quota exceeded for ${isPro ? 'PRO' : 'STANDARD'} key #${attempts}. Waiting 2s before retry...`);
+          await new Promise(resolve => setTimeout(resolve, 2000));
           continue;
         }
-        console.error("Chat_CNR API Error:", error);
+        console.error("[ChatCNR] API Error (Single):", error);
         throw error;
       }
     }
