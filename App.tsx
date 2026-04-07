@@ -647,16 +647,6 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
       handleFirestoreError(err, OperationType.WRITE, `users/${user.uid}/sessions/${newId}`);
     }
     
-    const initialMsg = INITIAL_MESSAGE(newId + '-1', user.name);
-    try {
-      await setDoc(doc(db, 'users', user.uid, 'sessions', newId, 'messages', initialMsg.id), {
-        ...initialMsg,
-        timestamp: Timestamp.now()
-      });
-    } catch (err) {
-      handleFirestoreError(err, OperationType.WRITE, `users/${user.uid}/sessions/${newId}/messages/${initialMsg.id}`);
-    }
-
     setActiveSessionId(newId);
     setIsSidebarOpen(false);
   };
@@ -1188,9 +1178,16 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
 
         {/* Messages Area */}
         <main className="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-6">
-        {activeSession && activeSession.messages ? (
+        {activeSession ? (
           <>
-            {activeSession.messages.map((msg) => (
+            {activeSession.messages && activeSession.messages.length === 0 && (
+              <MessageItem 
+                message={INITIAL_MESSAGE('welcome', user.name)} 
+                themeColor="blue" 
+                appearance={theme} 
+              />
+            )}
+            {activeSession.messages && activeSession.messages.map((msg) => (
               <MessageItem key={msg.id} message={msg} themeColor="blue" appearance={theme} />
             ))}
             {streamingMessage && (

@@ -3,7 +3,7 @@ import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
 import Stripe from "stripe";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from "@google/generative-ai";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -56,10 +56,10 @@ app.post("/api/chat/stream", async (req, res) => {
           model: activeModel,
           systemInstruction: systemInstruction,
           safetySettings: [
-            { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
-            { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
-            { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
-            { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
+            { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
+            { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
+            { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_NONE },
+            { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE },
           ]
         });
 
@@ -67,32 +67,43 @@ app.post("/api/chat/stream", async (req, res) => {
         const sanitizedHistory = [];
         let lastRole = null;
 
-        for (const m of history) {
-          if (!m.text || !m.text.trim()) continue;
-          
-          const currentRole = m.role === 'model' ? 'model' : 'user';
-          
-          // Skip if it's the first message and it's from the model
-          if (sanitizedHistory.length === 0 && currentRole === 'model') continue;
-          
-          // Skip if it's the same role as the last one (Gemini requires alternation)
-          if (currentRole === lastRole) continue;
+        if (Array.isArray(history)) {
+          for (const m of history) {
+            if (!m.text || !m.text.trim()) continue;
+            
+            const currentRole = m.role === 'model' ? 'model' : 'user';
+            
+            // Skip if it's the first message and it's from the model
+            if (sanitizedHistory.length === 0 && currentRole === 'model') continue;
+            
+            // Skip if it's the same role as the last one (Gemini requires alternation)
+            if (currentRole === lastRole) continue;
 
-          sanitizedHistory.push({
-            role: currentRole,
-            parts: [{ text: m.text }]
-          });
-          lastRole = currentRole;
+            sanitizedHistory.push({
+              role: currentRole,
+              parts: [{ text: m.text }]
+            });
+            lastRole = currentRole;
+          }
         }
 
-        console.log(`[Server Proxy] History length: ${sanitizedHistory.length}, Prompt: "${prompt.substring(0, 50)}..."`);
+        console.log(`[Server Proxy] Sanitized History length: ${sanitizedHistory.length}, Prompt: "${prompt.substring(0, 50)}..."`);
 
-        const chatSession = generativeModel.startChat({
-          history: sanitizedHistory
-        });
-
-        console.log(`[Server Proxy] Sending message to Gemini...`);
-        const result = await chatSession.sendMessageStream(prompt);
+        let result;
+        if (sanitizedHistory.length === 0) {
+          // First message or history was invalid/empty
+          console.log(`[Server Proxy] Using generateContentStream (First Message)`);
+          result = await generativeModel.generateContentStream({
+            contents: [{ role: 'user', parts: [{ text: prompt }] }]
+          });
+        } else {
+          // Continuing a conversation
+          console.log(`[Server Proxy] Using sendMessageStream (Conversation)`);
+          const chatSession = generativeModel.startChat({
+            history: sanitizedHistory
+          });
+          result = await chatSession.sendMessageStream(prompt);
+        }
 
         let chunkCount = 0;
         for await (const chunk of result.stream) {
@@ -103,9 +114,9 @@ app.post("/api/chat/stream", async (req, res) => {
               chunkCount++;
             }
           } catch (e) {
-            console.warn(`[Server Proxy] Chunk ${chunkCount + 1} has no text. FinishReason: ${chunk.candidates?.[0]?.finishReason}`);
-            // If there's no text but there's a candidate, it might be a safety block
-            if (chunk.candidates?.[0]?.finishReason === 'SAFETY') {
+            const finishReason = chunk.candidates?.[0]?.finishReason;
+            console.warn(`[Server Proxy] Chunk ${chunkCount + 1} has no text. FinishReason: ${finishReason}`);
+            if (finishReason === 'SAFETY') {
               res.write(`data: ${JSON.stringify({ error: "İçerik güvenlik filtresine takıldı." })}\n\n`);
             }
           }
