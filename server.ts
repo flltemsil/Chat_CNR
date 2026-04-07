@@ -3,6 +3,7 @@ import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
 import Stripe from "stripe";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -15,6 +16,132 @@ const app = express();
 const PORT = 3000;
 
 app.use(express.json());
+
+// Gemini API Proxy (Server-Side)
+app.post("/api/chat/stream", async (req, res) => {
+  const { prompt, history, model, systemInstruction, isPro } = req.body;
+  
+  const envKeyStandard = process.env.CHAT_CNR_API_KEY || process.env.GEMINI_API_KEY || process.env.API_KEY || "";
+  const envKeyPro = process.env.CHAT_CNR_PRO_API_KEY || "";
+  const envKey = isPro ? (envKeyPro || envKeyStandard) : envKeyStandard;
+
+  if (!envKey || envKey.length < 5) {
+    return res.status(500).json({ error: "API_KEY_MISSING_ON_SERVER" });
+  }
+
+  const apiKeys = envKey.split(',').map(k => k.trim()).filter(k => k.length > 5);
+  
+  // Model variations to try if 404 occurs
+  const modelVariations = isPro 
+    ? ['gemini-1.5-pro', 'gemini-1.5-pro-latest', 'gemini-pro'] 
+    : ['gemini-1.5-flash', 'gemini-1.5-flash-latest', 'gemini-1.5-flash-002', 'gemini-pro'];
+
+  // Set headers for SSE (Streaming)
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+
+  let success = false;
+  
+  // Try each key
+  for (let keyIndex = 0; keyIndex < apiKeys.length; keyIndex++) {
+    const apiKey = apiKeys[keyIndex];
+    const genAI = new GoogleGenerativeAI(apiKey);
+
+    // Try each model variation
+    for (const activeModel of modelVariations) {
+      try {
+        const generativeModel = genAI.getGenerativeModel({ 
+          model: activeModel,
+          systemInstruction: systemInstruction 
+        });
+
+        const chatSession = generativeModel.startChat({
+          history: history.map((m: any) => ({
+            role: m.role === 'model' ? 'model' : 'user',
+            parts: [{ text: m.text }]
+          }))
+        });
+
+        const result = await chatSession.sendMessageStream(prompt);
+
+        for await (const chunk of result.stream) {
+          const chunkText = chunk.text();
+          res.write(`data: ${JSON.stringify({ text: chunkText })}\n\n`);
+        }
+
+        res.write('data: [DONE]\n\n');
+        res.end();
+        success = true;
+        break; // Success with this model
+      } catch (error: any) {
+        const isQuota = error.message?.includes('429') || error.message?.includes('quota');
+        const isNotFound = error.message?.includes('404') || error.message?.includes('not found');
+
+        if (isNotFound) {
+          console.warn(`[Server Proxy] Model ${activeModel} not found with key ${keyIndex + 1}. Trying next variation...`);
+          continue; 
+        }
+
+        if (isQuota && keyIndex < apiKeys.length - 1) {
+          console.warn(`[Server Proxy] Quota exceeded for key ${keyIndex + 1}. Trying next key...`);
+          break; // Break model loop to try next key
+        }
+
+        // If it's the last key and last model, or a different error, report it
+        if (keyIndex === apiKeys.length - 1 && activeModel === modelVariations[modelVariations.length - 1]) {
+          console.error("[Server Proxy Final Error]:", error);
+          res.write(`data: ${JSON.stringify({ error: error.message })}\n\n`);
+          res.end();
+          return;
+        }
+        
+        // If it's a quota error but we have more keys, break to next key
+        if (isQuota) break;
+      }
+    }
+    if (success) break;
+  }
+});
+
+// Image Generation Proxy
+app.post("/api/chat/image", async (req, res) => {
+  const { prompt } = req.body;
+  const envKey = process.env.CHAT_CNR_API_KEY || process.env.GEMINI_API_KEY || process.env.API_KEY || "";
+  if (!envKey) return res.status(500).json({ error: "API_KEY_MISSING" });
+  const apiKeys = envKey.split(',').map(k => k.trim());
+
+  for (const apiKey of apiKeys) {
+    try {
+      const genAI = new GoogleGenerativeAI(apiKey);
+      // For images, we use the specific multimodal capabilities of 1.5 Flash
+      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+      
+      const result = await model.generateContent([
+        prompt,
+        "Generate a high quality image based on this description. Return the image data."
+      ]);
+      
+      const response = await result.response;
+      // Gemini 1.5 Flash can return inlineData if configured, 
+      // but standard generateContent usually returns text.
+      // If the user wants actual DALL-E style image gen, they'd need a different model.
+      // For now, we'll return the text or any inline data found.
+      const part = response.candidates?.[0]?.content?.parts?.[0];
+      
+      if (part?.inlineData) {
+        res.json({ imageUrl: `data:${part.inlineData.mimeType};base64,${part.inlineData.data}` });
+      } else {
+        res.json({ text: response.text() });
+      }
+      return;
+    } catch (error: any) {
+      if (error.message?.includes('429') && apiKeys.indexOf(apiKey) < apiKeys.length - 1) continue;
+      res.status(500).json({ error: error.message });
+      return;
+    }
+  }
+});
 
 // Stripe Checkout Session Route
 app.post("/api/stripe/create-checkout-session", async (req, res) => {

@@ -200,10 +200,6 @@ const App: React.FC = () => {
       databaseId: firebaseConfig.firestoreDatabaseId,
       hasApiKey: !!firebaseConfig.apiKey
     });
-    
-    // Check for missing API Key in production
-    const apiKey = process.env.CHAT_CNR_API_KEY || process.env.GEMINI_API_KEY || '';
-    console.log("App: API Key Presence Check", { hasApiKey: !!apiKey });
   }, [isAuthLoading, user]);
   const isAuthLoadingRef = useRef(true);
 
@@ -685,7 +681,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
     if (!user) return;
     
     // Check if Stripe is configured
-    const stripeKey = process.env.VITE_STRIPE_PUBLISHABLE_KEY || '';
+    const stripeKey = (import.meta as any).env?.VITE_STRIPE_PUBLISHABLE_KEY || '';
     if (!stripeKey || stripeKey === 'undefined') {
       alert("Hata: Ödeme sistemi (Stripe) henüz yapılandırılmamış. Lütfen Vercel üzerinden anahtarları ekleyin.");
       return;
