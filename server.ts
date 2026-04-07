@@ -51,6 +51,7 @@ app.post("/api/chat/stream", async (req, res) => {
     // Try each model variation
     for (const activeModel of modelVariations) {
       try {
+        console.log(`[Server Proxy] Trying key ${keyIndex + 1}/${apiKeys.length} with model ${activeModel}`);
         const generativeModel = genAI.getGenerativeModel({ 
           model: activeModel,
           systemInstruction: systemInstruction 
@@ -79,7 +80,7 @@ app.post("/api/chat/stream", async (req, res) => {
         const isNotFound = error.message?.includes('404') || error.message?.includes('not found');
 
         if (isNotFound) {
-          console.warn(`[Server Proxy] Model ${activeModel} not found with key ${keyIndex + 1}. Trying next variation...`);
+          console.warn(`[Server Proxy] Model ${activeModel} not found. Trying next variation...`);
           continue; 
         }
 
@@ -88,19 +89,24 @@ app.post("/api/chat/stream", async (req, res) => {
           break; // Break model loop to try next key
         }
 
-        // If it's the last key and last model, or a different error, report it
+        // If it's a different error or we're out of options
+        console.error(`[Server Proxy Error] Key ${keyIndex + 1}, Model ${activeModel}:`, error.message);
+        
         if (keyIndex === apiKeys.length - 1 && activeModel === modelVariations[modelVariations.length - 1]) {
-          console.error("[Server Proxy Final Error]:", error);
           res.write(`data: ${JSON.stringify({ error: error.message })}\n\n`);
           res.end();
           return;
         }
         
-        // If it's a quota error but we have more keys, break to next key
         if (isQuota) break;
       }
     }
     if (success) break;
+  }
+
+  if (!success && !res.writableEnded) {
+    res.write(`data: ${JSON.stringify({ error: "Tüm API anahtarları ve model varyasyonları denendi ancak sonuç alınamadı." })}\n\n`);
+    res.end();
   }
 });
 

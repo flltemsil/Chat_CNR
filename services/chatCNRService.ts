@@ -87,8 +87,15 @@ ${SYSTEM_INSTRUCTION.split('Kurallar:')[1]}`;
       });
 
       if (!response.ok) {
-        const errData = await response.json();
-        throw new Error(errData.error || "Sunucu hatası");
+        const contentType = response.headers.get("content-type");
+        if (contentType && contentType.includes("application/json")) {
+          const errData = await response.json();
+          throw new Error(errData.error || `Sunucu hatası (${response.status})`);
+        } else {
+          const text = await response.text();
+          console.error("Non-JSON Error Response:", text.substring(0, 200));
+          throw new Error(`Sunucu hatası (${response.status}): Beklenmedik yanıt formatı. Lütfen sunucu loglarını kontrol edin.`);
+        }
       }
 
       const reader = response.body?.getReader();
