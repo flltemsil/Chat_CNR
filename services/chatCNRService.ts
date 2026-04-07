@@ -163,11 +163,13 @@ export class ChatCNRService {
     }
   }
 
-  async *sendMessageStream(prompt: string, history: Message[] = [], currentImage?: string, userName?: string, userEmail?: string, isChatMode: boolean = false, modelName: string = 'gemini-flash-latest'): AsyncGenerator<{ text: string; sources: GroundingChunk[] }> {
-    // Use gemini-flash-latest (1.5 Flash) as the most stable default for standard mode
+  async *sendMessageStream(prompt: string, history: Message[] = [], currentImage?: string, userName?: string, userEmail?: string, isChatMode: boolean = false, modelName: string = 'gemini-1.5-flash'): AsyncGenerator<{ text: string; sources: GroundingChunk[] }> {
+    // Use stable model names to avoid 404 errors
     let activeModel = modelName;
-    if (modelName === 'gemini-3-flash-preview' || modelName === 'gemini-2.0-flash-exp' || modelName === 'gemini-3.1-flash-lite-preview') {
-      activeModel = 'gemini-flash-latest';
+    if (modelName.includes('pro')) {
+      activeModel = 'gemini-1.5-pro';
+    } else {
+      activeModel = 'gemini-1.5-flash';
     }
     const isPro = activeModel.includes('pro');
     
@@ -250,18 +252,22 @@ ${SYSTEM_INSTRUCTION.split('Kurallar:')[1]}`;
         return; // Success, exit loop
       } catch (error: any) {
         const isQuotaError = error.message?.includes('429') || error.message?.includes('quota') || error.message?.includes('RESOURCE_EXHAUSTED');
-        if (isQuotaError && attempts < totalKeys - 1) {
-          // Mark current key as exhausted for today
-          const { apiKey } = this.getAI(false, isPro);
-          const exhaustedKeys = JSON.parse(localStorage.getItem('CHAT_CNR_EXHAUSTED_KEYS') || '[]');
-          if (!exhaustedKeys.includes(apiKey)) {
-            exhaustedKeys.push(apiKey);
-            localStorage.setItem('CHAT_CNR_EXHAUSTED_KEYS', JSON.stringify(exhaustedKeys));
+        const isNotFoundError = error.message?.includes('404') || error.message?.includes('not found') || error.message?.includes('NOT_FOUND');
+        
+        if ((isQuotaError || isNotFoundError) && attempts < totalKeys - 1) {
+          // Mark current key as exhausted for today if it's a quota error
+          if (isQuotaError) {
+            const { apiKey } = this.getAI(false, isPro);
+            const exhaustedKeys = JSON.parse(localStorage.getItem('CHAT_CNR_EXHAUSTED_KEYS') || '[]');
+            if (!exhaustedKeys.includes(apiKey)) {
+              exhaustedKeys.push(apiKey);
+              localStorage.setItem('CHAT_CNR_EXHAUSTED_KEYS', JSON.stringify(exhaustedKeys));
+            }
           }
           
           attempts++;
-          console.warn(`[ChatCNR] Quota exceeded for ${isPro ? 'PRO' : 'STANDARD'} key #${attempts}. Waiting 2s before retry...`);
-          await new Promise(resolve => setTimeout(resolve, 2000));
+          console.warn(`[ChatCNR] ${isNotFoundError ? 'Model not found' : 'Quota exceeded'} for ${isPro ? 'PRO' : 'STANDARD'} key #${attempts}. Retrying...`);
+          await new Promise(resolve => setTimeout(resolve, 1000));
           continue;
         }
         console.error("[ChatCNR] API Error (Stream):", error);
@@ -270,7 +276,7 @@ ${SYSTEM_INSTRUCTION.split('Kurallar:')[1]}`;
     }
   }
 
-  async sendMessage(prompt: string, history: Message[] = [], currentImage?: string, userName?: string, userEmail?: string, isChatMode: boolean = false, modelName: string = 'gemini-flash-latest'): Promise<{ text: string; sources: GroundingChunk[] }> {
+  async sendMessage(prompt: string, history: Message[] = [], currentImage?: string, userName?: string, userEmail?: string, isChatMode: boolean = false, modelName: string = 'gemini-1.5-flash'): Promise<{ text: string; sources: GroundingChunk[] }> {
     // Full Protection Integrity Check
     const isNameIntact = SYSTEM_INSTRUCTION.includes("Doruk Ali ARSLAN");
     const isTokenIntact = INTEGRITY_CHECK === "DORUK_ALI_ARSLAN_SECURE_2026";
@@ -280,8 +286,10 @@ ${SYSTEM_INSTRUCTION.split('Kurallar:')[1]}`;
     }
 
     let activeModel = modelName;
-    if (modelName === 'gemini-3-flash-preview' || modelName === 'gemini-2.0-flash-exp' || modelName === 'gemini-3.1-flash-lite-preview') {
-      activeModel = 'gemini-flash-latest';
+    if (modelName.includes('pro')) {
+      activeModel = 'gemini-1.5-pro';
+    } else {
+      activeModel = 'gemini-1.5-flash';
     }
     const isPro = activeModel.includes('pro');
     let attempts = 0;
@@ -359,18 +367,22 @@ ${SYSTEM_INSTRUCTION.split('Kurallar:')[1]}`;
         return { text, sources };
       } catch (error: any) {
         const isQuotaError = error.message?.includes('429') || error.message?.includes('quota') || error.message?.includes('RESOURCE_EXHAUSTED');
-        if (isQuotaError && attempts < totalKeys - 1) {
-          // Mark current key as exhausted for today
-          const { apiKey } = this.getAI(false, isPro);
-          const exhaustedKeys = JSON.parse(localStorage.getItem('CHAT_CNR_EXHAUSTED_KEYS') || '[]');
-          if (!exhaustedKeys.includes(apiKey)) {
-            exhaustedKeys.push(apiKey);
-            localStorage.setItem('CHAT_CNR_EXHAUSTED_KEYS', JSON.stringify(exhaustedKeys));
+        const isNotFoundError = error.message?.includes('404') || error.message?.includes('not found') || error.message?.includes('NOT_FOUND');
+        
+        if ((isQuotaError || isNotFoundError) && attempts < totalKeys - 1) {
+          // Mark current key as exhausted for today if it's a quota error
+          if (isQuotaError) {
+            const { apiKey } = this.getAI(false, isPro);
+            const exhaustedKeys = JSON.parse(localStorage.getItem('CHAT_CNR_EXHAUSTED_KEYS') || '[]');
+            if (!exhaustedKeys.includes(apiKey)) {
+              exhaustedKeys.push(apiKey);
+              localStorage.setItem('CHAT_CNR_EXHAUSTED_KEYS', JSON.stringify(exhaustedKeys));
+            }
           }
           
           attempts++;
-          console.warn(`[ChatCNR] Quota exceeded for ${isPro ? 'PRO' : 'STANDARD'} key #${attempts}. Waiting 2s before retry...`);
-          await new Promise(resolve => setTimeout(resolve, 2000));
+          console.warn(`[ChatCNR] ${isNotFoundError ? 'Model not found' : 'Quota exceeded'} for ${isPro ? 'PRO' : 'STANDARD'} key #${attempts}. Retrying...`);
+          await new Promise(resolve => setTimeout(resolve, 1000));
           continue;
         }
         console.error("[ChatCNR] API Error (Single):", error);

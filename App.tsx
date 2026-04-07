@@ -917,7 +917,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
         user.name,
         user.email,
         isChatMode,
-        selectedModel === 'pro' ? 'gemini-3.1-pro-preview' : 'gemini-flash-latest'
+        selectedModel === 'pro' ? 'gemini-1.5-pro' : 'gemini-1.5-flash'
       );
 
       // Show streaming message locally only
@@ -1518,7 +1518,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                         const btn = document.getElementById('test-api-btn');
                         if (btn) btn.innerText = "Test Ediliyor...";
                         try {
-                          const result = await chatCNRService.sendMessage("Merhaba, sistem testi.", [], undefined, "Sistem", "test@test.com", false, selectedModel === 'pro' ? 'gemini-3.1-pro-preview' : 'gemini-flash-latest');
+                          const result = await chatCNRService.sendMessage("Merhaba, sistem testi.", [], undefined, "Sistem", "test@test.com", false, selectedModel === 'pro' ? 'gemini-1.5-pro' : 'gemini-1.5-flash');
                           alert("Bağlantı Başarılı! AI Yanıtı: " + result.text.substring(0, 50) + "...");
                         } catch (err: any) {
                           alert("Bağlantı Hatası: " + (err.message || "Bilinmeyen hata"));
