@@ -58,19 +58,33 @@ app.post("/api/chat/stream", async (req, res) => {
         });
 
         const chatSession = generativeModel.startChat({
-          history: history.map((m: any) => ({
-            role: m.role === 'model' ? 'model' : 'user',
-            parts: [{ text: m.text }]
-          }))
+          history: history
+            .filter((m: any) => m.text && m.text.trim().length > 0)
+            .map((m: any) => ({
+              role: m.role === 'model' ? 'model' : 'user',
+              parts: [{ text: m.text }]
+            }))
         });
 
+        console.log(`[Server Proxy] Sending message to Gemini...`);
         const result = await chatSession.sendMessageStream(prompt);
 
+        let chunkCount = 0;
         for await (const chunk of result.stream) {
           const chunkText = chunk.text();
-          res.write(`data: ${JSON.stringify({ text: chunkText })}\n\n`);
+          if (chunkText) {
+            res.write(`data: ${JSON.stringify({ text: chunkText })}\n\n`);
+            chunkCount++;
+          }
         }
 
+        if (chunkCount === 0) {
+          console.warn(`[Server Proxy] Stream was empty for model ${activeModel}`);
+          // Don't break yet, try next variation or key if possible
+          throw new Error("EMPTY_STREAM");
+        }
+
+        console.log(`[Server Proxy] Stream completed successfully with ${chunkCount} chunks.`);
         res.write('data: [DONE]\n\n');
         res.end();
         success = true;

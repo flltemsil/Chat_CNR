@@ -921,7 +921,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
 
       let isFirstChunk = true;
       for await (const chunk of stream) {
-        if (isFirstChunk) {
+        if (isFirstChunk && chunk.text.trim()) {
           setIsLoading(false);
           isFirstChunk = false;
         }
@@ -929,7 +929,13 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
         finalSources = chunk.sources || [];
         
         // Update local streaming state ONLY
-        setStreamingMessage(prev => prev ? { ...prev, text: chunk.text, sources: finalSources } : null);
+        if (chunk.text.trim()) {
+          setStreamingMessage(prev => prev ? { ...prev, text: chunk.text, sources: finalSources } : null);
+        }
+      }
+
+      if (!finalResponseText.trim()) {
+        throw new Error("Yapay zeka boş bir yanıt döndürdü. Lütfen tekrar deneyin.");
       }
 
       // Final update to Firestore ONCE at the end

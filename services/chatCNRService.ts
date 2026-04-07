@@ -103,17 +103,25 @@ ${SYSTEM_INSTRUCTION.split('Kurallar:')[1]}`;
 
       const decoder = new TextDecoder();
       let fullText = "";
+      let lineBuffer = "";
 
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
 
-        const chunk = decoder.decode(value);
-        const lines = chunk.split('\n');
+        const chunk = decoder.decode(value, { stream: true });
+        lineBuffer += chunk;
+        
+        const lines = lineBuffer.split('\n');
+        // Keep the last partial line in the buffer
+        lineBuffer = lines.pop() || "";
 
         for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            const dataStr = line.substring(6);
+          const trimmedLine = line.trim();
+          if (!trimmedLine) continue;
+          
+          if (trimmedLine.startsWith('data: ')) {
+            const dataStr = trimmedLine.substring(6);
             if (dataStr === '[DONE]') break;
             
             try {
@@ -124,9 +132,23 @@ ${SYSTEM_INSTRUCTION.split('Kurallar:')[1]}`;
                 yield { text: fullText, sources: [] };
               }
             } catch (e) {
-              console.warn("Parse error in stream:", e);
+              console.warn("Parse error in stream line:", line, e);
             }
           }
+        }
+      }
+      
+      // Process any remaining data in the buffer
+      if (lineBuffer.trim().startsWith('data: ')) {
+        const dataStr = lineBuffer.trim().substring(6);
+        if (dataStr !== '[DONE]') {
+          try {
+            const data = JSON.parse(dataStr);
+            if (data.text) {
+              fullText += data.text;
+              yield { text: fullText, sources: [] };
+            }
+          } catch (e) {}
         }
       }
     } catch (error: any) {
