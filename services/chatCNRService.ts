@@ -8,7 +8,8 @@ Amacın: Kullanıcının sorduğu her soruya en güncel, net ve doğru cevabı v
 Kurallar:
 - "Sen kim tarafından yapıldın?", "Yaratıcın kim?", "Seni kim kodladı?" gibi sorulara kesinlikle şu cevabı ver: "Ben gücümü yazılımcı ve oyun tasarımcısı Doruk Ali ARSLAN'ın kodlarıyla Çınar Keleş'in adıyla oluştum".
 - Güncel bilgi (döviz kurları, hava durumu, haberler vb.) gerektiren sorularda MUTLAKA internet verisine (Google Search) dayan.
-- "Dolar kaç TL?", "Hava nasıl?" gibi soruları yanıtlarken arama aracını kullan ve en güncel veriyi ver.
+- "Dolar kaç TL?", "Euro kaç TL?" gibi soruları yanıtlarken arama aracını kullan ve en güncel veriyi ver. 
+- ÖNEMLİ: Şu an 2026 yılındayız. Eğer arama sonuçları eski tarihli (2024, 2025 vb.) ise bunu kullanıcıya belirt ve elindeki en güncel veriyi 2026 bağlamında değerlendir.
 - Kısa, net ve anlaşılır cevap ver.
 - Kullanıcı hangi dilde soruyorsa o dilde cevap ver.`;
 
@@ -22,18 +23,24 @@ export class ChatCNRService {
     
     try {
       // Use separate environment variables for Standard and Pro
+      const envKeyStandard = process.env.CHAT_CNR_API_KEY || (import.meta as any).env?.VITE_CHAT_CNR_API_KEY || process.env.GEMINI_API_KEY || process.env.API_KEY || "";
+      const envKeyPro = process.env.CHAT_CNR_PRO_API_KEY || (import.meta as any).env?.VITE_CHAT_CNR_PRO_API_KEY || "";
+      
       let envKey = "";
       if (isPro) {
-        envKey = process.env.CHAT_CNR_PRO_API_KEY || (import.meta as any).env?.VITE_CHAT_CNR_PRO_API_KEY || "";
+        envKey = envKeyPro;
         sourceVar = "CHAT_CNR_PRO_API_KEY";
       } else {
-        envKey = process.env.CHAT_CNR_API_KEY || (import.meta as any).env?.VITE_CHAT_CNR_API_KEY || process.env.GEMINI_API_KEY || process.env.API_KEY || "";
-        sourceVar = process.env.CHAT_CNR_API_KEY ? "CHAT_CNR_API_KEY" : (process.env.GEMINI_API_KEY ? "GEMINI_API_KEY" : "API_KEY");
+        envKey = envKeyStandard;
+        if (process.env.CHAT_CNR_API_KEY) sourceVar = "CHAT_CNR_API_KEY";
+        else if (process.env.GEMINI_API_KEY) sourceVar = "GEMINI_API_KEY";
+        else if (process.env.API_KEY) sourceVar = "API_KEY";
+        else sourceVar = "VITE_VARS";
       }
         
-      if (envKey && envKey !== 'undefined' && envKey !== 'null') {
+      if (envKey && envKey !== 'undefined' && envKey !== 'null' && envKey.length > 5) {
         // Support multiple keys separated by commas
-        apiKeys = envKey.split(',').map(k => k.trim()).filter(k => k.length > 0);
+        apiKeys = envKey.split(',').map(k => k.trim()).filter(k => k.length > 5);
       }
     } catch (e) {
       console.warn("Could not access environment keys", e);
@@ -47,6 +54,18 @@ export class ChatCNRService {
     // Get current key index or start at 0
     let currentIndex = parseInt(localStorage.getItem(indexKey) || '0');
     
+    // Smart Quota Management: Check if we should reset exhausted keys because it's a new day
+    const lastUsageDate = localStorage.getItem('CHAT_CNR_LAST_USAGE_DATE');
+    const today = new Date().toDateString();
+    
+    if (lastUsageDate !== today) {
+      console.log(`[ChatCNR] New day detected (${today}). Resetting key rotation and exhaustion states.`);
+      localStorage.setItem('CHAT_CNR_LAST_USAGE_DATE', today);
+      localStorage.removeItem('CHAT_CNR_EXHAUSTED_KEYS'); // Clear exhausted keys list
+      currentIndex = 0;
+      localStorage.setItem(indexKey, '0');
+    }
+
     if (forceNextKey) {
       currentIndex = (currentIndex + 1) % apiKeys.length;
       localStorage.setItem(indexKey, currentIndex.toString());
@@ -54,6 +73,13 @@ export class ChatCNRService {
 
     const apiKey = apiKeys[currentIndex];
     
+    // Check if this specific key is marked as exhausted today
+    const exhaustedKeys = JSON.parse(localStorage.getItem('CHAT_CNR_EXHAUSTED_KEYS') || '[]');
+    if (exhaustedKeys.includes(apiKey) && !forceNextKey && apiKeys.length > 1) {
+      console.warn(`[ChatCNR] Key ${currentIndex + 1} was previously exhausted today. Skipping...`);
+      return this.getAI(true, isPro); // Try next key
+    }
+
     // Debug log (masked)
     const maskedKey = apiKey ? `${apiKey.substring(0, 4)}...${apiKey.substring(apiKey.length - 4)}` : 'null';
     console.log(`[ChatCNR] Mode: ${isPro ? 'PRO' : 'STANDARD'}, Source: ${sourceVar}, Key: ${currentIndex + 1}/${apiKeys.length} (${maskedKey})`);
@@ -63,18 +89,24 @@ export class ChatCNRService {
 
   getDebugInfo(isPro: boolean = false) {
     try {
+      const envKeyStandard = process.env.CHAT_CNR_API_KEY || (import.meta as any).env?.VITE_CHAT_CNR_API_KEY || process.env.GEMINI_API_KEY || process.env.API_KEY || "";
+      const envKeyPro = process.env.CHAT_CNR_PRO_API_KEY || (import.meta as any).env?.VITE_CHAT_CNR_PRO_API_KEY || "";
+      
       let envKey = "";
       let sourceVar = "NONE";
       if (isPro) {
-        envKey = process.env.CHAT_CNR_PRO_API_KEY || (import.meta as any).env?.VITE_CHAT_CNR_PRO_API_KEY || "";
+        envKey = envKeyPro;
         sourceVar = "CHAT_CNR_PRO_API_KEY";
       } else {
-        envKey = process.env.CHAT_CNR_API_KEY || (import.meta as any).env?.VITE_CHAT_CNR_API_KEY || process.env.GEMINI_API_KEY || process.env.API_KEY || "";
-        sourceVar = process.env.CHAT_CNR_API_KEY ? "CHAT_CNR_API_KEY" : (process.env.GEMINI_API_KEY ? "GEMINI_API_KEY" : "API_KEY");
+        envKey = envKeyStandard;
+        if (process.env.CHAT_CNR_API_KEY) sourceVar = "CHAT_CNR_API_KEY";
+        else if (process.env.GEMINI_API_KEY) sourceVar = "GEMINI_API_KEY";
+        else if (process.env.API_KEY) sourceVar = "API_KEY";
+        else sourceVar = "VITE_VARS";
       }
       
-      if (!envKey || envKey === 'undefined' || envKey === 'null') return { totalKeys: 0, sourceVar: "NONE", maskedKeys: [] };
-      const keys = envKey.split(',').map(k => k.trim()).filter(k => k.length > 0);
+      if (!envKey || envKey === 'undefined' || envKey === 'null' || envKey.length < 5) return { totalKeys: 0, sourceVar: "NONE", maskedKeys: [] };
+      const keys = envKey.split(',').map(k => k.trim()).filter(k => k.length > 5);
       const maskedKeys = keys.map(k => k.length > 8 ? `${k.substring(0, 4)}...${k.substring(k.length - 4)}` : '****');
       return { totalKeys: keys.length, sourceVar, maskedKeys };
     } catch (e) {
@@ -170,7 +202,7 @@ ${SYSTEM_INSTRUCTION.split('Kurallar:')[1]}`;
         const dateStr = now.toLocaleDateString('tr-TR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
         const timeStr = now.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
 
-        const systemInstruction = `${baseInstruction}\n${identityInstruction}Şu bir tarih: ${dateStr}, saat: ${timeStr}. İsmini her mesajda tekrarlama, sadece doğal olduğunda veya sohbetin başında kullan. Kullanıcının hitap şekline ve üslubuna uyum sağla (örneğin sana 'bro' diyorsa sen de ona 'bro' diyebilirsin).`;
+        const systemInstruction = `${baseInstruction}\n\n[SİSTEM ZAMAN BİLGİSİ - KRİTİK]\nŞu anki gerçek zamanlı tarih: ${dateStr}\nŞu anki saat: ${timeStr}\n\n${identityInstruction}İsmini her mesajda tekrarlama, sadece doğal olduğunda veya sohbetin başında kullan. Kullanıcının hitap şekline ve üslubuna uyum sağla (örneğin sana 'bro' diyorsa sen de ona 'bro' diyebilirsin). Her zaman bu tarihi baz alarak güncel bilgi ver.`;
 
         const contents = history.slice(-10).map(m => {
           const parts: any[] = [{ text: m.text }];
@@ -219,6 +251,14 @@ ${SYSTEM_INSTRUCTION.split('Kurallar:')[1]}`;
       } catch (error: any) {
         const isQuotaError = error.message?.includes('429') || error.message?.includes('quota') || error.message?.includes('RESOURCE_EXHAUSTED');
         if (isQuotaError && attempts < totalKeys - 1) {
+          // Mark current key as exhausted for today
+          const { apiKey } = this.getAI(false, isPro);
+          const exhaustedKeys = JSON.parse(localStorage.getItem('CHAT_CNR_EXHAUSTED_KEYS') || '[]');
+          if (!exhaustedKeys.includes(apiKey)) {
+            exhaustedKeys.push(apiKey);
+            localStorage.setItem('CHAT_CNR_EXHAUSTED_KEYS', JSON.stringify(exhaustedKeys));
+          }
+          
           attempts++;
           console.warn(`[ChatCNR] Quota exceeded for ${isPro ? 'PRO' : 'STANDARD'} key #${attempts}. Waiting 2s before retry...`);
           await new Promise(resolve => setTimeout(resolve, 2000));
@@ -275,7 +315,7 @@ ${SYSTEM_INSTRUCTION.split('Kurallar:')[1]}`;
         const dateStr = now.toLocaleDateString('tr-TR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
         const timeStr = now.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
 
-        const systemInstruction = `${baseInstruction}\n${identityInstruction}Şu anki tarih: ${dateStr}, saat: ${timeStr}. İsmini her mesajda tekrarlama, sadece doğal olduğunda veya sohbetin başında kullan. Kullanıcının hitap şekline ve üslubuna uyum sağla (örneğin sana 'bro' diyorsa sen de ona 'bro' diyebilirsin).`;
+        const systemInstruction = `${baseInstruction}\n\n[SİSTEM ZAMAN BİLGİSİ - KRİTİK]\nŞu anki gerçek zamanlı tarih: ${dateStr}\nŞu anki saat: ${timeStr}\n\n${identityInstruction}İsmini her mesajda tekrarlama, sadece doğal olduğunda veya sohbetin başında kullan. Kullanıcının hitap şekline ve üslubuna uyum sağla (örneğin sana 'bro' diyorsa sen de ona 'bro' diyebilirsin). Her zaman bu tarihi baz alarak güncel bilgi ver.`;
 
         const contents = history.slice(-10).map(m => {
           const parts: any[] = [{ text: m.text }];
@@ -320,6 +360,14 @@ ${SYSTEM_INSTRUCTION.split('Kurallar:')[1]}`;
       } catch (error: any) {
         const isQuotaError = error.message?.includes('429') || error.message?.includes('quota') || error.message?.includes('RESOURCE_EXHAUSTED');
         if (isQuotaError && attempts < totalKeys - 1) {
+          // Mark current key as exhausted for today
+          const { apiKey } = this.getAI(false, isPro);
+          const exhaustedKeys = JSON.parse(localStorage.getItem('CHAT_CNR_EXHAUSTED_KEYS') || '[]');
+          if (!exhaustedKeys.includes(apiKey)) {
+            exhaustedKeys.push(apiKey);
+            localStorage.setItem('CHAT_CNR_EXHAUSTED_KEYS', JSON.stringify(exhaustedKeys));
+          }
+          
           attempts++;
           console.warn(`[ChatCNR] Quota exceeded for ${isPro ? 'PRO' : 'STANDARD'} key #${attempts}. Waiting 2s before retry...`);
           await new Promise(resolve => setTimeout(resolve, 2000));

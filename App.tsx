@@ -401,12 +401,20 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
     }
   });
   const [deletingSessionId, setDeletingSessionId] = useState<string | null>(null);
+  const [streamingMessage, setStreamingMessage] = useState<{ id: string, text: string, sources: any[] } | null>(null);
 
   useEffect(() => {
     try {
       localStorage.setItem('chat_cnr_model', selectedModel);
     } catch (e) {}
   }, [selectedModel]);
+
+  const [currentTime, setCurrentTime] = useState(new Date());
+  
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   // Stripe Payment Success Handling
   useEffect(() => {
@@ -900,17 +908,8 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
 
       await incrementUsage('messages');
 
-      // Add empty model message to Firestore (placeholder)
-      try {
-        await setDoc(doc(db, 'users', user.uid, 'sessions', activeSessionId!, 'messages', modelMsgId), cleanForFirestore({
-          ...initialModelMsg,
-          timestamp: Timestamp.now()
-        }));
-      } catch (err) {
-        handleFirestoreError(err, OperationType.WRITE, `users/${user.uid}/sessions/${activeSessionId}/messages/${modelMsgId}`);
-      }
-
       let finalResponseText = "";
+      let finalSources: any[] = [];
       const stream = chatCNRService.sendMessageStream(
         userMsg.text,
         activeSession?.messages || [],
@@ -921,6 +920,9 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
         selectedModel === 'pro' ? 'gemini-3.1-pro-preview' : 'gemini-flash-latest'
       );
 
+      // Show streaming message locally only
+      setStreamingMessage({ id: modelMsgId, text: '', sources: [] });
+
       let isFirstChunk = true;
       for await (const chunk of stream) {
         if (isFirstChunk) {
@@ -928,17 +930,26 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
           isFirstChunk = false;
         }
         finalResponseText = chunk.text;
+        finalSources = chunk.sources || [];
         
-        // Update model message in Firestore
-        try {
-          await setDoc(doc(db, 'users', user.uid, 'sessions', activeSessionId!, 'messages', modelMsgId), {
-            text: chunk.text,
-            sources: chunk.sources || []
-          }, { merge: true });
-        } catch (err) {
-          handleFirestoreError(err, OperationType.UPDATE, `users/${user.uid}/sessions/${activeSessionId}/messages/${modelMsgId}`);
-        }
+        // Update local streaming state ONLY
+        setStreamingMessage(prev => prev ? { ...prev, text: chunk.text, sources: finalSources } : null);
       }
+
+      // Final update to Firestore ONCE at the end
+      try {
+        await setDoc(doc(db, 'users', user.uid, 'sessions', activeSessionId!, 'messages', modelMsgId), cleanForFirestore({
+          id: modelMsgId,
+          role: 'model',
+          text: finalResponseText,
+          sources: finalSources,
+          timestamp: Timestamp.now()
+        }));
+      } catch (err) {
+        handleFirestoreError(err, OperationType.WRITE, `users/${user.uid}/sessions/${activeSessionId}/messages/${modelMsgId}`);
+      }
+
+      setStreamingMessage(null);
 
       if (isAutoSpeak) {
         const audioBase64 = await chatCNRService.textToSpeech(finalResponseText);
@@ -1130,6 +1141,10 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                   <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></div>
                   <span className={`text-[10px] uppercase tracking-widest font-bold ${theme === 'dark' ? 'text-zinc-500' : 'text-zinc-400'}`}>Çevrimiçi</span>
                   <span className="mx-2 text-zinc-700">•</span>
+                  <span className={`text-[10px] font-medium ${theme === 'dark' ? 'text-zinc-400' : 'text-zinc-500'}`}>
+                    {currentTime.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' })} {currentTime.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                  <span className="mx-2 text-zinc-700">•</span>
                   <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-lg ${selectedModel === 'pro' ? 'bg-amber-500/20 text-amber-500 border border-amber-500/30' : 'bg-blue-500/10 text-blue-400 border border-blue-500/20'}`}>
                     {selectedModel === 'pro' ? 'Chat_CNR Pro' : 'Chat_CNR Standart'}
                   </span>
@@ -1168,9 +1183,25 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
         {/* Messages Area */}
         <main className="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-6">
         {activeSession && activeSession.messages ? (
-          activeSession.messages.map((msg) => (
-            <MessageItem key={msg.id} message={msg} themeColor="blue" appearance={theme} />
-          ))
+          <>
+            {activeSession.messages.map((msg) => (
+              <MessageItem key={msg.id} message={msg} themeColor="blue" appearance={theme} />
+            ))}
+            {streamingMessage && (
+              <MessageItem 
+                key={streamingMessage.id} 
+                message={{ 
+                  id: streamingMessage.id,
+                  role: 'model', 
+                  text: streamingMessage.text,
+                  sources: streamingMessage.sources,
+                  timestamp: new Date() 
+                }} 
+                themeColor="blue" 
+                appearance={theme} 
+              />
+            )}
+          </>
         ) : (
             <div className="h-full flex flex-col items-center justify-center text-center p-8">
               <div className="w-20 h-20 bg-zinc-800/50 rounded-3xl flex items-center justify-center mb-6">
@@ -1190,9 +1221,17 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
             </div>
           )}
           {error && (
-            <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-4 rounded-2xl text-sm flex items-center gap-3">
-              <X size={18} />
-              <span>{error}</span>
+            <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-4 rounded-2xl text-sm flex flex-col gap-3">
+              <div className="flex items-center gap-3">
+                <X size={18} />
+                <span>{error}</span>
+              </div>
+              <button 
+                onClick={() => { setError(null); handleSend(); }}
+                className="self-start px-4 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg font-bold transition-all text-xs"
+              >
+                Yeniden Dene
+              </button>
             </div>
           )}
           <div ref={messagesEndRef} />
