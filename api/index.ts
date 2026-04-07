@@ -12,8 +12,8 @@ const stripe = process.env.STRIPE_SECRET_KEY
   ? new Stripe(process.env.STRIPE_SECRET_KEY) 
   : null;
 
-const app = express();
-const PORT = 3000;
+export const app = express();
+const PORT = Number(process.env.PORT) || 3000;
 
 app.use(express.json());
 
@@ -243,7 +243,7 @@ if (process.env.NODE_ENV !== "production") {
     // However, to be safe with Express 5's path-to-regexp v8, we use the most compatible string.
     const url = req.originalUrl;
     try {
-      let template = fs.readFileSync(path.resolve(__dirname, "index.html"), "utf-8");
+      let template = fs.readFileSync(path.resolve(__dirname, "..", "index.html"), "utf-8");
       template = await vite.transformIndexHtml(url, template);
       res.status(200).set({ "Content-Type": "text/html" }).end(template);
     } catch (e) {
@@ -252,19 +252,43 @@ if (process.env.NODE_ENV !== "production") {
     }
   });
 } else {
-  const distPath = path.join(process.cwd(), "dist");
+  const distPath = path.join(__dirname, "..", "dist");
+  console.log(`[Server] Serving static files from: ${distPath}`);
   app.use(express.static(distPath));
   app.get("*", (req, res) => {
-    res.sendFile(path.join(distPath, "index.html"));
+    // If it's an API request that wasn't caught, return 404 JSON
+    if (req.path.startsWith('/api/')) {
+      return res.status(404).json({ error: `API endpoint ${req.path} not found.` });
+    }
+    
+    const indexPath = path.join(distPath, "index.html");
+    if (fs.existsSync(indexPath)) {
+      res.sendFile(indexPath);
+    } else {
+      res.status(404).send("Frontend build not found. Please run 'npm run build' first.");
+    }
   });
 }
 
-// Start the server
-const server = app.listen(PORT, "0.0.0.0", () => {
-  console.log(`Server running on http://localhost:${PORT}`);
+// Global Error Handler
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  console.error('[Server Error]', err);
+  res.status(err.status || 500).json({
+    error: err.message || "Internal Server Error",
+    path: req.path
+  });
 });
 
-// Handle server errors
-server.on('error', (err) => {
-  console.error('Server failed to start:', err);
-});
+// Start the server only if not on Vercel
+if (process.env.NODE_ENV !== "production" || !process.env.VERCEL) {
+  const server = app.listen(PORT, "0.0.0.0", () => {
+    console.log(`Server running on http://localhost:${PORT}`);
+  });
+
+  // Handle server errors
+  server.on('error', (err) => {
+    console.error('Server failed to start:', err);
+  });
+}
+
+export default app;

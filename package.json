@@ -4,8 +4,8 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "tsx server.ts",
-    "start": "node server.ts",
+    "dev": "tsx api/index.ts",
+    "start": "node api/index.ts",
     "build": "vite build",
     "preview": "vite preview",
     "lint": "tsc --noEmit",
@@ -14,7 +14,6 @@
     "build:ios": "vite build && npx cap sync ios"
   },
   "dependencies": {
-    "@google/genai": "^1.46.0",
     "@google/generative-ai": "^0.24.1",
     "@stripe/stripe-js": "^8.9.0",
     "@types/express": "^5.0.6",

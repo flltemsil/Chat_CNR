@@ -77,7 +77,7 @@ service cloud.firestore {
              data.uid is string && data.uid.size() > 0 &&
              data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
              data.email is string && isValidEmail(data.email) &&
-             data.role in ['admin', 'user'];
+             data.role in ['admin', 'user', 'pro'];
     }
 
     function isValidSession(data) {
