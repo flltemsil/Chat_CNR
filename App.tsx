@@ -1506,6 +1506,52 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
               </div>
 
               <div className="space-y-4">
+                <label className={`block text-xs font-bold uppercase tracking-widest ml-1 ${theme === 'dark' ? 'text-zinc-500' : 'text-zinc-400'}`}>Sistem Tanılama</label>
+                <div className={`border rounded-2xl p-4 space-y-4 ${theme === 'dark' ? 'bg-[#1a1a1a] border-zinc-800' : 'bg-zinc-50 border-zinc-200'}`}>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-bold">API Bağlantısı</p>
+                      <p className="text-[10px] text-zinc-500">Anahtarların durumunu kontrol et</p>
+                    </div>
+                    <button 
+                      onClick={async () => {
+                        const btn = document.getElementById('test-api-btn');
+                        if (btn) btn.innerText = "Test Ediliyor...";
+                        try {
+                          const result = await chatCNRService.sendMessage("Merhaba, sistem testi.", [], undefined, "Sistem", "test@test.com", false, selectedModel === 'pro' ? 'gemini-3.1-pro-preview' : 'gemini-flash-latest');
+                          alert("Bağlantı Başarılı! AI Yanıtı: " + result.text.substring(0, 50) + "...");
+                        } catch (err: any) {
+                          alert("Bağlantı Hatası: " + (err.message || "Bilinmeyen hata"));
+                          console.error("API Test Error:", err);
+                        } finally {
+                          if (btn) btn.innerText = "Bağlantıyı Test Et";
+                        }
+                      }}
+                      id="test-api-btn"
+                      className="bg-zinc-800 hover:bg-zinc-700 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all"
+                    >
+                      Bağlantıyı Test Et
+                    </button>
+                  </div>
+                  
+                  <div className="pt-2 border-t border-zinc-800/50">
+                    <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Aktif Anahtarlar</p>
+                    <div className="space-y-1">
+                      {(() => {
+                        const info = chatCNRService.getDebugInfo(selectedModel === 'pro');
+                        return info.maskedKeys.length > 0 ? info.maskedKeys.map((k, i) => (
+                          <div key={i} className="flex items-center justify-between text-[10px]">
+                            <code className="text-blue-400">{k}</code>
+                            <span className="text-zinc-500">{info.sourceVar}</span>
+                          </div>
+                        )) : <p className="text-[10px] text-red-500">Anahtar Bulunamadı!</p>;
+                      })()}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-4">
                 <label className={`block text-xs font-bold uppercase tracking-widest ml-1 ${theme === 'dark' ? 'text-zinc-500' : 'text-zinc-400'}`}>Model Ayarları</label>
                 <div className={`border rounded-2xl p-4 space-y-4 ${theme === 'dark' ? 'bg-[#1a1a1a] border-zinc-800' : 'bg-zinc-50 border-zinc-200'}`}>
                   <div className="flex items-center justify-between">

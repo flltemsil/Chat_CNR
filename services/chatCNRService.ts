@@ -232,7 +232,7 @@ ${SYSTEM_INSTRUCTION.split('Kurallar:')[1]}`;
         contents.push({ role: 'user', parts: currentParts });
 
         const responseStream = await ai.models.generateContentStream({
-          model: activeModel,
+          model: attempts === 0 ? activeModel : 'gemini-1.5-flash',
           contents,
           config: {
             systemInstruction,
@@ -345,7 +345,7 @@ ${SYSTEM_INSTRUCTION.split('Kurallar:')[1]}`;
         contents.push({ role: 'user', parts: currentParts });
 
         const response = await ai.models.generateContent({
-          model: modelName,
+          model: attempts === 0 ? modelName : 'gemini-1.5-flash',
           contents,
           config: {
             systemInstruction,
