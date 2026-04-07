@@ -1532,6 +1532,41 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
               </div>
 
               <div className="space-y-4">
+                <label className={`block text-xs font-bold uppercase tracking-widest ml-1 ${theme === 'dark' ? 'text-zinc-500' : 'text-zinc-400'}`}>Tehlikeli Bölge</label>
+                <div className={`border rounded-2xl p-4 space-y-4 ${theme === 'dark' ? 'bg-red-500/5 border-red-500/20' : 'bg-red-50 border-red-100'}`}>
+                  <p className="text-[10px] text-red-500/70 font-medium leading-relaxed">
+                    Bu işlem tüm sohbet geçmişinizi silecek ve API anahtarı kotalarını yerel olarak sıfırlayacaktır. Eğer "Kota Doldu" hatası alıyorsanız bu son çaredir.
+                  </p>
+                  <button 
+                    onClick={async () => {
+                      if (window.confirm("TÜM sohbet geçmişiniz silinecek ve sistem sıfırlanacak. Emin misiniz?")) {
+                        try {
+                          // Clear local storage
+                          localStorage.removeItem('CHAT_CNR_EXHAUSTED_KEYS');
+                          localStorage.removeItem('CHAT_CNR_KEY_INDEX');
+                          localStorage.removeItem('CHAT_CNR_PRO_KEY_INDEX');
+                          localStorage.removeItem('CHAT_CNR_LAST_USAGE_DATE');
+                          
+                          // Delete all sessions from Firestore
+                          for (const session of sessions) {
+                            await deleteDoc(doc(db, 'users', user.uid, 'sessions', session.id));
+                          }
+                          
+                          alert("Sistem başarıyla sıfırlandı. Uygulama yeniden başlatılıyor...");
+                          window.location.reload();
+                        } catch (err) {
+                          alert("Sıfırlama sırasında bir hata oluştu.");
+                        }
+                      }
+                    }}
+                    className="w-full py-3 bg-red-500 hover:bg-red-600 text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-lg shadow-red-900/20"
+                  >
+                    Sistemi ve Geçmişi Sıfırla
+                  </button>
+                </div>
+              </div>
+
+              <div className="space-y-4">
                 <label className={`block text-xs font-bold uppercase tracking-widest ml-1 ${theme === 'dark' ? 'text-zinc-500' : 'text-zinc-400'}`}>Hesap</label>
                 <button 
                   onClick={handleLogout}
