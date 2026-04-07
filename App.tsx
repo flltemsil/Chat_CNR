@@ -840,6 +840,8 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
     }
   };
 
+  const lastSentMessageRef = useRef<string>('');
+
   const handleSend = async (e?: React.FormEvent | null, overrideInput?: string) => {
     if (e) e.preventDefault();
     if (!activeSession || !activeSession.messages) return;
@@ -847,6 +849,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
     const text = overrideInput || input;
     if (!text.trim() && !selectedImage) return;
 
+    lastSentMessageRef.current = text;
     const userMsg: Message = {
       id: Date.now().toString(),
       role: 'user',
@@ -935,7 +938,8 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
       }
 
       if (!finalResponseText.trim()) {
-        throw new Error("Yapay zeka boş bir yanıt döndürdü. Lütfen tekrar deneyin.");
+        console.error("Empty response from AI. History sent:", activeSession?.messages);
+        throw new Error("Yapay zeka boş bir yanıt döndürdü. Bu genellikle sohbet geçmişindeki bir uyumsuzluktan kaynaklanır. Lütfen yeni bir sohbet başlatmayı deneyin.");
       }
 
       // Final update to Firestore ONCE at the end
@@ -1229,7 +1233,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                 <span>{error}</span>
               </div>
               <button 
-                onClick={() => { setError(null); handleSend(); }}
+                onClick={() => { setError(null); handleSend(null, lastSentMessageRef.current); }}
                 className="self-start px-4 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg font-bold transition-all text-xs"
               >
                 Yeniden Dene

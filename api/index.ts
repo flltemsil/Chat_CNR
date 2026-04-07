@@ -54,16 +54,41 @@ app.post("/api/chat/stream", async (req, res) => {
         console.log(`[Server Proxy] Trying key ${keyIndex + 1}/${apiKeys.length} with model ${activeModel}`);
         const generativeModel = genAI.getGenerativeModel({ 
           model: activeModel,
-          systemInstruction: systemInstruction 
+          systemInstruction: systemInstruction,
+          safetySettings: [
+            { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
+            { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
+            { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
+            { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
+          ]
         });
 
+        // Gemini history MUST start with 'user' and alternate roles
+        const sanitizedHistory = [];
+        let lastRole = null;
+
+        for (const m of history) {
+          if (!m.text || !m.text.trim()) continue;
+          
+          const currentRole = m.role === 'model' ? 'model' : 'user';
+          
+          // Skip if it's the first message and it's from the model
+          if (sanitizedHistory.length === 0 && currentRole === 'model') continue;
+          
+          // Skip if it's the same role as the last one (Gemini requires alternation)
+          if (currentRole === lastRole) continue;
+
+          sanitizedHistory.push({
+            role: currentRole,
+            parts: [{ text: m.text }]
+          });
+          lastRole = currentRole;
+        }
+
+        console.log(`[Server Proxy] History length: ${sanitizedHistory.length}, Prompt: "${prompt.substring(0, 50)}..."`);
+
         const chatSession = generativeModel.startChat({
-          history: history
-            .filter((m: any) => m.text && m.text.trim().length > 0)
-            .map((m: any) => ({
-              role: m.role === 'model' ? 'model' : 'user',
-              parts: [{ text: m.text }]
-            }))
+          history: sanitizedHistory
         });
 
         console.log(`[Server Proxy] Sending message to Gemini...`);
@@ -71,16 +96,23 @@ app.post("/api/chat/stream", async (req, res) => {
 
         let chunkCount = 0;
         for await (const chunk of result.stream) {
-          const chunkText = chunk.text();
-          if (chunkText) {
-            res.write(`data: ${JSON.stringify({ text: chunkText })}\n\n`);
-            chunkCount++;
+          try {
+            const chunkText = chunk.text();
+            if (chunkText) {
+              res.write(`data: ${JSON.stringify({ text: chunkText })}\n\n`);
+              chunkCount++;
+            }
+          } catch (e) {
+            console.warn(`[Server Proxy] Chunk ${chunkCount + 1} has no text. FinishReason: ${chunk.candidates?.[0]?.finishReason}`);
+            // If there's no text but there's a candidate, it might be a safety block
+            if (chunk.candidates?.[0]?.finishReason === 'SAFETY') {
+              res.write(`data: ${JSON.stringify({ error: "İçerik güvenlik filtresine takıldı." })}\n\n`);
+            }
           }
         }
 
         if (chunkCount === 0) {
-          console.warn(`[Server Proxy] Stream was empty for model ${activeModel}`);
-          // Don't break yet, try next variation or key if possible
+          console.warn(`[Server Proxy] Stream was empty for model ${activeModel}. Response:`, JSON.stringify(result.response || {}));
           throw new Error("EMPTY_STREAM");
         }
 
