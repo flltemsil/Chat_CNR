@@ -23,13 +23,6 @@ const LIMITS = {
   PRO: { MESSAGES: 250, IMAGES: 10 }
 };
 
-const INITIAL_MESSAGE = (id: string, userName?: string): Message => ({
-  id,
-  role: 'model',
-  text: `Merhaba${userName ? ' ' + userName : ''}, ben Chat_CNR. Bilgi merkezinize hoş geldiniz. Size nasıl yardımcı olabilirim?`,
-  timestamp: new Date(),
-});
-
 // Error Handling Spec for Firestore Operations
 enum OperationType {
   CREATE = 'create',
@@ -1181,11 +1174,42 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
         {activeSession ? (
           <>
             {activeSession.messages && activeSession.messages.length === 0 && (
-              <MessageItem 
-                message={INITIAL_MESSAGE('welcome', user.name)} 
-                themeColor="blue" 
-                appearance={theme} 
-              />
+              <div className="h-full flex flex-col items-center justify-center text-center p-8 animate-in fade-in zoom-in duration-700">
+                <div className="w-24 h-24 bg-blue-600 rounded-[2rem] flex items-center justify-center mb-8 shadow-2xl shadow-blue-900/40 rotate-12 hover:rotate-0 transition-transform duration-500">
+                  <MessageSquare size={48} className="text-white" />
+                </div>
+                <h2 className="text-4xl font-black mb-4 tracking-tight">
+                  Merhaba, <span className="text-blue-500">{user.name.split(' ')[0]}</span>
+                </h2>
+                <p className={`text-lg font-medium max-w-md mx-auto leading-relaxed ${theme === 'dark' ? 'text-zinc-400' : 'text-zinc-500'}`}>
+                  Bugün senin için ne yapabilirim? Chat_CNR ile bilgiye ulaşmak artık çok daha hızlı.
+                </p>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-12 w-full max-w-2xl">
+                  {[
+                    { icon: <Sparkles size={18} />, title: "Yaratıcı Fikirler", desc: "Yeni bir proje için beyin fırtınası yapalım." },
+                    { icon: <Camera size={18} />, title: "Görsel Analiz", desc: "Bir fotoğraf yükle ve üzerine konuşalım." },
+                    { icon: <Users size={18} />, title: "Bilgi Merkezi", desc: "Herhangi bir konuda detaylı bilgi al." },
+                    { icon: <Settings size={18} />, title: "Hızlı Çözümler", desc: "Karmaşık sorunları birlikte çözelim." }
+                  ].map((item, i) => (
+                    <div 
+                      key={i}
+                      onClick={() => setInput(item.title + ": ")}
+                      className={`p-6 rounded-3xl border text-left cursor-pointer transition-all hover:scale-[1.02] active:scale-[0.98] ${
+                        theme === 'dark' 
+                          ? 'bg-zinc-900/50 border-zinc-800 hover:bg-zinc-800 hover:border-zinc-700' 
+                          : 'bg-white border-zinc-200 hover:bg-zinc-50 hover:border-zinc-300 shadow-sm'
+                      }`}
+                    >
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-4 ${theme === 'dark' ? 'bg-zinc-800 text-blue-400' : 'bg-blue-50 text-blue-600'}`}>
+                        {item.icon}
+                      </div>
+                      <h4 className="font-bold text-sm mb-1">{item.title}</h4>
+                      <p className={`text-xs ${theme === 'dark' ? 'text-zinc-500' : 'text-zinc-400'}`}>{item.desc}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
             )}
             {activeSession.messages && activeSession.messages.map((msg) => (
               <MessageItem key={msg.id} message={msg} themeColor="blue" appearance={theme} />
