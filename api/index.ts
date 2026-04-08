@@ -106,24 +106,34 @@ app.post("/api/chat/stream", async (req, res) => {
         }
 
         let chunkCount = 0;
-        for await (const chunk of result.stream) {
-          try {
-            const chunkText = chunk.text();
-            if (chunkText) {
-              res.write(`data: ${JSON.stringify({ text: chunkText })}\n\n`);
-              chunkCount++;
+        try {
+          for await (const chunk of result.stream) {
+            try {
+              const chunkText = chunk.text();
+              if (chunkText) {
+                res.write(`data: ${JSON.stringify({ text: chunkText })}\n\n`);
+                chunkCount++;
+              }
+            } catch (e) {
+              const finishReason = chunk.candidates?.[0]?.finishReason;
+              console.warn(`[Server Proxy] Chunk ${chunkCount + 1} has no text. FinishReason: ${finishReason}`);
+              if (finishReason === 'SAFETY') {
+                res.write(`data: ${JSON.stringify({ error: "İçerik güvenlik filtresine takıldı." })}\n\n`);
+              }
             }
-          } catch (e) {
-            const finishReason = chunk.candidates?.[0]?.finishReason;
-            console.warn(`[Server Proxy] Chunk ${chunkCount + 1} has no text. FinishReason: ${finishReason}`);
-            if (finishReason === 'SAFETY') {
-              res.write(`data: ${JSON.stringify({ error: "İçerik güvenlik filtresine takıldı." })}\n\n`);
-            }
+          }
+        } catch (streamError: any) {
+          console.error(`[Server Proxy Stream Error] ${activeModel}:`, streamError.message);
+          if (chunkCount === 0) throw streamError;
+          else {
+            res.write(`data: ${JSON.stringify({ error: "Yayın sırasında bir hata oluştu." })}\n\n`);
+            res.end();
+            return;
           }
         }
 
         if (chunkCount === 0) {
-          console.warn(`[Server Proxy] Stream was empty for model ${activeModel}. Response:`, JSON.stringify(result.response || {}));
+          console.warn(`[Server Proxy] Stream was empty for model ${activeModel}.`);
           throw new Error("EMPTY_STREAM");
         }
 
@@ -133,11 +143,50 @@ app.post("/api/chat/stream", async (req, res) => {
         success = true;
         break; // Success with this model
       } catch (error: any) {
+        console.error(`[Server Proxy Attempt Failed] Key ${keyIndex + 1}, Model ${activeModel}:`, error.message);
+        
+        // Fallback: Try without history if it's the last model variation
+        if (activeModel === modelVariations[modelVariations.length - 1] && history && history.length > 0) {
+          try {
+            console.log(`[Server Proxy] FALLBACK: Trying without history...`);
+            const generativeModel = genAI.getGenerativeModel({ 
+              model: activeModel, 
+              systemInstruction,
+              safetySettings: [
+                { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
+                { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
+                { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_NONE },
+                { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE },
+              ]
+            });
+            const fallbackResult = await generativeModel.generateContentStream({
+              contents: [{ role: 'user', parts: [{ text: prompt }] }]
+            });
+            
+            let fallbackChunks = 0;
+            for await (const chunk of fallbackResult.stream) {
+              const txt = chunk.text();
+              if (txt) {
+                res.write(`data: ${JSON.stringify({ text: txt })}\n\n`);
+                fallbackChunks++;
+              }
+            }
+            if (fallbackChunks > 0) {
+              res.write('data: [DONE]\n\n');
+              res.end();
+              success = true;
+              break;
+            }
+          } catch (fallbackErr) {
+            console.error(`[Server Proxy Fallback Failed]:`, fallbackErr);
+          }
+        }
+
         const isQuota = error.message?.includes('429') || error.message?.includes('quota');
         const isNotFound = error.message?.includes('404') || error.message?.includes('not found');
 
-        if (isNotFound) {
-          console.warn(`[Server Proxy] Model ${activeModel} not found. Trying next variation...`);
+        if (isNotFound || error.message === "EMPTY_STREAM") {
+          console.warn(`[Server Proxy] Retrying with next variation due to: ${error.message}`);
           continue; 
         }
 
@@ -145,17 +194,6 @@ app.post("/api/chat/stream", async (req, res) => {
           console.warn(`[Server Proxy] Quota exceeded for key ${keyIndex + 1}. Trying next key...`);
           break; // Break model loop to try next key
         }
-
-        // If it's a different error or we're out of options
-        console.error(`[Server Proxy Error] Key ${keyIndex + 1}, Model ${activeModel}:`, error.message);
-        
-        if (keyIndex === apiKeys.length - 1 && activeModel === modelVariations[modelVariations.length - 1]) {
-          res.write(`data: ${JSON.stringify({ error: error.message })}\n\n`);
-          res.end();
-          return;
-        }
-        
-        if (isQuota) break;
       }
     }
     if (success) break;
