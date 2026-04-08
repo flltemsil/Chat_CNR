@@ -90,19 +90,26 @@ app.post("/api/chat/stream", async (req, res) => {
         console.log(`[Server Proxy] Sanitized History length: ${sanitizedHistory.length}, Prompt: "${prompt.substring(0, 50)}..."`);
 
         let result;
-        if (sanitizedHistory.length === 0) {
-          // First message or history was invalid/empty
-          console.log(`[Server Proxy] Using generateContentStream (First Message)`);
+        try {
+          if (sanitizedHistory.length === 0) {
+            // First message or history was invalid/empty
+            console.log(`[Server Proxy] Using generateContentStream (First Message)`);
+            result = await generativeModel.generateContentStream({
+              contents: [{ role: 'user', parts: [{ text: prompt }] }]
+            });
+          } else {
+            // Continuing a conversation
+            console.log(`[Server Proxy] Using sendMessageStream (Conversation)`);
+            const chatSession = generativeModel.startChat({
+              history: sanitizedHistory
+            });
+            result = await chatSession.sendMessageStream(prompt);
+          }
+        } catch (initError: any) {
+          console.warn(`[Server Proxy] Initial call failed for ${activeModel}: ${initError.message}. Trying direct prompt fallback...`);
           result = await generativeModel.generateContentStream({
             contents: [{ role: 'user', parts: [{ text: prompt }] }]
           });
-        } else {
-          // Continuing a conversation
-          console.log(`[Server Proxy] Using sendMessageStream (Conversation)`);
-          const chatSession = generativeModel.startChat({
-            history: sanitizedHistory
-          });
-          result = await chatSession.sendMessageStream(prompt);
         }
 
         let chunkCount = 0;
