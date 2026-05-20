@@ -16,6 +16,8 @@ export interface Message {
   sources?: GroundingChunk[];
   imageUrl?: string;
   videoUrl?: string;
+  isDeep?: boolean;
+  grounded?: boolean;
 }
 
 export interface ChatSession {
@@ -25,20 +27,28 @@ export interface ChatSession {
   updatedAt: Date;
 }
 
-export interface UserInfo {
-  email: string;
+export interface UserProfile {
+  uid: string;
   name: string;
+  email: string;
+  role: 'admin' | 'user';
+  interests?: string[];
+  bio?: string;
+  phone?: string;
+  lastLogin?: Date;
+  updatedAt?: Date;
 }
 
 export type ThemeColor = 'blue' | 'indigo' | 'rose' | 'emerald' | 'amber' | 'violet';
 export type AppearanceMode = 'light' | 'dark';
+export type Language = 'tr' | 'en' | 'es' | 'de' | 'fr' | 'it' | 'ru';
 
 export interface ChatState {
   sessions: ChatSession[];
   activeSessionId: string | null;
   isLoading: boolean;
   error: string | null;
-  user: UserInfo | null;
+  user: UserProfile | null;
   theme: ThemeColor;
   appearance: AppearanceMode;
 }

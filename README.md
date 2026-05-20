@@ -9,10 +9,9 @@ Bu uygulama, izinsiz kod değişikliklerine ve telif hakkı ihlallerine karşı 
 - **Master Key:** Olası kilitlenmelerde `CNR_2026_SECURE` anahtarı ile sistem tekrar aktif edilebilir.
 
 ## 🚀 Özellikler
-- **Chat_CNR 3.1 Pro Altyapısı:** En güncel yapay zeka modeli ile akıllı yanıtlar.
+- **Yüksek Performanslı AI Altyapısı:** En güncel ve stabil yapay zeka modeli ile akıllı yanıtlar.
 - **Sesli Yanıt (TTS):** Yapay zeka cevaplarını sesli olarak dinleyebilme.
 - **Görsel Analiz:** Fotoğraf yükleyerek yapay zekaya analiz ettirme.
-- **PWA Desteği:** Tarayıcı üzerinden uygulama olarak yüklenebilme.
 - **Karanlık/Aydınlık Tema:** Göz dostu arayüz seçenekleri.
 
 ## 🛠️ Kurulum (Geliştiriciler İçin)
@@ -33,25 +32,6 @@ Bu uygulama, izinsiz kod değişikliklerine ve telif hakkı ihlallerine karşı 
    ```bash
    npm run dev
    ```
-
-## 📦 Gerçek Uygulama Haline Getirme
-
-### Masaüstü (Windows/Mac)
-Electron kullanarak `.exe` veya `.app` dosyası oluşturmak için:
-```bash
-npm install -g electron
-# Gerekli yapılandırmadan sonra
-npm run build:desktop
-```
-
-### Mobil (Android/iOS)
-Capacitor kullanarak paketlemek için:
-```bash
-npm install @capacitor/core @capacitor/cli
-npx cap init
-npx cap add android
-npx cap open android
-```
 
 ---
 **Geliştirici:** Doruk Ali Arslan  

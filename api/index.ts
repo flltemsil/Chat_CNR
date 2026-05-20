@@ -2,395 +2,294 @@ import express from "express";
 import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
-import Stripe from "stripe";
-import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from "@google/generative-ai";
+import { createServer as createViteServer } from "vite";
+import { GoogleGenAI } from "@google/genai";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const stripe = process.env.STRIPE_SECRET_KEY 
-  ? new Stripe(process.env.STRIPE_SECRET_KEY) 
-  : null;
+async function startServer() {
+  const app = express();
+  const PORT = Number(process.env.PORT) || 3000;
 
-export const app = express();
-const PORT = Number(process.env.PORT) || 3000;
+  app.use(express.json({ limit: '50mb' }));
 
-app.use(express.json());
+  // Health check - At the top to respond quickly
+  app.get("/api/health", (req, res) => {
+    res.json({ status: "ok", time: new Date().toISOString() });
+  });
 
-// Gemini API Proxy (Server-Side)
-app.post("/api/chat/stream", async (req, res) => {
-  const { prompt, history, model, systemInstruction, isPro } = req.body;
-  
-  const envKeyStandard = process.env.CHAT_CNR_API_KEY || process.env.GEMINI_API_KEY || process.env.API_KEY || "";
-  const envKeyPro = process.env.CHAT_CNR_PRO_API_KEY || "";
-  const envKey = isPro ? (envKeyPro || envKeyStandard) : envKeyStandard;
+  // AI Chat Proxy Route
+  app.post("/api/chat", async (req, res) => {
+    const { prompt, history, systemInstruction, image, userApiKey } = req.body;
+    const modelName = "gemini-2.5-flash"; 
 
-  if (!envKey || envKey.length < 5) {
-    return res.status(500).json({ error: "API_KEY_MISSING_ON_SERVER" });
-  }
-
-  const apiKeys = envKey.split(',').map(k => k.trim()).filter(k => k.length > 5);
-  
-  // Model variations to try if 404 occurs
-  const modelVariations = isPro 
-    ? ['gemini-1.5-pro', 'gemini-1.5-pro-latest', 'gemini-pro'] 
-    : ['gemini-1.5-flash', 'gemini-1.5-flash-latest', 'gemini-1.5-flash-002', 'gemini-pro'];
-
-  // Set headers for SSE (Streaming)
-  res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache');
-  res.setHeader('Connection', 'keep-alive');
-
-  let success = false;
-  
-  // Try each key
-  for (let keyIndex = 0; keyIndex < apiKeys.length; keyIndex++) {
-    const apiKey = apiKeys[keyIndex];
-    const genAI = new GoogleGenerativeAI(apiKey);
-
-    // Try each model variation
-    for (const activeModel of modelVariations) {
-      try {
-        console.log(`[Server Proxy] Trying key ${keyIndex + 1}/${apiKeys.length} with model ${activeModel}`);
-        const generativeModel = genAI.getGenerativeModel({ 
-          model: activeModel,
-          systemInstruction: systemInstruction,
-          safetySettings: [
-            { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
-            { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
-            { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_NONE },
-            { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE },
-          ]
-        });
-
-        // Gemini history MUST start with 'user' and alternate roles
-        const sanitizedHistory = [];
-        let lastRole = null;
-
-        if (Array.isArray(history)) {
-          for (const m of history) {
-            if (!m.text || !m.text.trim()) continue;
-            
-            const currentRole = m.role === 'model' ? 'model' : 'user';
-            
-            // Skip if it's the first message and it's from the model
-            if (sanitizedHistory.length === 0 && currentRole === 'model') continue;
-            
-            // Skip if it's the same role as the last one (Gemini requires alternation)
-            if (currentRole === lastRole) continue;
-
-            sanitizedHistory.push({
-              role: currentRole,
-              parts: [{ text: m.text }]
-            });
-            lastRole = currentRole;
-          }
-        }
-
-        console.log(`[Server Proxy] Sanitized History length: ${sanitizedHistory.length}, Prompt: "${prompt.substring(0, 50)}..."`);
-
-        let result;
-        try {
-          if (sanitizedHistory.length === 0) {
-            // First message or history was invalid/empty
-            console.log(`[Server Proxy] Using generateContentStream (First Message)`);
-            result = await generativeModel.generateContentStream({
-              contents: [{ role: 'user', parts: [{ text: prompt }] }]
-            });
-          } else {
-            // Continuing a conversation
-            console.log(`[Server Proxy] Using sendMessageStream (Conversation)`);
-            const chatSession = generativeModel.startChat({
-              history: sanitizedHistory
-            });
-            result = await chatSession.sendMessageStream(prompt);
-          }
-        } catch (initError: any) {
-          console.warn(`[Server Proxy] Initial call failed for ${activeModel}: ${initError.message}. Trying direct prompt fallback...`);
-          result = await generativeModel.generateContentStream({
-            contents: [{ role: 'user', parts: [{ text: prompt }] }]
+    const generateWithKey = async (key: string, useSearch = true) => {
+      const ai = new GoogleGenAI({ apiKey: key });
+      const contents: any[] = [];
+      if (history && Array.isArray(history)) {
+        for (const msg of history) {
+          if (!msg.text) continue;
+          contents.push({
+            role: msg.role === 'model' ? 'model' : 'user',
+            parts: [{ text: msg.text }]
           });
         }
+      }
 
-        let chunkCount = 0;
+      const currentParts: any[] = [{ text: prompt }];
+      if (image) {
+        currentParts.push({
+          inlineData: {
+            mimeType: "image/jpeg",
+            data: image.split(',')[1]
+          }
+        });
+      }
+
+      contents.push({
+        role: 'user',
+        parts: currentParts
+      });
+
+      const config: any = {
+        systemInstruction: systemInstruction,
+        temperature: 0.1, // Düşük sıcaklık daha tutarlı ve gerçekçi sonuçlar verir
+      };
+
+      if (useSearch) {
+        config.tools = [{ googleSearch: {} }];
+      }
+
+      return await ai.models.generateContent({
+        model: modelName,
+        contents: contents,
+        config: config
+      });
+    };
+
+    try {
+      // If user provided their own key, try that FIRST
+      if (userApiKey && String(userApiKey).trim().length > 10) {
         try {
-          for await (const chunk of result.stream) {
+          // Try with search first
+          const response = await generateWithKey(userApiKey, true) as any;
+          let usedSources: any[] = [];
+          
+          // Improved grounding metadata extraction
+          const metadata = response.candidates?.[0]?.groundingMetadata || response.groundingMetadata;
+          if (metadata?.groundingChunks) {
+            for (const chunk of metadata.groundingChunks) {
+              if (chunk.web) {
+                usedSources.push({
+                  web: { uri: chunk.web.uri, title: chunk.web.title }
+                });
+              }
+            }
+          }
+          
+          const responseText = response.text || (response.candidates?.[0]?.content?.parts?.[0]?.text) || "";
+          if (!responseText) {
+            console.warn("AI returned empty text directly. Full response:", JSON.stringify(response, null, 2));
+          }
+          return res.json({ text: responseText, sources: usedSources, grounded: true });
+        } catch (err: any) {
+          const errorMsg = String(err.message || "");
+          const isQuota = errorMsg.includes("429") || errorMsg.includes("quota") || errorMsg.includes("RESOURCE_EXHAUSTED");
+          
+          if (isQuota) {
+            console.warn("User Key Error: QUOTA EXCEEDED");
+            console.warn("User key search quota hit, trying without search...");
             try {
-              const chunkText = chunk.text();
-              if (chunkText) {
-                res.write(`data: ${JSON.stringify({ text: chunkText })}\n\n`);
-                chunkCount++;
+              const response = await generateWithKey(userApiKey, false) as any;
+              const responseText = response.text || (response.candidates?.[0]?.content?.parts?.[0]?.text) || "";
+              return res.json({ text: responseText, sources: [], grounded: false });
+            } catch (innerErr: any) {
+              const innerErrorMsg = String(innerErr.message || "");
+              if (innerErrorMsg.includes("429") || innerErrorMsg.includes("quota") || innerErrorMsg.includes("RESOURCE_EXHAUSTED")) {
+                 console.warn("User provided key completely failed due to QUOTA.");
+              } else {
+                 console.warn("User provided key completely failed:", innerErrorMsg);
               }
-            } catch (e) {
-              const finishReason = chunk.candidates?.[0]?.finishReason;
-              console.warn(`[Server Proxy] Chunk ${chunkCount + 1} has no text. FinishReason: ${finishReason}`);
-              if (finishReason === 'SAFETY') {
-                res.write(`data: ${JSON.stringify({ error: "İçerik güvenlik filtresine takıldı." })}\n\n`);
+              console.warn("Falling back to system keys...");
+            }
+          } else {
+            console.warn("User provided key failed (non-quota):", errorMsg);
+            console.warn("Falling back to system keys...");
+          }
+        }
+      }
+
+      const apiKeysString = (process.env.CHAT_CNR_API_KEY || "").trim();
+      if (!apiKeysString) {
+        return res.status(400).json({ error: "API_KEY_MISSING" });
+      }
+
+      // Support multiple keys separated by comma for rotation
+      const apiKeys = apiKeysString.split(",").map(k => k.trim()).filter(k => k.length > 0);
+      
+      // Shuffle apiKeys to distribute load evenly
+      for (let i = apiKeys.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [apiKeys[i], apiKeys[j]] = [apiKeys[j], apiKeys[i]];
+      }
+      
+      let lastError: any = null;
+      let success = false;
+      let responseData: any = null;
+
+      // FIRST PASS: Try all keys with search
+      for (let i = 0; i < apiKeys.length; i++) {
+        const currentKey = apiKeys[i];
+        try {
+          console.log(`Trying system key ${i + 1}/${apiKeys.length} with Search...`);
+          const response = await generateWithKey(currentKey, true) as any;
+          let usedSources: any[] = [];
+          
+          const metadata = response.candidates?.[0]?.groundingMetadata || response.groundingMetadata;
+          if (metadata?.groundingChunks) {
+            for (const chunk of metadata.groundingChunks) {
+              if (chunk.web) {
+                usedSources.push({ web: { uri: chunk.web.uri, title: chunk.web.title } });
               }
             }
           }
-        } catch (streamError: any) {
-          console.error(`[Server Proxy Stream Error] ${activeModel}:`, streamError.message);
-          if (chunkCount === 0) throw streamError;
-          else {
-            res.write(`data: ${JSON.stringify({ error: "Yayın sırasında bir hata oluştu." })}\n\n`);
-            res.end();
-            return;
+          
+          const responseText = response.text || (response.candidates?.[0]?.content?.parts?.[0]?.text) || "";
+          if (!responseText) {
+             console.warn(`Key ${i + 1} with search succeeded but returned no text.`);
+             // If search returned no text, maybe try next key or continue?
+             // Usually it's better to treat empty as failure to trigger second pass
+             throw new Error("Empty response from search");
+          }
+          responseData = { text: responseText, sources: usedSources, grounded: true };
+          success = true;
+          break;
+        } catch (error: any) {
+          lastError = error;
+          const errorMsg = String(error.message || "");
+          // Simplify quota error log to avoid spam
+          const isQuota = errorMsg.includes("429") || errorMsg.includes("quota") || errorMsg.includes("RESOURCE_EXHAUSTED");
+          if (isQuota) {
+            console.warn(`System Key ${i + 1} with Search failed due to QUOTA.`);
+            continue;
+          } else {
+            console.warn(`System Key ${i + 1} with Search failed:`, errorMsg);
+            continue;
           }
         }
+      }
 
-        if (chunkCount === 0) {
-          console.warn(`[Server Proxy] Stream was empty for model ${activeModel}.`);
-          throw new Error("EMPTY_STREAM");
-        }
-
-        console.log(`[Server Proxy] Stream completed successfully with ${chunkCount} chunks.`);
-        res.write('data: [DONE]\n\n');
-        res.end();
-        success = true;
-        break; // Success with this model
-      } catch (error: any) {
-        console.error(`[Server Proxy Attempt Failed] Key ${keyIndex + 1}, Model ${activeModel}:`, error.message);
-        
-        // Fallback: Try without history if it's the last model variation
-        if (activeModel === modelVariations[modelVariations.length - 1] && history && history.length > 0) {
+      // SECOND PASS: If search failed for ALL keys, try ALL keys WITHOUT search as fallback
+      if (!success) {
+        console.warn("All search attempts failed or returned empty results. Fallback: System keys without search...");
+        for (let i = 0; i < apiKeys.length; i++) {
+          const currentKey = apiKeys[i];
           try {
-            console.log(`[Server Proxy] FALLBACK: Trying without history...`);
-            const generativeModel = genAI.getGenerativeModel({ 
-              model: activeModel, 
-              systemInstruction,
-              safetySettings: [
-                { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
-                { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
-                { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_NONE },
-                { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE },
-              ]
-            });
-            const fallbackResult = await generativeModel.generateContentStream({
-              contents: [{ role: 'user', parts: [{ text: prompt }] }]
-            });
-            
-            let fallbackChunks = 0;
-            for await (const chunk of fallbackResult.stream) {
-              const txt = chunk.text();
-              if (txt) {
-                res.write(`data: ${JSON.stringify({ text: txt })}\n\n`);
-                fallbackChunks++;
-              }
+            console.log(`Trying system key ${i + 1}/${apiKeys.length} WITHOUT Search...`);
+            const response = await generateWithKey(currentKey, false) as any;
+            const responseText = response.text || (response.candidates?.[0]?.content?.parts?.[0]?.text) || "";
+            if (!responseText) {
+               console.warn(`Key ${i + 1} without search succeeded but returned no text.`);
+               continue;
             }
-            if (fallbackChunks > 0) {
-              res.write('data: [DONE]\n\n');
-              res.end();
-              success = true;
-              break;
+            responseData = { text: responseText, sources: [], grounded: false };
+            success = true;
+            break;
+          } catch (error: any) {
+            lastError = error;
+            const errorMsg = String(error.message || "");
+            // Simplify quota error log to avoid spam
+            const isQuota = errorMsg.includes("429") || errorMsg.includes("quota") || errorMsg.includes("RESOURCE_EXHAUSTED");
+            if (isQuota) {
+               console.warn(`System Key ${i + 1} WITHOUT Search failed due to QUOTA.`);
+               continue;
+            } else {
+               console.warn(`System Key ${i + 1} WITHOUT Search failed:`, errorMsg);
+               continue; // Try next key even if not quota, might be model refusal on one key
             }
-          } catch (fallbackErr) {
-            console.error(`[Server Proxy Fallback Failed]:`, fallbackErr);
           }
         }
-
-        const isQuota = error.message?.includes('429') || error.message?.includes('quota');
-        const isNotFound = error.message?.includes('404') || error.message?.includes('not found');
-
-        if (isNotFound || error.message === "EMPTY_STREAM") {
-          console.warn(`[Server Proxy] Retrying with next variation due to: ${error.message}`);
-          continue; 
-        }
-
-        if (isQuota && keyIndex < apiKeys.length - 1) {
-          console.warn(`[Server Proxy] Quota exceeded for key ${keyIndex + 1}. Trying next key...`);
-          break; // Break model loop to try next key
-        }
       }
-    }
-    if (success) break;
-  }
 
-  if (!success && !res.writableEnded) {
-    res.write(`data: ${JSON.stringify({ error: "Tüm API anahtarları ve model varyasyonları denendi ancak sonuç alınamadı." })}\n\n`);
-    res.end();
-  }
-});
-
-// Image Generation Proxy
-app.post("/api/chat/image", async (req, res) => {
-  const { prompt } = req.body;
-  const envKey = process.env.CHAT_CNR_API_KEY || process.env.GEMINI_API_KEY || process.env.API_KEY || "";
-  if (!envKey) return res.status(500).json({ error: "API_KEY_MISSING" });
-  const apiKeys = envKey.split(',').map(k => k.trim());
-
-  for (const apiKey of apiKeys) {
-    try {
-      const genAI = new GoogleGenerativeAI(apiKey);
-      // For images, we use the specific multimodal capabilities of 1.5 Flash
-      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-      
-      const result = await model.generateContent([
-        prompt,
-        "Generate a high quality image based on this description. Return the image data."
-      ]);
-      
-      const response = await result.response;
-      // Gemini 1.5 Flash can return inlineData if configured, 
-      // but standard generateContent usually returns text.
-      // If the user wants actual DALL-E style image gen, they'd need a different model.
-      // For now, we'll return the text or any inline data found.
-      const part = response.candidates?.[0]?.content?.parts?.[0];
-      
-      if (part?.inlineData) {
-        res.json({ imageUrl: `data:${part.inlineData.mimeType};base64,${part.inlineData.data}` });
+      if (success) {
+        return res.json(responseData);
       } else {
-        res.json({ text: response.text() });
+        throw lastError;
       }
-      return;
+
     } catch (error: any) {
-      if (error.message?.includes('429') && apiKeys.indexOf(apiKey) < apiKeys.length - 1) continue;
-      res.status(500).json({ error: error.message });
-      return;
-    }
-  }
-});
+      let errorMsg = String(error.message || "AI Error");
+      
+      // Cleanup API error if it contains JSON string
+      if (errorMsg.includes('{"error":')) {
+        try {
+          const jsonStr = errorMsg.substring(errorMsg.indexOf('{'));
+          const parsed = JSON.parse(jsonStr);
+          if (parsed.error?.message) {
+            errorMsg = parsed.error.message;
+          }
+        } catch (e) {}
+      }
 
-// Stripe Checkout Session Route
-app.post("/api/stripe/create-checkout-session", async (req, res) => {
-  if (!stripe) {
-    return res.status(500).json({ error: "Stripe is not configured" });
-  }
+      // Cleanup ugly JSON parsing errors from Google APIs (like 503 HTML pages)
+      if (errorMsg.includes("is not valid JSON") || errorMsg.includes("Unexpected token")) {
+        errorMsg = "API Servisi geçici olarak yanıt vermiyor (Geçersiz yanıt). Lütfen tekrar deneyin.";
+      }
 
-  const { userId, userEmail, priceId } = req.body;
-  const appUrl = process.env.APP_URL || `http://localhost:${PORT}`;
+      const errorType = errorMsg.includes("API_KEY_INVALID") || errorMsg.includes("API key not valid") ? "API_KEY_INVALID" : 
+                        (errorMsg.includes("429") || errorMsg.includes("quota") || errorMsg.includes("RESOURCE_EXHAUSTED") ? "QUOTA_EXCEEDED" : "GENERAL_ERROR");
 
-  try {
-    const session = await stripe.checkout.sessions.create({
-      payment_method_types: ["card"],
-      line_items: [
-        {
-          price: priceId || "price_1Q...your_test_price_id", // User should replace this
-          quantity: 1,
-        },
-      ],
-      mode: "subscription",
-      success_url: `${appUrl}?payment_success=true&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${appUrl}?payment_cancelled=true`,
-      customer_email: userEmail,
-      metadata: {
-        userId: userId,
-      },
-    });
-
-    res.json({ url: session.url });
-  } catch (error: any) {
-    console.error("Stripe Session Error:", error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// Stripe Customer Portal Route
-app.post("/api/stripe/create-portal-session", async (req, res) => {
-  if (!stripe) return res.status(500).json({ error: "Stripe not configured" });
-  
-  const { userEmail } = req.body;
-  const appUrl = process.env.APP_URL || `http://localhost:${PORT}`;
-
-  try {
-    // Find customer by email
-    const customers = await stripe.customers.list({ email: userEmail, limit: 1 });
-    if (customers.data.length === 0) {
-      return res.status(404).json({ error: "Customer not found" });
-    }
-
-    const portalSession = await stripe.billingPortal.sessions.create({
-      customer: customers.data[0].id,
-      return_url: appUrl,
-    });
-
-    res.json({ url: portalSession.url });
-  } catch (error: any) {
-    console.error("Stripe Portal Error:", error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// Stripe Session Verification Route
-app.get("/api/stripe/verify-session", async (req, res) => {
-  if (!stripe) return res.status(500).json({ error: "Stripe not configured" });
-  
-  const { session_id } = req.query;
-  if (!session_id) return res.status(400).json({ error: "No session ID" });
-
-  try {
-    const session = await stripe.checkout.sessions.retrieve(session_id as string);
-    if (session.payment_status === "paid") {
-      res.json({ status: "success", userId: session.metadata?.userId });
-    } else {
-      res.json({ status: "pending" });
-    }
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// Vite / Static logic
-if (process.env.NODE_ENV !== "production") {
-  const { createServer: createViteServer } = await import("vite");
-  const vite = await createViteServer({
-    server: { middlewareMode: true },
-    appType: "spa",
-  });
-  app.use(vite.middlewares);
-
-  app.all("*", async (req, res, next) => {
-    // Express 5 requires a different approach for catch-all if using regex, 
-    // but for simple middleware it might still work depending on the router version.
-    // However, to be safe with Express 5's path-to-regexp v8, we use the most compatible string.
-    const url = req.originalUrl;
-    try {
-      let template = fs.readFileSync(path.resolve(__dirname, "..", "index.html"), "utf-8");
-      template = await vite.transformIndexHtml(url, template);
-      res.status(200).set({ "Content-Type": "text/html" }).end(template);
-    } catch (e) {
-      vite.ssrFixStacktrace(e as Error);
-      next(e);
+      if (errorType === "QUOTA_EXCEEDED") {
+         console.warn("Final Server AI Error: QUOTA_EXCEEDED");
+      } else {
+         console.error("Final Server AI Error:", errorMsg);
+      }
+      
+      const status = errorType === "QUOTA_EXCEEDED" ? 429 : 500;
+      res.status(status).json({ 
+        error: errorType === "QUOTA_EXCEEDED" ? "QUOTA_EXCEEDED" : errorMsg,
+        errorType: errorType
+      });
     }
   });
-} else {
-  const distPath = path.join(__dirname, "..", "dist");
-  console.log(`[Server] Serving static files from: ${distPath}`);
-  app.use(express.static(distPath));
-  app.get("*", (req, res) => {
-    // If it's an API request that wasn't caught, return 404 JSON
-    if (req.path.startsWith('/api/')) {
-      return res.status(404).json({ error: `API endpoint ${req.path} not found.` });
-    }
+
+  // Vite middleware for development
+  if (process.env.NODE_ENV !== "production") {
+    const vite = await createViteServer({
+      server: { middlewareMode: true },
+      appType: "spa",
+      root: process.cwd(),
+    });
+    app.use(vite.middlewares);
     
-    const indexPath = path.join(distPath, "index.html");
-    if (fs.existsSync(indexPath)) {
-      res.sendFile(indexPath);
-    } else {
-      res.status(404).send("Frontend build not found. Please run 'npm run build' first.");
-    }
-  });
-}
+    // Explicit SPA fallback for development - only for non-file requests
+    app.use('*', async (req, res, next) => {
+      const url = req.originalUrl;
+      // Skip files (requests with extensions)
+      if (url.includes('.') && !url.endsWith('.html')) {
+        return next();
+      }
+      try {
+        let template = fs.readFileSync(path.resolve(process.cwd(), 'index.html'), 'utf-8');
+        template = await vite.transformIndexHtml(url, template);
+        res.status(200).set({ 'Content-Type': 'text/html' }).end(template);
+      } catch (e) {
+        vite.ssrFixStacktrace(e as Error);
+        next(e);
+      }
+    });
+  } else {
+    const distPath = path.join(process.cwd(), 'dist');
+    app.use(express.static(distPath));
+    app.get('*', (req, res) => {
+      res.sendFile(path.join(distPath, 'index.html'));
+    });
+  }
 
-// Global Error Handler
-app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  console.error('[Server Error]', err);
-  res.status(err.status || 500).json({
-    error: err.message || "Internal Server Error",
-    path: req.path
-  });
-});
-
-// Start the server only if not on Vercel
-if (process.env.NODE_ENV !== "production" || !process.env.VERCEL) {
-  const server = app.listen(PORT, "0.0.0.0", () => {
+  app.listen(PORT, "0.0.0.0", () => {
     console.log(`Server running on http://localhost:${PORT}`);
   });
-
-  // Handle server errors
-  server.on('error', (err) => {
-    console.error('Server failed to start:', err);
-  });
 }
 
-export default app;
+startServer();

@@ -9,7 +9,15 @@
         "name": { "type": "string", "description": "Display name" },
         "email": { "type": "string", "description": "Email address" },
         "role": { "type": "string", "enum": ["admin", "user"], "description": "User role" },
-        "lastLogin": { "type": "string", "format": "date-time", "description": "Last login timestamp" }
+        "interests": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "User interests for personalization"
+        },
+        "bio": { "type": "string", "description": "Short bio" },
+        "phone": { "type": "string", "description": "Contact phone number" },
+        "lastLogin": { "type": "string", "format": "date-time", "description": "Last login timestamp" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Last update timestamp" }
       },
       "required": ["uid", "name", "email", "role"]
     },

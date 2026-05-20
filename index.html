@@ -5,15 +5,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Chat_CNR | Bilgi Merkezi</title>
-    <link rel="manifest" href="/manifest.json">
-    <meta name="theme-color" content="#0a0a0a" media="(prefers-color-scheme: dark)">
-    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
-    
-    <!-- iOS Specific Meta Tags -->
+    <meta name="theme-color" content="#0a0a0a">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Chat_CNR">
-    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2593/2593635.png">
+    <link rel="manifest" href="/manifest.webmanifest">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/1698/1698535.png">
     
     <!-- Windows Specific Meta Tags -->
     <meta name="msapplication-TileColor" content="#0a0a0a">
@@ -23,21 +21,33 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --accent: #2563eb;
+            --accent-glow: rgba(37, 99, 235, 0.15);
+            --bg: #030303;
+            --surface: #0a0a0a;
+            --border: rgba(255, 255, 255, 0.06);
+            --text-main: #f8fafc;
+            --text-dim: #94a3b8;
+        }
+
         html, body {
             margin: 0;
             padding: 0;
             width: 100%;
             height: 100%;
-            background-color: #0a0a0a;
-            font-family: 'Inter', sans-serif;
-            color: #f8fafc;
+            background-color: var(--bg);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            color: var(--text-main);
             overflow: hidden;
             /* Prevent rubber band scrolling on iOS */
             position: fixed;
             -webkit-overflow-scrolling: touch;
+            letter-spacing: -0.01em;
         }
+
         #root {
             width: 100%;
             height: 100%;
@@ -48,89 +58,102 @@
             padding-bottom: env(safe-area-inset-bottom);
             padding-left: env(safe-area-inset-left);
             padding-right: env(safe-area-inset-right);
+            background: radial-gradient(circle at 50% 0%, rgba(37, 99, 235, 0.05) 0%, transparent 50%);
         }
+
         .loading-screen {
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             height: 100%;
-            gap: 20px;
+            gap: 24px;
+            background: var(--bg);
         }
+
         .spinner {
-            width: 40px;
-            height: 40px;
-            border: 3px solid rgba(255,255,255,0.1);
-            border-top-color: #3b82f6;
+            width: 32px;
+            height: 32px;
+            border: 2px solid rgba(255,255,255,0.05);
+            border-top-color: var(--accent);
             border-radius: 50%;
-            animation: spin 1s linear infinite;
+            animation: spin 0.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+            box-shadow: 0 0 20px var(--accent-glow);
         }
+
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
-        #error-display {
-            position: fixed;
-            bottom: 20px;
-            left: 20px;
-            right: 20px;
-            background: #7f1d1d;
-            color: #fecaca;
-            padding: 15px;
-            border-radius: 10px;
-            font-size: 12px;
-            display: none;
-            z-index: 9999;
-            word-break: break-all;
-            border: 1px solid #991b1b;
-        }
 
-        /* Markdown Styles */
+        /* Markdown Styles - Unified Infrastructure Look */
         .markdown-body {
             font-size: 14px;
             line-height: 1.6;
             color: inherit;
         }
-        .markdown-body p { margin-bottom: 12px; }
+        .markdown-body p { margin-bottom: 1rem; }
         .markdown-body p:last-child { margin-bottom: 0; }
         .markdown-body code {
-            background: rgba(255,255,255,0.1);
-            padding: 2px 4px;
-            border-radius: 4px;
-            font-family: monospace;
-            font-size: 0.9em;
+            background: rgba(255,255,255,0.06);
+            padding: 0.2em 0.4em;
+            border-radius: 6px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85em;
+            border: 1px solid rgba(255,255,255,0.05);
         }
         .markdown-body pre {
             background: #000;
-            padding: 12px;
-            border-radius: 8px;
+            padding: 1.25rem;
+            border-radius: 12px;
             overflow-x: auto;
-            margin: 12px 0;
-            border: 1px solid rgba(255,255,255,0.1);
+            margin: 1.25rem 0;
+            border: 1px solid var(--border);
+            box-shadow: 0 4px 24px rgba(0,0,0,0.3);
         }
         .markdown-body pre code {
             background: transparent;
             padding: 0;
+            border: none;
+            font-size: 0.85em;
+            line-height: 1.7;
         }
         .markdown-body ul, .markdown-body ol {
-            margin-left: 20px;
-            margin-bottom: 12px;
+            margin-left: 1.5rem;
+            margin-bottom: 1rem;
         }
-        .markdown-body li { margin-bottom: 4px; }
+        .markdown-body table {
+            display: block;
+            width: 100%;
+            overflow-x: auto;
+            border-collapse: collapse;
+            margin-bottom: 1rem;
+        }
+        .markdown-body th, .markdown-body td {
+            border: 1px solid var(--border);
+            padding: 8px 12px;
+        }
+        .markdown-body li { margin-bottom: 0.5rem; }
         .markdown-body a {
-            color: #3b82f6;
-            text-decoration: underline;
+            color: #60a5fa;
+            text-decoration: none;
+            border-bottom: 1px solid rgba(96, 165, 250, 0.3);
+            transition: all 0.2s;
         }
+        .markdown-body a:hover {
+            color: #93c5fd;
+            border-bottom-color: #93c5fd;
+        }
+        .markdown-body h1, .markdown-body h2, .markdown-body h3 {
+            font-weight: 600;
+            margin-top: 1.5rem;
+            margin-bottom: 1rem;
+            letter-spacing: -0.02em;
+        }
+        .markdown-body h1 { font-size: 1.5rem; }
+        .markdown-body h2 { font-size: 1.25rem; }
+        .markdown-body h3 { font-size: 1.125rem; }
     </style>
     <script>
-        // Unregister any existing service workers to prevent caching issues
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.getRegistrations().then(function(registrations) {
-                for(let registration of registrations) {
-                    registration.unregister();
-                }
-            });
-        }
-        
         window.onerror = function(msg, url, lineNo, columnNo, error) {
             console.error("Global Error:", msg, url, lineNo);
             var display = document.getElementById('error-display');

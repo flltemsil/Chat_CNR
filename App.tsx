@@ -1,9 +1,13 @@
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { chatCNRService } from './services/chatCNRService';
-import { Message, ChatSession, ThemeColor, AppearanceMode } from './types';
+import { Message, ChatSession, ThemeColor, AppearanceMode, Language } from './types';
+import { translations } from './translations';
 import MessageItem from './components/MessageItem';
-import { Menu, Plus, Trash2, X, MessageSquare, Settings, Mic, MicOff, Volume2, VolumeX, Camera, Send, User, LogOut, Shield, Users, Image as ImageIcon, Sparkles, Key, Check } from 'lucide-react';
+import ProfileModal from './components/ProfileModal';
+import { profileService } from './services/profileService';
+import { Menu, Plus, Trash2, X, MessageSquare, Settings, Mic, MicOff, Volume2, VolumeX, Camera, Send, User, LogOut, Shield, Users, Image as ImageIcon, Sparkles, Key, Check, ExternalLink, Heart, Cpu, Download, Smartphone, Brain, Microscope } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 import { 
   auth, db, signInWithGoogle, logout, onAuthStateChanged, 
   collection, doc, setDoc, getDoc, onSnapshot, query, orderBy, 
@@ -11,16 +15,16 @@ import {
   increment, serverTimestamp 
 } from './firebase';
 import firebaseConfig from './firebase-applet-config.json';
+import { UserProfile } from './types';
 
 const OWNER_EMAIL = "dorukaliarslan20@gmail.com";
-const INTEGRITY_TOKEN = "AUTHORIZED_BY_DORUK_ALI_ARSLAN_2026";
-const MASTER_KEY = "CNR_2026_SECURE";
+const BANNED_EMAILS = ["b4164370@gmail.com"];
 const STORAGE_KEY = 'chat_cnr_sessions_v2';
 const USER_KEY = 'chat_cnr_user_v2';
 
 const LIMITS = {
-  FREE: { MESSAGES: 250, IMAGES: 2 },
-  PRO: { MESSAGES: 250, IMAGES: 10 }
+  MESSAGES: 250,
+  IMAGES: 2
 };
 
 // Error Handling Spec for Firestore Operations
@@ -86,92 +90,35 @@ const cleanForFirestore = (obj: any) => {
   return cleaned;
 };
 
-// Security Guard: Prevents unauthorized modification of owner information
+// Security Guard: Prevents unauthorized access for banned users
 const SecurityGuard: React.FC<{ children: React.ReactNode; user: { name: string; email: string } | null }> = ({ children, user }) => {
-  const [isUnlocked, setIsUnlocked] = useState(false);
-  const [unlockInput, setUnlockInput] = useState('');
-  const [hasReported, setHasReported] = useState(false);
+  const isBanned = user?.email && BANNED_EMAILS.includes(user.email);
   
-  const footerText = "CNR Bilgi Merkezi • Doruk Ali Arslan";
-  const isOwner = user?.email === OWNER_EMAIL;
-  
-  // Full Protection Mode: Check for multiple integrity markers
-  const isFooterIntact = footerText.toLowerCase().includes("doruk ali arslan");
-  const isTokenIntact = INTEGRITY_TOKEN === "AUTHORIZED_BY_DORUK_ALI_ARSLAN_2026";
-  const isOwnerEmailIntact = OWNER_EMAIL === "dorukaliarslan20@gmail.com";
-  
-  const isSystemCompromised = false; 
-  
-  // Reporting logic
-  useEffect(() => {
-    console.log("SecurityGuard: System status check", { isSystemCompromised, isOwner });
-    if (isSystemCompromised && !isOwner && !hasReported && user) {
-      // Only attempt fetch if we are on a web server (not file://)
-      if (window.location.protocol.startsWith('http')) {
-        fetch('/api/security/report', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            user: user,
-            reason: "System Integrity Compromised (Tamper Detected)",
-            timestamp: new Date().toISOString()
-          })
-        })
-        .then(res => {
-          if (res.ok) setHasReported(true);
-        })
-        .catch(err => console.warn("Security report could not be sent (Server might be offline)", err));
-      } else {
-        console.warn("Security report skipped: Running in local file mode (Electron/PWA)");
-      }
-    }
-  }, [isSystemCompromised, isOwner, user, hasReported]);
-
-  const handleUnlock = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (unlockInput === MASTER_KEY) {
-      setIsUnlocked(true);
-    } else {
-      alert("Geçersiz Anahtar!");
-    }
-  };
-
-  // If tampered and not owner and not unlocked, lock the app
-  if (isSystemCompromised && !isOwner && !isUnlocked) {
+  // BAN SCREEN
+  if (isBanned) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center p-6 text-center font-['Inter']">
-        <div className="max-w-md w-full space-y-8">
-          <div className="w-24 h-24 bg-red-600 rounded-full flex items-center justify-center mx-auto animate-pulse shadow-2xl shadow-red-900/40">
-            <X size={48} className="text-white" />
+        <div className="max-w-md w-full space-y-8 animate-in fade-in zoom-in duration-500">
+          <div className="w-24 h-24 bg-red-600 rounded-full flex items-center justify-center mx-auto shadow-2xl shadow-red-900/40">
+            <Shield size={48} className="text-white" />
           </div>
           <div className="space-y-4">
-            <h1 className="text-4xl font-black text-white tracking-tighter uppercase">Tam Koruma Aktif</h1>
+            <h1 className="text-4xl font-black text-white tracking-tighter uppercase">Erişim Engellendi</h1>
             <p className="text-zinc-400 leading-relaxed">
-              Uygulama kodlarında izinsiz değişiklik algılandı. "Tam Koruma Modu" gereği sistem kendini kilitledi.
+              Hesabınız sistem kurallarını ihlal ettiği için kalıcı olarak yasaklanmıştır.
             </p>
             <div className="bg-red-500/10 border border-red-500/20 p-4 rounded-2xl">
               <p className="text-red-400 text-sm font-bold">
-                İhlal raporu ve konum verileri Doruk Ali ARSLAN'a iletildi.
+                Bu email adresi sistem kara listesindedir. (b4164370@gmail.com)
               </p>
             </div>
           </div>
-
-          <form onSubmit={handleUnlock} className="pt-8 border-t border-zinc-800 space-y-4">
-            <p className="text-[10px] text-zinc-600 uppercase tracking-[0.3em] font-bold">Yönetici Kilit Açma</p>
-            <input 
-              type="password"
-              value={unlockInput}
-              onChange={(e) => setUnlockInput(e.target.value)}
-              placeholder="Master Key Girin..."
-              className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 text-white text-center focus:outline-none focus:ring-2 focus:ring-red-600/50 transition-all"
-            />
-            <button 
-              type="submit"
-              className="w-full bg-zinc-800 hover:bg-zinc-700 text-white font-bold py-3 rounded-xl transition-all"
-            >
-              Kilidi Aç
-            </button>
-          </form>
+          <button 
+            onClick={() => auth.signOut()}
+            className="w-full bg-zinc-800 hover:bg-zinc-700 text-white font-bold py-3 rounded-xl transition-all"
+          >
+            Çıkış Yap
+          </button>
         </div>
       </div>
     );
@@ -184,21 +131,47 @@ const SecurityGuard: React.FC<{ children: React.ReactNode; user: { name: string;
 const App: React.FC = () => {
   console.log("App component: Initializing");
   const [error, setError] = useState<any>(null);
-  const [user, setUser] = useState<{ name: string; email: string; uid: string; role: string } | null>(null);
+  const [user, setUser] = useState<UserProfile | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
+  const [isLoginLoading, setIsLoginLoading] = useState(false);
+  const [installPrompt, setInstallPrompt] = useState<any>(null);
+  const [isInstallable, setIsInstallable] = useState(false);
+  const isAuthLoadingRef = useRef(true);
+  const [debugStatus, setDebugStatus] = useState<string | null>(null);
+
+  useEffect(() => {
+    const handler = (e: any) => {
+      e.preventDefault();
+      setInstallPrompt(e);
+      setIsInstallable(true);
+    };
+    window.addEventListener('beforeinstallprompt', handler);
+    return () => window.removeEventListener('beforeinstallprompt', handler);
+  }, []);
+
   useEffect(() => {
     console.log("App: Auth loading state", isAuthLoading);
-    console.log("App: Firebase Config Check", {
-      projectId: firebaseConfig.projectId,
-      databaseId: firebaseConfig.firestoreDatabaseId,
-      hasApiKey: !!firebaseConfig.apiKey
-    });
   }, [isAuthLoading, user]);
-  const isAuthLoadingRef = useRef(true);
+
+  useEffect(() => {
+    // Health check - silent on initial load
+    fetch('/api/health')
+      .then(r => r.ok ? r.json() : null)
+      .catch(() => null);
+  }, []);
 
   const setAuthLoading = (val: boolean) => {
     setIsAuthLoading(val);
     isAuthLoadingRef.current = val;
+  };
+
+  const handleInstallClick = async () => {
+    if (!installPrompt) return;
+    installPrompt.prompt();
+    const { outcome } = await installPrompt.userChoice;
+    if (outcome === 'accepted') {
+      setIsInstallable(false);
+    }
   };
 
   useEffect(() => {
@@ -215,35 +188,20 @@ const App: React.FC = () => {
       clearTimeout(timeout);
       try {
         if (firebaseUser) {
-          const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
-          if (userDoc.exists()) {
-            const userData = userDoc.data();
-            setUser({
-              uid: firebaseUser.uid,
-              name: userData.name,
-              email: firebaseUser.email || '',
-              role: userData.role
-            });
+          const profile = await profileService.getProfile(firebaseUser.uid);
+          if (profile) {
+            setUser(profile);
+            // Update last login
+            await profileService.updateProfile(firebaseUser.uid, { lastLogin: new Date() });
           } else {
             const role = firebaseUser.email === OWNER_EMAIL ? 'admin' : 'user';
-            const newUser = {
-              uid: firebaseUser.uid,
-              name: firebaseUser.displayName || 'Kullanıcı',
-              email: firebaseUser.email || '',
-              role: role,
-              lastLogin: Timestamp.now()
-            };
-            try {
-              await setDoc(doc(db, 'users', firebaseUser.uid), newUser);
-            } catch (err) {
-              handleFirestoreError(err, OperationType.WRITE, `users/${firebaseUser.uid}`);
-            }
-            setUser({
-              uid: newUser.uid,
-              name: newUser.name,
-              email: newUser.email,
-              role: newUser.role
-            });
+            const newProfile = await profileService.createUserProfile(
+              firebaseUser.uid, 
+              firebaseUser.email || '', 
+              firebaseUser.displayName || 'Kullanıcı',
+              role
+            );
+            setUser(newProfile);
           }
         } else {
           setUser(null);
@@ -307,32 +265,124 @@ const App: React.FC = () => {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center p-4 font-['Inter']">
-        <div className="w-full max-w-md bg-[#121212] border border-zinc-800 rounded-3xl p-8 shadow-2xl animate-in fade-in zoom-in duration-500">
-          <div className="flex justify-center mb-8">
-            <div className="w-20 h-20 bg-blue-600 rounded-3xl flex items-center justify-center shadow-lg shadow-blue-900/20 rotate-3">
-              <MessageSquare size={40} className="text-white -rotate-3" />
+      <div className="min-h-screen bg-[#0a0a0a] flex flex-col items-center justify-center p-4 font-['Inter'] relative overflow-hidden">
+        {/* Background Decorative Elements */}
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-600/10 blur-[120px] rounded-full pointer-events-none" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-purple-600/10 blur-[120px] rounded-full pointer-events-none" />
+        
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8 }}
+          className="w-full max-w-4xl grid md:grid-cols-2 gap-12 items-center relative z-10"
+        >
+          {/* Left Side: Brand & Hero */}
+          <div className="space-y-8 text-center md:text-left">
+            <div className="flex items-center justify-center md:justify-start gap-4">
+              <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center shadow-2xl shadow-blue-900/30">
+                <Cpu size={32} className="text-white" />
+              </div>
+              <h1 className="text-4xl font-black text-white tracking-tighter uppercase italic">Chat_CNR</h1>
+            </div>
+            
+            <div className="space-y-4">
+              <h2 className="text-5xl md:text-6xl font-black text-white leading-[1.1] tracking-tight">
+                Yapay Zekanın <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-400">Yeni Nesli</span>
+              </h2>
+              <p className="text-zinc-400 text-lg leading-relaxed max-w-md mx-auto md:mx-0">
+                Hub ile sınırsız bilgiye, gerçek zamanlı arama verilerine ve profesyonel yapay zeka gücüne tek tıkla ulaşın.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap gap-4 justify-center md:justify-start">
+              <div className="flex items-center gap-2 bg-zinc-900/50 border border-zinc-800 px-4 py-2 rounded-full">
+                <Check size={14} className="text-green-500" />
+                <span className="text-xs font-bold text-zinc-300">Yüksek Doğruluk</span>
+              </div>
+              <div className="flex items-center gap-2 bg-zinc-900/50 border border-zinc-800 px-4 py-2 rounded-full">
+                <Check size={14} className="text-green-500" />
+                <span className="text-xs font-bold text-zinc-300">Gerçek Zamanlı</span>
+              </div>
+               <div className="flex items-center gap-2 bg-zinc-900/50 border border-zinc-800 px-4 py-2 rounded-full">
+                <Check size={14} className="text-green-500" />
+                <span className="text-xs font-bold text-zinc-300">Güvenli</span>
+              </div>
             </div>
           </div>
-          <h1 className="text-3xl font-bold text-white text-center mb-2">Chat_CNR</h1>
-          <p className="text-zinc-400 text-center mb-8 text-sm">Devam etmek için giriş yapın</p>
-          
-          <button 
-            onClick={async (e) => {
-              e.preventDefault();
-              try {
-                await signInWithGoogle();
-              } catch (err) {
-                console.error("Login error:", err);
-                alert("Giriş yapılamadı.");
-              }
-            }}
-            className="w-full flex items-center justify-center gap-3 bg-white hover:bg-zinc-100 text-black font-bold py-4 rounded-2xl transition-all shadow-lg active:scale-[0.98]"
-          >
-            <img src="https://www.google.com/favicon.ico" className="w-5 h-5" alt="Google" />
-            Google ile Giriş Yap
-          </button>
-        </div>
+
+          {/* Right Side: Actions */}
+          <div className="bg-zinc-900/30 border border-white/5 backdrop-blur-xl rounded-[40px] p-8 md:p-10 space-y-6 shadow-3xl">
+             <div className="space-y-2">
+                <h3 className="text-xl font-bold text-white">Sisteme Giriş Yap</h3>
+                <p className="text-sm text-zinc-500">Devam etmek için hesabınızı bağlayın.</p>
+             </div>
+
+             <button 
+              disabled={isLoginLoading}
+              onClick={async (e) => {
+                e.preventDefault();
+                if (isLoginLoading) return;
+                setIsLoginLoading(true);
+                try {
+                  await signInWithGoogle();
+                } catch (err: any) {
+                  console.error("Login error:", err);
+                  alert(`Giriş yapılamadı: ${err.message || "Bilinmeyen hata"}`);
+                } finally {
+                  setIsLoginLoading(false);
+                }
+              }}
+              className="w-full flex items-center justify-center gap-3 bg-white hover:bg-zinc-100 disabled:opacity-50 text-black font-black py-4 rounded-2xl transition-all shadow-xl active:scale-[0.98] group"
+            >
+              {isLoginLoading ? (
+                 <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin"></div>
+              ) : (
+                 <img src="https://www.google.com/favicon.ico" className="w-6 h-6 border rounded-full p-0.5" alt="Google" />
+              )}
+              {isLoginLoading ? "Giriş Yapılıyor..." : "Google ile Başlat"}
+              <ExternalLink size={18} className="ml-2 group-hover:translate-x-1 transition-transform" />
+            </button>
+
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-zinc-800"></div></div>
+              <div className="relative flex justify-center text-xs uppercase"><span className="bg-[#0a0a0a] px-4 text-zinc-600 font-bold tracking-widest leading-none">Uygulama Olarak İndir</span></div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <button 
+                onClick={isInstallable ? handleInstallClick : () => {
+                  alert("EXE (Windows) Yükleme Rehberi: Tarayıcı adres çubuğundaki 'Yükle' ikonuna basın veya menuden 'Uygulamayı Yükle' seçeneğini seçin. Bu sayede uygulama masaüstünüze EXE olarak eklenecektir.");
+                }}
+                className={`flex flex-col items-center justify-center gap-2 ${isInstallable ? 'bg-blue-600/20 border-blue-500/30 font-bold' : 'bg-zinc-800/50 border-zinc-700'} hover:bg-zinc-800 border py-4 rounded-3xl transition-all group`}
+              >
+                <div className={`w-10 h-10 ${isInstallable ? 'bg-blue-600' : 'bg-zinc-700'} rounded-full flex items-center justify-center group-hover:scale-110 transition-transform`}>
+                  <Download size={20} className="text-white" />
+                </div>
+                <span className="text-[10px] font-black text-zinc-300 uppercase tracking-wider">
+                  {isInstallable ? 'Hemen Yükle (EXE)' : 'Windows (EXE)'}
+                </span>
+              </button>
+              
+              <button 
+                onClick={isInstallable ? handleInstallClick : () => {
+                   alert("APK (Android) Yükleme Rehberi: Chrome menüsünden 'Ana Ekrana Ekle' seçeneğine dokunun. Uygulama telefonunuza APK olarak yüklenecektir.");
+                }}
+                className={`flex flex-col items-center justify-center gap-2 ${isInstallable ? 'bg-purple-600/20 border-purple-500/30' : 'bg-zinc-800/50 border-zinc-700'} hover:bg-zinc-800 border py-4 rounded-3xl transition-all group`}
+              >
+                <div className={`w-10 h-10 ${isInstallable ? 'bg-purple-600' : 'bg-zinc-700'} rounded-full flex items-center justify-center group-hover:scale-110 transition-transform`}>
+                  <Smartphone size={20} className="text-white" />
+                </div>
+                <span className="text-[10px] font-black text-zinc-300 uppercase tracking-wider">
+                   {isInstallable ? 'Hemen Yükle (APK)' : 'Android (APK)'}
+                </span>
+              </button>
+            </div>
+
+            <p className="text-[10px] text-center text-zinc-600 font-medium px-4">
+              Copyright © 2026 Chat CNR Information Hub. Tüm hakları saklıdır. Professional Edition v2.0
+            </p>
+          </div>
+        </motion.div>
       </div>
     );
   }
@@ -345,18 +395,18 @@ const App: React.FC = () => {
 };
 
 interface ChatAppProps {
-  user: { name: string; email: string; uid: string; role: string };
+  user: UserProfile;
   setUser: React.Dispatch<React.SetStateAction<any>>;
 }
 
 const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
   console.log("ChatApp: Initializing for user", user?.email);
+
   const [input, setInput] = useState('');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
 
-  const [isPricingModalOpen, setIsPricingModalOpen] = useState(false);
-  const [isPaymentProcessing, setIsPaymentProcessing] = useState(false);
   const [dailyUsage, setDailyUsage] = useState({ messages: 0, images: 0 });
   const [isRecording, setIsRecording] = useState(false);
   const [isAutoSpeak, setIsAutoSpeak] = useState(false);
@@ -375,28 +425,31 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
       return 'dark';
     }
   });
+  const [language, setLanguage] = useState<Language>(() => {
+    try {
+      return (localStorage.getItem('chat_cnr_lang') as Language) || 'tr';
+    } catch (e) {
+      return 'tr';
+    }
+  });
+
+  const t = translations[language] || translations.tr;
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
+  const [isDeepMode, setIsDeepMode] = useState(() => {
+    try {
+      return localStorage.getItem('chat_cnr_deep_mode') === 'true';
+    } catch (e) {
+      return false;
+    }
+  });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [tempName, setTempName] = useState(user.name);
   const [allUsers, setAllUsers] = useState<{email: string, name: string}[]>([]);
   const [isAdminPanelOpen, setIsAdminPanelOpen] = useState(false);
-  const [selectedModel, setSelectedModel] = useState<'standard' | 'pro'>(() => {
-    try {
-      return (localStorage.getItem('chat_cnr_model') as 'standard' | 'pro') || 'pro';
-    } catch (e) {
-      return 'pro';
-    }
-  });
   const [deletingSessionId, setDeletingSessionId] = useState<string | null>(null);
   const [streamingMessage, setStreamingMessage] = useState<{ id: string, text: string, sources: any[] } | null>(null);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('chat_cnr_model', selectedModel);
-    } catch (e) {}
-  }, [selectedModel]);
 
   const [currentTime, setCurrentTime] = useState(new Date());
   
@@ -404,43 +457,6 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
-
-  // Stripe Payment Success Handling
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const paymentSuccess = urlParams.get('payment_success');
-    const sessionId = urlParams.get('session_id');
-
-    if (paymentSuccess === 'true' && sessionId && user) {
-      const verifyPayment = async () => {
-        try {
-          const response = await fetch(`/api/stripe/verify-session?session_id=${sessionId}`);
-          const data = await response.json();
-          
-          if (data.status === 'success') {
-            // Update user role in Firestore
-            try {
-              await setDoc(doc(db, 'users', user.uid), {
-                role: 'pro'
-              }, { merge: true });
-            } catch (err) {
-              handleFirestoreError(err, OperationType.UPDATE, `users/${user.uid}`);
-            }
-            
-            // Update local state
-            setUser((prev: any) => prev ? { ...prev, role: 'pro' } : null);
-            
-            // Clean URL
-            window.history.replaceState({}, document.title, window.location.pathname);
-            alert("Tebrikler! Hesabınız başarıyla Pro sürümüne yükseltildi.");
-          }
-        } catch (err) {
-          console.error("Payment verification failed:", err);
-        }
-      };
-      verifyPayment();
-    }
-  }, [user, setUser]);
 
   useEffect(() => {
     if (!user) return;
@@ -480,13 +496,11 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
 
   const checkLimit = (type: 'messages' | 'images') => {
     if (user?.email === OWNER_EMAIL) return true;
-    const role = user?.role === 'pro' ? 'PRO' : 'FREE';
-    const limit = type === 'messages' ? LIMITS[role].MESSAGES : LIMITS[role].IMAGES;
+    const limit = type === 'messages' ? LIMITS.MESSAGES : LIMITS.IMAGES;
     const current = type === 'messages' ? dailyUsage.messages : dailyUsage.images;
     
     if (current >= limit) {
-      alert(`Günlük ${type === 'messages' ? 'mesaj' : 'görsel'} sınırınıza ulaştınız (${limit}). ${user?.role !== 'pro' ? "Daha fazla hak için Pro'ya geçebilirsiniz." : ""}`);
-      if (user?.role !== 'pro') setIsPricingModalOpen(true);
+      alert(`Günlük ${type === 'messages' ? 'mesaj' : 'görsel'} sınırınıza ulaştınız (${limit}). Lütfen yarın tekrar deneyin.`);
       return false;
     }
     return true;
@@ -613,6 +627,14 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
   }, [sessions]);
 
   useEffect(() => {
+    localStorage.setItem('chat_cnr_chat_mode', isChatMode.toString());
+  }, [isChatMode]);
+
+  useEffect(() => {
+    localStorage.setItem('chat_cnr_deep_mode', isDeepMode.toString());
+  }, [isDeepMode]);
+
+  useEffect(() => {
     if (user) {
       localStorage.setItem(USER_KEY, JSON.stringify(user));
     } else {
@@ -644,77 +666,9 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
     setIsSidebarOpen(false);
   };
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      await signInWithGoogle();
-    } catch (err) {
-      console.error("Login error:", err);
-      alert("Giriş yapılamadı.");
-    }
-  };
-
   const handleLogout = async () => {
     if (confirm('Çıkış yapmak istediğinize emin misiniz?')) {
       await logout();
-    }
-  };
-
-  const handleUpgrade = async (priceId: string) => {
-    if (!user) return;
-    
-    // Check if Stripe is configured
-    const stripeKey = (import.meta as any).env?.VITE_STRIPE_PUBLISHABLE_KEY || '';
-    if (!stripeKey || stripeKey === 'undefined') {
-      alert("Hata: Ödeme sistemi (Stripe) henüz yapılandırılmamış. Lütfen Vercel üzerinden anahtarları ekleyin.");
-      return;
-    }
-
-    setIsPaymentProcessing(true);
-    try {
-      const response = await fetch('/api/stripe/create-checkout-session', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: user.uid,
-          userEmail: user.email,
-          priceId: priceId
-        })
-      });
-      const data = await response.json();
-      if (data.url) {
-        window.location.href = data.url;
-      } else {
-        throw new Error(data.error || "Ödeme oturumu oluşturulamadı.");
-      }
-    } catch (err: any) {
-      console.error("Upgrade Error:", err);
-      alert(`Hata: ${err.message}`);
-    } finally {
-      setIsPaymentProcessing(false);
-    }
-  };
-
-  const handleManageSubscription = async () => {
-    if (!user) return;
-    setIsPaymentProcessing(true);
-    try {
-      const response = await fetch('/api/stripe/create-portal-session', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userEmail: user.email })
-      });
-      const data = await response.json();
-      if (data.url) {
-        window.location.href = data.url;
-      } else {
-        throw new Error(data.error || "Portal oturumu oluşturulamadı.");
-      }
-    } catch (err: any) {
-      console.error("Portal Error:", err);
-      alert(`Hata: ${err.message}`);
-    } finally {
-      setIsPaymentProcessing(false);
     }
   };
 
@@ -722,7 +676,57 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
     const file = e.target.files?.[0];
     if (file) {
       const reader = new FileReader();
-      reader.onload = (ev) => setSelectedImage(ev.target?.result as string);
+      reader.onload = (ev) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          let width = img.width;
+          let height = img.height;
+          
+          const MAX_DIMENSION = 512; // Very safe max dimension for Firestore 1MB limit
+          if (width > height && width > MAX_DIMENSION) {
+            height *= MAX_DIMENSION / width;
+            width = MAX_DIMENSION;
+          } else if (height > MAX_DIMENSION) {
+            width *= MAX_DIMENSION / height;
+            height = MAX_DIMENSION;
+          }
+          
+          canvas.width = Math.floor(width);
+          canvas.height = Math.floor(height);
+          
+          const ctx = canvas.getContext("2d");
+          if (ctx) {
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            // Compress image aggressively to fit within Firestore limit
+            const compressedDataUrl = canvas.toDataURL("image/jpeg", 0.5);
+            console.log("Compressed image size (bytes):", compressedDataUrl.length);
+            if (compressedDataUrl.length > 1000000) {
+              alert("Görsel sıkıştırıldıktan sonra bile çok büyük (1MB sınırını aşıyor). Lütfen daha düşük çözünürlüklü bir dosya seçin.");
+              return;
+            }
+            setSelectedImage(compressedDataUrl);
+          } else {
+            console.warn("Canvas context failed, using original");
+            const raw = ev.target?.result as string;
+            if (raw.length > 1000000) {
+              alert("Cihazınız görseli sıkıştıramadı ve orijinal boyutu 1MB sınırını aşıyor. Lütfen daha küçük bir dosya seçin.");
+              return;
+            }
+            setSelectedImage(raw); // fallback
+          }
+        };
+        img.onerror = () => {
+          console.error("Failed to load image for compression");
+          const raw = ev.target?.result as string;
+          if (raw.length > 1000000) {
+            alert("Görsel yüklenemedi ve boyutu çok büyük (1MB sınırı).");
+            return;
+          }
+          setSelectedImage(raw);
+        };
+        img.src = ev.target?.result as string;
+      };
       reader.readAsDataURL(file);
     }
   };
@@ -740,7 +744,16 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
     }
 
     const recognition = new SpeechRecognition();
-    recognition.lang = 'tr-TR';
+    const voiceLangMap: Record<string, string> = {
+      'tr': 'tr-TR',
+      'en': 'en-US',
+      'es': 'es-ES',
+      'de': 'de-DE',
+      'fr': 'fr-FR',
+      'it': 'it-IT',
+      'ru': 'ru-RU'
+    };
+    recognition.lang = voiceLangMap[language] || 'tr-TR';
     recognition.continuous = false;
     recognition.interimResults = false;
 
@@ -754,73 +767,6 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
 
     recognitionRef.current = recognition;
     recognition.start();
-  };
-
-  const handleGenerateImage = async () => {
-    if (!input.trim() || !activeSession || !activeSession.messages) return;
-    if (!checkLimit('images')) return;
-    
-    const prompt = input.trim();
-    const userMsg: Message = {
-      id: Date.now().toString(),
-      role: 'user',
-      text: `Görsel oluştur: ${prompt}`,
-      timestamp: new Date(),
-    };
-
-    const updatedMessages = [...(activeSession.messages || []), userMsg];
-    setSessions(prev => prev.map(s => 
-      s.id === activeSessionId ? { ...s, messages: updatedMessages, updatedAt: new Date() } : s
-    ));
-
-    setInput('');
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const modelMsgId = (Date.now() + 1).toString();
-      
-      // Add user message to Firestore
-      try {
-        await setDoc(doc(db, 'users', user.uid, 'sessions', activeSessionId!, 'messages', userMsg.id), cleanForFirestore({
-          ...userMsg,
-          timestamp: Timestamp.now()
-        }));
-      } catch (err) {
-        handleFirestoreError(err, OperationType.WRITE, `users/${user.uid}/sessions/${activeSessionId}/messages/${userMsg.id}`);
-      }
-
-      const imageUrl = await chatCNRService.generateImage(prompt);
-      await incrementUsage('images');
-      
-      const modelMsg: Message = {
-        id: modelMsgId,
-        role: 'model',
-        text: `"${prompt}" için oluşturduğum görsel:`,
-        imageUrl: imageUrl,
-        timestamp: new Date(),
-      };
-
-      // Add model message to Firestore
-      try {
-        await setDoc(doc(db, 'users', user.uid, 'sessions', activeSessionId!, 'messages', modelMsgId), cleanForFirestore({
-          ...modelMsg,
-          timestamp: Timestamp.now()
-        }));
-      } catch (err) {
-        handleFirestoreError(err, OperationType.WRITE, `users/${user.uid}/sessions/${activeSessionId}/messages/${modelMsgId}`);
-      }
-
-      if (isAutoSpeak) {
-        const audioBase64 = await chatCNRService.textToSpeech(modelMsg.text);
-        if (audioBase64) playPCM(audioBase64);
-      }
-    } catch (err: any) {
-      console.error("Image Gen Error:", err);
-      setError("Görsel oluşturulurken bir hata oluştu.");
-    } finally {
-      setIsLoading(false);
-    }
   };
 
   const lastSentMessageRef = useRef<string>('');
@@ -892,6 +838,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
 
       let finalResponseText = "";
       let finalSources: any[] = [];
+      let finalGrounded = false;
       const stream = chatCNRService.sendMessageStream(
         userMsg.text,
         activeSession?.messages || [],
@@ -899,7 +846,10 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
         user.name,
         user.email,
         isChatMode,
-        selectedModel === 'pro' ? 'gemini-1.5-pro' : 'gemini-1.5-flash'
+        user.role,
+        user,
+        language,
+        isDeepMode
       );
 
       // Show streaming message locally only
@@ -907,22 +857,33 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
 
       let isFirstChunk = true;
       for await (const chunk of stream) {
-        if (isFirstChunk && chunk.text.trim()) {
+        if (!chunk) continue;
+        
+        const chunkText = chunk.text || "";
+        const chunkSources = chunk.sources || [];
+        const chunkGrounded = !!chunk.grounded;
+
+        if (isFirstChunk && chunkText.trim()) {
           setIsLoading(false);
           isFirstChunk = false;
         }
-        finalResponseText = chunk.text;
-        finalSources = chunk.sources || [];
+        finalResponseText = chunkText;
+        finalSources = chunkSources;
+        finalGrounded = chunkGrounded;
         
         // Update local streaming state ONLY
-        if (chunk.text.trim()) {
-          setStreamingMessage(prev => prev ? { ...prev, text: chunk.text, sources: finalSources } : null);
+        if (chunkText.trim()) {
+          setStreamingMessage({ 
+            id: modelMsgId, 
+            text: chunkText, 
+            sources: finalSources 
+          });
         }
       }
 
       if (!finalResponseText.trim()) {
-        console.error("Empty response from AI. History sent:", activeSession?.messages);
-        throw new Error("Yapay zeka şu an yanıt veremiyor. Lütfen tekrar denemeyi veya yeni bir sohbet başlatmayı deneyin.");
+        console.error("Empty response from AI. (History hidden to prevent spam)");
+        throw new Error("Yapay zeka şu an yanıt veremiyor. Sunucu boş bir yanıt döndürdü. Lütfen tekrar deneyin.");
       }
 
       // Final update to Firestore ONCE at the end
@@ -932,6 +893,8 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
           role: 'model',
           text: finalResponseText,
           sources: finalSources,
+          isDeep: isDeepMode,
+          grounded: finalGrounded,
           timestamp: Timestamp.now()
         }));
       } catch (err) {
@@ -950,22 +913,35 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
       let errorMessage = err.message || 'Bilinmeyen hata';
       
       // Try to parse JSON error if it exists
+      let errorType = "";
+      let errorDetails = "";
       try {
         if (errorMessage.includes('{')) {
           const jsonStr = errorMessage.substring(errorMessage.indexOf('{'));
           const parsed = JSON.parse(jsonStr);
           if (parsed.error?.message) errorMessage = parsed.error.message;
+          else if (parsed.error && typeof parsed.error === 'string') errorMessage = parsed.error;
+          
+          if (parsed.errorType) errorType = parsed.errorType;
+          if (parsed.details) errorDetails = parsed.details;
         }
       } catch (e) {}
 
-      if (errorMessage.includes("429") || errorMessage.includes("quota") || errorMessage.includes("RESOURCE_EXHAUSTED")) {
-        const { totalKeys, sourceVar, maskedKeys } = chatCNRService.getDebugInfo(selectedModel === 'pro');
-        const keysHint = maskedKeys.length > 0 ? ` [${maskedKeys.join(', ')}]` : '';
-        setError(`Günlük kullanım kotanız tamamen doldu (${totalKeys} anahtar denendi${keysHint}, Kaynak: ${sourceVar}). Lütfen AI Studio Build panelindeki Settings kısmından veya Vercel Dashboard'dan API anahtarlarınızı kontrol edin.`);
+      if (errorType === "QUOTA_EXCEEDED" || errorMessage.includes("429") || errorMessage.includes("quota") || errorMessage.includes("RESOURCE_EXHAUSTED")) {
+        setError(t.quotaExceeded || `SİSTEM KOTASI DOLDU: Günlük kullanım sınırına ulaşıldı. Google Gemini API ücretsiz sürümde kota sınırları bulunmaktadır. Kendi API anahtarınızı Profile -> Settings -> API Keys kısmından ekleyerek bu sınırı aşabilirsiniz.`);
       } else if (errorMessage === "API_KEY_MISSING") {
-        setError("API Anahtarı bulunamadı. Lütfen AI Studio Build panelindeki Settings kısmından CHAT_CNR_API_KEY veya CHAT_CNR_PRO_API_KEY değişkenini tanımlayın.");
+        setError("API Anahtarı bulunamadı. Lütfen AI Studio Build panelindeki Settings kısmından CHAT_CNR_API_KEY değişkenini tanımlayın.");
+      } else if (
+        errorType === "API_KEY_INVALID" ||
+        errorMessage.includes("API key not valid") || 
+        errorMessage.includes("API_KEY_INVALID") || 
+        errorMessage === "INVALID_API_KEY_FORMAT" ||
+        errorMessage.includes("invalid-api-key") ||
+        errorMessage.toLowerCase().includes("invalid key")
+      ) {
+        setError(`GEÇERSİZ API ANAHTARI: Sistem anahtarı reddetti. Lütfen Settings -> CHAT_CNR_API_KEY kısmındaki anahtarın doğruluğunu kontrol edin. Eğer yeni bir anahtar aldıysanız, AI Studio Build Settings panelinden güncellediğinizden emin olun.`);
       } else {
-        console.error("Chat Error:", err);
+        console.error("Chat Error:", errorMessage);
         setError(`Yanıt alınırken bir sorun oluştu: ${errorMessage}. Lütfen bağlantınızı kontrol edip tekrar deneyin.`);
       }
     } finally {
@@ -976,121 +952,85 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
   return (
     <div className={`flex h-[100dvh] overflow-hidden font-['Inter'] transition-colors duration-300 ${theme === 'dark' ? 'bg-[#0a0a0a] text-zinc-100' : 'bg-zinc-50 text-zinc-900'}`}>
       {/* Sidebar */}
-      <aside className={`fixed inset-y-0 left-0 z-[60] w-72 border-r transition-transform duration-300 lg:relative lg:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} ${theme === 'dark' ? 'bg-[#121212] border-zinc-800' : 'bg-white border-zinc-200'}`}>
-        <div className="flex flex-col h-full">
-          <div className={`p-4 border-b flex items-center justify-between ${theme === 'dark' ? 'border-zinc-800' : 'border-zinc-200'}`}>
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-                <MessageSquare size={16} className="text-white" />
+      <aside className={`fixed inset-y-0 left-0 z-[60] w-72 border-r transition-all duration-500 ease-[0.23, 1, 0.32, 1] lg:relative lg:translate-x-0 ${isSidebarOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full'} ${theme === 'dark' ? 'bg-[#050505] border-zinc-800/80 shadow-[10px_0_40px_rgba(0,0,0,0.4)]' : 'bg-white border-zinc-200'}`}>
+        <div className="flex flex-col h-full overflow-hidden">
+          <div className={`px-6 py-6 border-b flex items-center justify-between ${theme === 'dark' ? 'border-zinc-800/50' : 'border-zinc-100'}`}>
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center shadow-lg shadow-blue-500/20">
+                <Sparkles size={16} className="text-white" />
               </div>
-              <span className="font-bold text-sm">Sohbetler</span>
+              <span className="font-bold text-[13px] uppercase tracking-[0.2em]">{t.sessions}</span>
             </div>
-            <button onClick={() => setIsSidebarOpen(false)} className={`lg:hidden p-2 ${theme === 'dark' ? 'text-zinc-400' : 'text-zinc-500'}`}>
-              <X size={20} />
+            <button onClick={() => setIsSidebarOpen(false)} className={`lg:hidden p-2 rounded-lg transition-colors ${theme === 'dark' ? 'text-zinc-500 hover:bg-zinc-800 hover:text-white' : 'text-zinc-500 hover:bg-zinc-100'}`}>
+              <X size={18} />
             </button>
           </div>
 
-          <div className="p-4">
+          <div className="p-6">
             <button 
               onClick={createNewSession}
-              className="w-full flex items-center gap-3 bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-xl font-bold transition-all shadow-lg shadow-blue-900/20"
+              className="w-full flex items-center justify-center gap-3 bg-blue-600 hover:bg-blue-500 text-white py-3 px-4 rounded-xl font-bold transition-all shadow-xl shadow-blue-500/10 active:scale-[0.98]"
             >
               <Plus size={18} />
-              <span>Yeni Sohbet</span>
+              <span className="text-sm">{t.newChat}</span>
             </button>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-4 space-y-2 custom-scrollbar">
-            {sessions.filter(s => s && s.id).map(session => (
-              <div 
-                key={session.id}
-                onClick={() => {
-                  setActiveSessionId(session.id);
-                  if (window.innerWidth < 1024) setIsSidebarOpen(false);
-                }}
-                className={`group relative flex items-center gap-3 p-4 rounded-2xl cursor-pointer transition-all duration-300 ${
-                  activeSessionId === session.id 
-                    ? (theme === 'dark' ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/20' : 'bg-blue-600 text-white shadow-lg shadow-blue-600/20')
-                    : (theme === 'dark' ? 'hover:bg-zinc-800 text-zinc-400' : 'hover:bg-zinc-100 text-zinc-600')
-                }`}
-              >
-                <div className={`p-2 rounded-xl flex-shrink-0 ${activeSessionId === session.id ? 'bg-white/20' : (theme === 'dark' ? 'bg-zinc-900' : 'bg-zinc-200')}`}>
-                  <MessageSquare size={16} />
-                </div>
-                <span className="flex-1 text-sm font-bold truncate pr-8">{session.title}</span>
-                
-                <button 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setDeletingSessionId(session.id);
+          <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-1.5 custom-scrollbar">
+            <AnimatePresence mode="popLayout">
+              {sessions.filter(s => s && s.id).map((session, idx) => (
+                <motion.div 
+                  key={session.id}
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  transition={{ delay: idx * 0.03, duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
+                  onClick={() => {
+                    setActiveSessionId(session.id);
+                    if (window.innerWidth < 1024) setIsSidebarOpen(false);
                   }}
-                  className={`absolute right-2 p-2 rounded-lg transition-all ${
+                  className={`group relative flex items-center gap-3 p-3.5 rounded-xl cursor-pointer transition-all duration-300 border ${
                     activeSessionId === session.id 
-                      ? 'hover:bg-white/20 text-white' 
-                      : (theme === 'dark' ? 'hover:bg-red-500/20 text-zinc-500 hover:text-red-500' : 'hover:bg-red-50 text-zinc-400 hover:text-red-500')
+                      ? (theme === 'dark' ? 'bg-zinc-800/50 border-zinc-700 text-white shadow-inner' : 'bg-zinc-100 border-zinc-200 text-zinc-900 shadow-inner')
+                      : (theme === 'dark' ? 'border-transparent hover:bg-zinc-900/50 hover:border-zinc-800 text-zinc-500 hover:text-zinc-300' : 'border-transparent hover:bg-zinc-50 hover:border-zinc-200 text-zinc-600')
                   }`}
-                  title="Sohbeti Sil"
                 >
-                  <Trash2 size={14} />
-                </button>
-              </div>
-            ))}
+                  <div className={`p-1.5 rounded-lg flex-shrink-0 transition-colors ${activeSessionId === session.id ? 'text-blue-500' : (theme === 'dark' ? 'text-zinc-600 group-hover:text-zinc-400' : 'text-zinc-400 group-hover:text-zinc-500')}`}>
+                    <MessageSquare size={14} />
+                  </div>
+                  <span className="flex-1 text-[13px] font-medium truncate pr-6 tracking-tight">{session.title}</span>
+                  
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setDeletingSessionId(session.id);
+                    }}
+                    className={`absolute right-2 p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-all ${
+                      theme === 'dark' ? 'hover:bg-red-500/20 text-zinc-600 hover:text-red-500' : 'hover:bg-red-50 text-zinc-400 hover:text-red-500'
+                    }`}
+                  >
+                    <Trash2 size={12} />
+                  </button>
+                </motion.div>
+              ))}
+            </AnimatePresence>
           </div>
 
-          {/* Model Selection Quick Access */}
-          <div className={`p-4 border-t ${theme === 'dark' ? 'border-zinc-800' : 'border-zinc-200'}`}>
-            <p className={`text-[10px] font-bold uppercase tracking-[0.2em] mb-3 ${theme === 'dark' ? 'text-zinc-500' : 'text-zinc-400'}`}>Model Seçimi</p>
-            <div className={`flex p-1 rounded-xl ${theme === 'dark' ? 'bg-zinc-900' : 'bg-zinc-100'}`}>
-              <button 
-                onClick={() => setSelectedModel('standard')}
-                className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
-                  selectedModel === 'standard' 
-                    ? 'bg-blue-600 text-white shadow-lg' 
-                    : (theme === 'dark' ? 'text-zinc-500 hover:text-zinc-300' : 'text-zinc-400 hover:text-zinc-600')
-                }`}
-              >
-                Standart
-              </button>
-              <button 
-                onClick={() => setSelectedModel('pro')}
-                className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
-                  selectedModel === 'pro' 
-                    ? 'bg-amber-500 text-black shadow-lg' 
-                    : (theme === 'dark' ? 'text-zinc-500 hover:text-zinc-300' : 'text-zinc-400 hover:text-zinc-600')
-                }`}
-              >
-                <Sparkles size={10} />
-                Pro
-              </button>
-            </div>
-          </div>
-
-          <div className={`p-4 border-t ${theme === 'dark' ? 'border-zinc-800' : 'border-zinc-200'}`}>
-            {user.role !== 'pro' && user.role !== 'admin' && (
-              <button 
-                onClick={() => setIsPricingModalOpen(true)}
-                className="w-full mb-4 flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-bold py-3 rounded-2xl shadow-lg shadow-amber-900/20 transition-all active:scale-[0.98]"
-              >
-                <Sparkles size={18} />
-                <span>Pro'ya Yükselt</span>
-              </button>
-            )}
-            <div className={`flex items-center gap-3 p-3 rounded-2xl ${theme === 'dark' ? 'bg-zinc-900' : 'bg-zinc-100'}`}>
-              <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${theme === 'dark' ? 'bg-zinc-800 text-blue-400' : 'bg-white text-blue-600 border border-zinc-200'}`}>
-                <User size={20} />
+          {/* User Profile Section */}
+          <div className={`p-4 border-t ${theme === 'dark' ? 'border-zinc-800/50 bg-[#070707]' : 'border-zinc-100 bg-zinc-50/50'}`}>
+            <div className={`flex items-center gap-3 p-3 rounded-xl border transition-all ${theme === 'dark' ? 'bg-zinc-900/50 border-zinc-800 hover:border-zinc-700' : 'bg-white border-zinc-200 hover:border-zinc-300'}`}>
+              <div className={`w-9 h-9 rounded-lg flex items-center justify-center transition-all ${theme === 'dark' ? 'bg-zinc-800 text-blue-400 group-hover:text-blue-300' : 'bg-zinc-100 text-blue-600'}`}>
+                {user.email === OWNER_EMAIL ? <Shield size={18} /> : <User size={18} />}
               </div>
               <div className="flex-1 overflow-hidden">
-                <p className="text-sm font-bold truncate">{user.name}</p>
-                <div className="flex items-center gap-1">
-                  <p className={`text-[10px] truncate ${theme === 'dark' ? 'text-zinc-500' : 'text-zinc-400'}`}>{user.email || 'Kullanıcı'}</p>
-                  <span className={`text-[8px] px-1.5 py-0.5 rounded-full font-bold uppercase tracking-tighter ${
+                <p className="text-[13px] font-bold truncate tracking-tight">{user.name}</p>
+                <div className="flex items-center gap-2">
+                  <span className={`text-[8px] px-1.5 py-0.5 rounded-md font-black uppercase tracking-widest ${
                     user.email === OWNER_EMAIL 
-                      ? 'bg-amber-500/20 text-amber-500 border border-amber-500/30' 
-                      : user.role === 'pro'
-                        ? 'bg-emerald-500/20 text-emerald-500 border border-emerald-500/30'
-                        : 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
+                      ? 'bg-amber-500/10 text-amber-500 border border-amber-500/20' 
+                      : 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
                   }`}>
-                    {user.email === OWNER_EMAIL ? 'Kurucu' : user.role === 'pro' ? 'Pro' : 'Üye'}
+                    {user.email === OWNER_EMAIL ? 'SİSTEM SORUMLUSU' : 'PREMIUM'}
                   </span>
                 </div>
               </div>
@@ -1110,202 +1050,270 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
         )}
 
         {/* Header */}
-        <header className={`h-16 border-b backdrop-blur-xl flex items-center justify-between px-4 sticky top-0 z-50 ${theme === 'dark' ? 'border-zinc-800 bg-[#0a0a0a]/80' : 'border-zinc-200 bg-white/80'}`}>
-          <div className="flex items-center gap-3">
+        <header className={`h-16 border-b backdrop-blur-md flex items-center justify-between px-4 md:px-6 sticky top-0 z-50 ${theme === 'dark' ? 'border-zinc-800/50 bg-[#0a0a0a]/70' : 'border-zinc-200/50 bg-white/70'}`}>
+          <div className="flex items-center gap-3 md:gap-4 overflow-hidden">
             <button 
               onClick={() => setIsSidebarOpen(true)}
-              className={`lg:hidden p-2 rounded-xl ${theme === 'dark' ? 'text-zinc-400 hover:bg-zinc-800' : 'text-zinc-500 hover:bg-zinc-100'}`}
+              className={`lg:hidden p-2 -ml-2 rounded-lg transition-all flex-shrink-0 ${theme === 'dark' ? 'text-zinc-400 hover:bg-zinc-800' : 'text-zinc-500 hover:bg-zinc-100'}`}
             >
-              <Menu size={20} />
+              <Menu size={18} />
             </button>
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-900/20">
-                <MessageSquare size={20} className="text-white" />
+            <div className="flex items-center gap-3 overflow-hidden">
+              <div className="hidden sm:flex w-8 h-8 bg-blue-600 rounded-lg items-center justify-center shadow-lg shadow-blue-500/10 flex-shrink-0">
+                <MessageSquare size={16} className="text-white" />
               </div>
-              <div>
-        <h1 className="font-bold text-sm truncate max-w-[150px] md:max-w-none">
-          {activeSession?.title || (sessions.length > 0 ? 'Yükleniyor...' : 'Yeni Sohbet')}
-        </h1>
-                <div className="flex items-center gap-1.5">
-                  <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></div>
-                  <span className={`text-[10px] uppercase tracking-widest font-bold ${theme === 'dark' ? 'text-zinc-500' : 'text-zinc-400'}`}>Çevrimiçi</span>
-                  <span className="mx-2 text-zinc-700">•</span>
-                  <span className={`text-[10px] font-medium ${theme === 'dark' ? 'text-zinc-400' : 'text-zinc-500'}`}>
-                    {currentTime.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' })} {currentTime.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
-                  </span>
-                  <span className="mx-2 text-zinc-700">•</span>
-                  <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-lg ${selectedModel === 'pro' ? 'bg-amber-500/20 text-amber-500 border border-amber-500/30' : 'bg-blue-500/10 text-blue-400 border border-blue-500/20'}`}>
-                    {selectedModel === 'pro' ? 'Chat_CNR Pro' : 'Chat_CNR Standart'}
-                  </span>
+              <div className="flex flex-col min-w-0">
+                <h1 className="font-bold text-[13px] tracking-tight truncate uppercase">
+                  {activeSession?.title || (sessions.length > 0 ? 'Loading...' : t.newChat)}
+                </h1>
+                <div className="flex items-center gap-2">
+                  <div className="w-1 h-1 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.6)]"></div>
+                  <span className={`text-[9px] uppercase tracking-[0.15em] font-black ${theme === 'dark' ? 'text-emerald-500/80' : 'text-emerald-600'}`}>{t.online}</span>
                 </div>
               </div>
             </div>
           </div>
           
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
             {user.email === OWNER_EMAIL && (
               <button 
                 onClick={() => setIsAdminPanelOpen(true)}
-                className={`p-2.5 rounded-xl transition-all ${theme === 'dark' ? 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700' : 'bg-zinc-100 text-zinc-500 hover:bg-zinc-200'}`}
-                title="Kullanıcı Listesi"
+                className={`p-2 rounded-lg transition-all border ${theme === 'dark' ? 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-white' : 'bg-white border-zinc-200 text-zinc-500 hover:text-zinc-900'}`}
+                title={t.userList}
               >
-                <Users size={18} />
+                <Users size={16} />
               </button>
             )}
             <button 
               onClick={() => setIsAutoSpeak(!isAutoSpeak)}
-              className={`p-2.5 rounded-xl transition-all ${isAutoSpeak ? 'bg-blue-600 text-white' : (theme === 'dark' ? 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700' : 'bg-zinc-100 text-zinc-500 hover:bg-zinc-200')}`}
-              title={isAutoSpeak ? "Sesli Yanıt Açık" : "Sesli Yanıt Kapalı"}
+              className={`p-2 rounded-lg transition-all border ${isAutoSpeak ? 'bg-blue-600 border-blue-500 text-white' : (theme === 'dark' ? 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-white' : 'bg-white border-zinc-200 text-zinc-500 hover:text-zinc-900')}`}
+              title={isAutoSpeak ? t.voiceResponseOn : t.voiceResponseOff}
             >
-              {isAutoSpeak ? <Volume2 size={18} /> : <VolumeX size={18} />}
+              {isAutoSpeak ? <Volume2 size={16} /> : <VolumeX size={16} />}
             </button>
             <button 
               onClick={() => setIsSettingsOpen(true)}
-              className={`p-2.5 rounded-xl transition-all ${theme === 'dark' ? 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700' : 'bg-zinc-100 text-zinc-500 hover:bg-zinc-200'}`}
-              title="Ayarlar"
+              className={`p-2 rounded-lg transition-all border ${theme === 'dark' ? 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-white' : 'bg-white border-zinc-200 text-zinc-500 hover:text-zinc-900'}`}
+              title={t.settings}
             >
-              <Settings size={18} />
+              <Settings size={16} />
             </button>
           </div>
         </header>
 
         {/* Messages Area */}
-        <main className="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-6">
-        {activeSession ? (
-          <>
-            {activeSession.messages && activeSession.messages.length === 0 && (
-              <div className="h-full flex flex-col items-center justify-center text-center p-8 opacity-20">
-                <MessageSquare size={48} className="mb-4" />
-                <p className="text-sm font-medium">Sohbeti başlatmak için bir mesaj yazın.</p>
+        <main className={`flex-1 overflow-y-auto custom-scrollbar relative px-4 md:px-8 py-8 space-y-8 ${theme === 'dark' ? 'bg-[#030303]' : 'bg-zinc-50'}`}>
+          <div className="max-w-4xl mx-auto w-full">
+            {activeSession ? (
+              <>
+                {activeSession.messages && activeSession.messages.length === 0 && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="h-[60vh] flex flex-col items-center justify-center text-center p-8"
+                  >
+                    <div className="w-20 h-20 bg-blue-600/10 rounded-[2rem] flex items-center justify-center mb-6 shadow-[0_0_40px_rgba(37,99,235,0.1)] border border-blue-500/20">
+                      <Sparkles size={40} className="text-blue-500" />
+                    </div>
+                    <h2 className="text-2xl font-bold mb-3 tracking-tight">{t.systemReady}</h2>
+                    <p className="text-zinc-500 max-w-sm text-sm leading-relaxed">
+                      {t.systemWelcome}
+                    </p>
+                    
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-12 w-full max-w-md">
+                      {[
+                        { icon: <Cpu size={14} />, label: t.codeAnalysis, desc: t.expertLogic },
+                        { icon: <Mic size={14} />, label: t.voiceResponse, desc: t.ultraRealistic },
+                        { icon: <Shield size={14} />, label: t.secureProcess, desc: t.encrypted }
+                      ].map((item, i) => (
+                        <div key={i} className={`p-4 rounded-2xl border text-left transition-all hover:scale-[1.02] cursor-pointer ${theme === 'dark' ? 'bg-zinc-900/40 border-zinc-800 hover:border-zinc-700' : 'bg-white border-zinc-200'}`}>
+                          <div className="text-blue-500 mb-2">{item.icon}</div>
+                          <div className="font-bold text-[12px]">{item.label}</div>
+                          <div className="text-[10px] text-zinc-500">{item.desc}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
+                <div className="space-y-2">
+                  {activeSession.messages && activeSession.messages.map((msg, idx) => (
+                    <MessageItem key={msg.id} message={msg} themeColor="blue" appearance={theme} language={language} />
+                  ))}
+                </div>
+                {streamingMessage && (
+                  <MessageItem 
+                    key={streamingMessage.id} 
+                    message={{ 
+                      id: streamingMessage.id,
+                      role: 'model', 
+                      text: streamingMessage.text,
+                      sources: streamingMessage.sources,
+                      timestamp: new Date() 
+                    }} 
+                    themeColor="blue" 
+                    appearance={theme} 
+                    isStreaming={true}
+                    language={language}
+                  />
+                )}
+              </>
+            ) : (
+              <div className="h-[70vh] flex flex-col items-center justify-center text-center p-8">
+                <div className="w-24 h-24 bg-zinc-900 rounded-[2.5rem] flex items-center justify-center mb-8 border border-zinc-800 shadow-2xl relative group overflow-hidden">
+                  <div className="absolute inset-0 bg-blue-600 opacity-0 group-hover:opacity-10 transition-opacity" />
+                  <MessageSquare size={44} className="text-zinc-700" />
+                </div>
+                <h3 className="text-2xl font-bold mb-3 tracking-tight uppercase">{t.waitingConnection}</h3>
+                <p className="text-zinc-500 max-w-xs text-sm">{t.waitingConnectionDesc}</p>
               </div>
             )}
-            {activeSession.messages && activeSession.messages.map((msg) => (
-              <MessageItem key={msg.id} message={msg} themeColor="blue" appearance={theme} />
-            ))}
-            {streamingMessage && (
-              <MessageItem 
-                key={streamingMessage.id} 
-                message={{ 
-                  id: streamingMessage.id,
-                  role: 'model', 
-                  text: streamingMessage.text,
-                  sources: streamingMessage.sources,
-                  timestamp: new Date() 
-                }} 
-                themeColor="blue" 
-                appearance={theme} 
-              />
+            {isLoading && (
+              <div className="flex gap-4 animate-pulse px-2">
+                <div className={`w-9 h-9 rounded-xl flex-shrink-0 ${theme === 'dark' ? 'bg-zinc-900 border border-zinc-800' : 'bg-zinc-200'}`} />
+                <div className="space-y-3 flex-1 pt-2">
+                  <div className={`h-3 rounded-full w-1/4 ${theme === 'dark' ? 'bg-zinc-900' : 'bg-zinc-200'}`} />
+                  <div className={`h-3 rounded-full w-3/4 ${theme === 'dark' ? 'bg-zinc-900' : 'bg-zinc-200'}`} />
+                  <div className={`h-3 rounded-full w-1/2 ${theme === 'dark' ? 'bg-zinc-800' : 'bg-zinc-100'}`} />
+                </div>
+              </div>
             )}
-          </>
-        ) : (
-            <div className="h-full flex flex-col items-center justify-center text-center p-8">
-              <div className="w-20 h-20 bg-zinc-800/50 rounded-3xl flex items-center justify-center mb-6">
-                <MessageSquare size={40} className="text-zinc-600" />
-              </div>
-              <h3 className="text-xl font-bold mb-2">Henüz bir sohbet seçilmedi</h3>
-              <p className="text-zinc-500 max-w-xs">Yeni bir sohbet başlatmak için sol menüdeki butona tıklayın.</p>
-            </div>
-          )}
-          {isLoading && (
-            <div className="flex gap-3 animate-pulse">
-              <div className={`w-8 h-8 rounded-lg flex-shrink-0 ${theme === 'dark' ? 'bg-zinc-800' : 'bg-zinc-200'}`} />
-              <div className="space-y-2 flex-1">
-                <div className={`h-4 rounded w-1/4 ${theme === 'dark' ? 'bg-zinc-800' : 'bg-zinc-200'}`} />
-                <div className={`h-4 rounded w-3/4 ${theme === 'dark' ? 'bg-zinc-800' : 'bg-zinc-200'}`} />
-              </div>
-            </div>
-          )}
-          {error && (
-            <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-4 rounded-2xl text-sm flex flex-col gap-3">
-              <div className="flex items-center gap-3">
-                <X size={18} />
-                <span>{error}</span>
-              </div>
-              <button 
-                onClick={() => { setError(null); handleSend(null, lastSentMessageRef.current); }}
-                className="self-start px-4 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg font-bold transition-all text-xs"
+            {error && (
+              <motion.div 
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-red-500/5 border border-red-500/20 text-red-400 p-6 rounded-[2rem] text-sm flex flex-col gap-4 shadow-xl"
               >
-                Yeniden Dene
-              </button>
-            </div>
-          )}
-          <div ref={messagesEndRef} />
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 bg-red-500/20 rounded-full flex items-center justify-center">
+                    <X size={20} />
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-bold uppercase tracking-widest text-[10px] mb-1">{t.errorNotification}</p>
+                    <span className="opacity-90">{error}</span>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => { setError(null); handleSend(undefined, lastSentMessageRef.current); }}
+                  className="self-end px-6 py-2.5 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-xl font-bold transition-all text-xs border border-red-500/30 uppercase tracking-widest"
+                >
+                  {t.reconnect}
+                </button>
+              </motion.div>
+            )}
+            <div ref={messagesEndRef} className="h-12" />
+          </div>
         </main>
 
-        {/* Input Area */}
-        <footer className={`p-4 border-t ${theme === 'dark' ? 'bg-[#0a0a0a] border-zinc-800' : 'bg-white border-zinc-200'}`}>
-          {selectedImage && (
-            <div className="mb-4 relative inline-block">
-              <img src={selectedImage} alt="Seçilen" className={`h-20 w-20 object-cover rounded-xl border ${theme === 'dark' ? 'border-zinc-700' : 'border-zinc-200'}`} />
-              <button 
-                onClick={() => setSelectedImage(null)}
-                className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow-lg"
+        {/* Footer */}
+        <footer className={`px-4 py-4 md:p-6 pb-[calc(env(safe-area-inset-bottom,0)+16px)] border-t transition-colors duration-500 ${theme === 'dark' ? 'bg-[#050505]/95 backdrop-blur-2xl border-zinc-800/40 shadow-[0_-20px_50px_rgba(0,0,0,0.5)]' : 'bg-white border-zinc-100'}`}>
+          <div className="max-w-4xl mx-auto">
+            {selectedImage && (
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.9, y: 10 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                className="mb-4 relative inline-block group"
               >
-                <X size={12} />
-              </button>
+                <img src={selectedImage} alt="Seçilen" className={`h-28 w-28 object-cover rounded-2xl border-2 ${theme === 'dark' ? 'border-blue-500/40 ring-8 ring-blue-500/5' : 'border-blue-200'}`} />
+                <button 
+                  onClick={() => setSelectedImage(null)}
+                  className="absolute -top-3 -right-3 bg-red-500 text-white rounded-full p-2 shadow-2xl transition-transform hover:scale-110 active:scale-95 border-2 border-[#050505]"
+                >
+                  <X size={14} />
+                </button>
+              </motion.div>
+            )}
+            
+            <form onSubmit={handleSend} className="flex gap-2 relative">
+              <div className={`flex-1 border-2 rounded-3xl p-2 md:p-3 flex flex-col transition-all duration-500 shadow-inner relative overflow-hidden group ${
+                theme === 'dark' 
+                  ? 'bg-[#0a0a0a] border-zinc-800/80 focus-within:border-blue-600/30 focus-within:shadow-[0_0_60px_rgba(37,99,235,0.05)]' 
+                  : 'bg-zinc-50 border-zinc-200 focus-within:border-blue-500/20'
+              }`}>
+                
+                <div className="flex items-end gap-2 px-1">
+                  <textarea 
+                    value={input}
+                    disabled={!activeSession}
+                    onChange={(e) => setInput(e.target.value)}
+                    placeholder={activeSession ? t.inputPlaceholder : t.noSession}
+                    rows={1}
+                    className={`flex-1 bg-transparent border-none focus:ring-0 py-2 resize-none max-h-40 md:max-h-56 custom-scrollbar text-[15px] font-medium leading-relaxed tracking-tight placeholder:text-zinc-700 disabled:opacity-50 ${theme === 'dark' ? 'text-white' : 'text-zinc-900'}`}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey && activeSession) {
+                        e.preventDefault();
+                        handleSend();
+                      }
+                    }}
+                  />
+                  
+                  {/* Send button & mic button inline with text mostly (on desktop or tablet if you prefer) - actually let's put mic and send at the bottom right */}
+                </div>
+
+                {/* Toolbar row (icons) - below text on mobile, or bottom row always */}
+                <div className="flex items-center justify-between mt-1 md:mt-2 px-1">
+                  <div className="flex items-center gap-1">
+                    <button 
+                      type="button"
+                      disabled={!activeSession}
+                      onClick={() => setIsDeepMode(!isDeepMode)}
+                      className={`p-2 rounded-xl transition-all disabled:opacity-30 flex items-center gap-2 group relative ${
+                        isDeepMode 
+                          ? 'bg-purple-600/10 text-purple-500 shadow-lg shadow-purple-500/10' 
+                          : (theme === 'dark' ? 'text-zinc-500 hover:text-white hover:bg-zinc-800/50' : 'text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100')
+                      }`}
+                      title={t.deepMode}
+                    >
+                      <Brain size={18} className={isDeepMode ? 'animate-pulse' : ''} />
+                    </button>
+                    <button 
+                      type="button"
+                      disabled={!activeSession}
+                      onClick={() => fileInputRef.current?.click()}
+                      className={`p-2 rounded-xl transition-all disabled:opacity-30 ${theme === 'dark' ? 'text-zinc-500 hover:text-white hover:bg-zinc-800/50' : 'text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100'}`}
+                      title="Görsel Yükle"
+                    >
+                      <Camera size={18} />
+                    </button>
+                    <input 
+                      type="file" 
+                      ref={fileInputRef} 
+                      onChange={handleImageSelect} 
+                      accept="image/*" 
+                      className="hidden" 
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-1">
+                    <button 
+                      type="button"
+                      disabled={!activeSession}
+                      onClick={toggleRecording}
+                      className={`p-2 rounded-xl transition-all disabled:opacity-30 ${
+                        isRecording 
+                          ? 'bg-red-500/10 text-red-500 shadow-[0_0_20px_rgba(239,68,68,0.3)] animate-pulse' 
+                          : (theme === 'dark' ? 'text-zinc-500 hover:text-white hover:bg-zinc-800/50' : 'text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100')
+                      }`}
+                    >
+                      {isRecording ? <Mic size={18} /> : <MicOff size={18} />}
+                    </button>
+                    <button 
+                      type="submit"
+                      disabled={!activeSession || (!input.trim() && !selectedImage) || isLoading}
+                      className={`p-2 rounded-xl md:p-2.5 transition-all shadow-xl active:scale-95 disabled:opacity-30 ${
+                        input.trim() || selectedImage
+                          ? 'bg-blue-600 text-white shadow-blue-500/40 hover:bg-blue-500 translate-y-0 active:translate-y-0.5' 
+                          : (theme === 'dark' ? 'bg-zinc-800 text-zinc-600' : 'bg-zinc-200 text-zinc-400')
+                      }`}
+                    >
+                      <Send size={18} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </form>
+            <div className="mt-4 flex items-center justify-between px-2">
             </div>
-          )}
-          
-          <form onSubmit={handleSend} className="flex items-end gap-2 max-w-4xl mx-auto">
-            <div className={`flex-1 border rounded-2xl p-2 flex items-end gap-2 focus-within:ring-2 focus-within:ring-blue-600/50 transition-all ${theme === 'dark' ? 'bg-[#1a1a1a] border-zinc-800' : 'bg-zinc-50 border-zinc-200'}`}>
-              <button 
-                type="button"
-                disabled={!activeSession}
-                onClick={() => fileInputRef.current?.click()}
-                className={`p-3 rounded-xl transition-all disabled:opacity-30 ${theme === 'dark' ? 'text-zinc-400 hover:text-white hover:bg-zinc-800' : 'text-zinc-500 hover:text-zinc-900 hover:bg-zinc-200'}`}
-              >
-                <Camera size={20} />
-              </button>
-              <input 
-                type="file" 
-                ref={fileInputRef} 
-                onChange={handleImageSelect} 
-                accept="image/*" 
-                className="hidden" 
-              />
-              <button 
-                type="button"
-                disabled={!activeSession || !input.trim() || isLoading}
-                onClick={handleGenerateImage}
-                className={`p-3 rounded-xl transition-all disabled:opacity-30 ${theme === 'dark' ? 'text-amber-400 hover:text-amber-300 hover:bg-zinc-800' : 'text-amber-600 hover:text-amber-700 hover:bg-zinc-200'}`}
-                title="Görsel Oluştur"
-              >
-                <Sparkles size={20} />
-              </button>
-              <textarea 
-                value={input}
-                disabled={!activeSession}
-                onChange={(e) => setInput(e.target.value)}
-                placeholder={activeSession ? "Mesajınızı yazın..." : "Önce bir sohbet başlatın"}
-                rows={1}
-                className={`flex-1 bg-transparent border-none focus:ring-0 py-3 px-1 resize-none max-h-32 custom-scrollbar text-sm disabled:opacity-50 ${theme === 'dark' ? 'text-white' : 'text-zinc-900'}`}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey && activeSession) {
-                    e.preventDefault();
-                    handleSend();
-                  }
-                }}
-              />
-              <button 
-                type="button"
-                disabled={!activeSession}
-                onClick={toggleRecording}
-                className={`p-3 rounded-xl transition-all disabled:opacity-30 ${isRecording ? 'bg-red-500 text-white animate-pulse' : (theme === 'dark' ? 'text-zinc-400 hover:text-white hover:bg-zinc-800' : 'text-zinc-500 hover:text-zinc-900 hover:bg-zinc-200')}`}
-              >
-                {isRecording ? <Mic size={20} /> : <MicOff size={20} />}
-              </button>
-            </div>
-            <button 
-              type="submit"
-              disabled={isLoading || !activeSession || (!input.trim() && !selectedImage)}
-              className="p-4 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:hover:bg-blue-600 text-white rounded-2xl transition-all shadow-lg shadow-blue-900/20 active:scale-95"
-            >
-              <Send size={20} />
-            </button>
-          </form>
-          <p className={`text-center text-[10px] mt-4 uppercase tracking-[0.2em] font-bold ${theme === 'dark' ? 'text-zinc-500' : 'text-zinc-400'}`}>
-            CNR Bilgi Merkezi • Doruk Ali Arslan
-          </p>
+          </div>
         </footer>
       </div>
 
@@ -1348,72 +1356,6 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
         </div>
       )}
 
-      {/* Pricing Modal */}
-      {isPricingModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/80 backdrop-blur-md" onClick={() => setIsPricingModalOpen(false)} />
-          <div className={`relative w-full max-w-2xl rounded-3xl overflow-hidden shadow-2xl border animate-in zoom-in duration-300 ${theme === 'dark' ? 'bg-[#121212] border-zinc-800' : 'bg-white border-zinc-200'}`}>
-            <div className="p-8 text-center">
-              <div className="w-16 h-16 bg-amber-500 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-amber-900/20">
-                <Sparkles size={32} className="text-white" />
-              </div>
-              <h2 className="text-3xl font-black mb-2">Chat_CNR Pro</h2>
-              <p className="text-zinc-500 mb-8">Yapay zeka deneyiminizi bir üst seviyeye taşıyın.</p>
-              
-              <div className="grid md:grid-cols-2 gap-6 text-left">
-                {/* Free Plan */}
-                <div className={`p-6 rounded-3xl border ${theme === 'dark' ? 'bg-zinc-900/50 border-zinc-800' : 'bg-zinc-50 border-zinc-200'}`}>
-                  <h3 className="font-bold text-lg mb-1">Ücretsiz</h3>
-                  <p className="text-3xl font-black mb-4">0₺ <span className="text-sm font-normal text-zinc-500">/ay</span></p>
-                  <ul className="space-y-3 text-sm text-zinc-400">
-                    <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 bg-zinc-600 rounded-full" /> Standart Chat_CNR Modeli</li>
-                    <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 bg-zinc-600 rounded-full" /> Günlük 250 Mesaj</li>
-                    <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 bg-zinc-600 rounded-full" /> Günlük 2 Görsel Oluşturma</li>
-                  </ul>
-                  <button disabled className="w-full mt-8 py-3 rounded-xl bg-zinc-800 text-zinc-500 font-bold cursor-not-allowed">Mevcut Plan</button>
-                </div>
-
-                {/* Pro Plan */}
-                <div className={`p-6 rounded-3xl border-2 border-amber-500 relative ${theme === 'dark' ? 'bg-amber-500/5' : 'bg-amber-50'}`}>
-                  <div className="absolute -top-3 right-6 bg-amber-500 text-white text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest">Önerilen</div>
-                  <h3 className="font-bold text-lg mb-1">Pro</h3>
-                  <p className="text-3xl font-black mb-4">300₺ <span className="text-sm font-normal text-zinc-500">/ay</span></p>
-                  <ul className="space-y-3 text-sm">
-                    <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 bg-amber-500 rounded-full" /> <span className={theme === 'dark' ? 'text-zinc-200' : 'text-zinc-800'}>Chat_CNR 3.1 Pro Erişimi</span></li>
-                    <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 bg-amber-500 rounded-full" /> <span className={theme === 'dark' ? 'text-zinc-200' : 'text-zinc-800'}>Günlük 250 Soru Sorma</span></li>
-                    <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 bg-amber-500 rounded-full" /> <span className={theme === 'dark' ? 'text-zinc-200' : 'text-zinc-800'}>Günlük 10 Görsel Oluşturma</span></li>
-                    <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 bg-amber-500 rounded-full" /> <span className={theme === 'dark' ? 'text-zinc-200' : 'text-zinc-800'}>Öncelikli Destek</span></li>
-                  </ul>
-                  {user.role === 'pro' ? (
-                    <button 
-                      onClick={handleManageSubscription}
-                      disabled={isPaymentProcessing}
-                      className="w-full mt-8 py-3 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-white font-bold transition-all active:scale-[0.98] disabled:opacity-50"
-                    >
-                      {isPaymentProcessing ? 'İşleniyor...' : 'Aboneliği Yönet'}
-                    </button>
-                  ) : (
-                    <button 
-                      onClick={() => handleUpgrade('price_1Q...your_actual_price_id')}
-                      disabled={isPaymentProcessing}
-                      className="w-full mt-8 py-3 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold shadow-lg shadow-amber-900/20 transition-all active:scale-[0.98] disabled:opacity-50"
-                    >
-                      {isPaymentProcessing ? 'İşleniyor...' : 'Hemen Yükselt'}
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
-            <button 
-              onClick={() => setIsPricingModalOpen(false)}
-              className="absolute top-4 right-4 p-2 text-zinc-500 hover:text-zinc-300"
-            >
-              <X size={24} />
-            </button>
-          </div>
-        </div>
-      )}
-
       {/* Admin Panel Modal */}
       {isAdminPanelOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-300">
@@ -1437,7 +1379,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                   </div>
                 ))
               ) : (
-                <p className="text-center text-zinc-500 py-8">Kullanıcı bulunamadı.</p>
+                <p className="text-center text-zinc-500 py-8">{t.noData}</p>
               )}
             </div>
           </div>
@@ -1445,20 +1387,20 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
       )}
       {isSettingsOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-300">
-          <div className={`w-full max-w-md border rounded-3xl p-6 shadow-2xl ${theme === 'dark' ? 'bg-[#121212] border-zinc-800 text-white' : 'bg-white border-zinc-200 text-zinc-900'}`}>
-            <div className="flex items-center justify-between mb-8">
+          <div className={`w-full max-w-md border rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] ${theme === 'dark' ? 'bg-[#121212] border-zinc-800 text-white' : 'bg-white border-zinc-200 text-zinc-900'}`}>
+            <div className="flex items-center justify-between p-6 border-b border-zinc-800/50">
               <h2 className="text-xl font-bold flex items-center gap-2">
                 <Settings size={20} className="text-blue-400" />
-                Ayarlar
+                {t.settings}
               </h2>
               <button onClick={() => setIsSettingsOpen(false)} className={`p-2 rounded-xl transition-all ${theme === 'dark' ? 'text-zinc-400 hover:bg-zinc-800' : 'text-zinc-500 hover:bg-zinc-100'}`}>
                 <X size={20} />
               </button>
             </div>
 
-            <div className="space-y-6">
+            <div className="p-6 space-y-6 overflow-y-auto custom-scrollbar">
               <div className="space-y-4">
-                <label className={`block text-xs font-bold uppercase tracking-widest ml-1 ${theme === 'dark' ? 'text-zinc-500' : 'text-zinc-400'}`}>Profil Ayarları</label>
+                <label className={`block text-xs font-bold uppercase tracking-widest ml-1 ${theme === 'dark' ? 'text-zinc-500' : 'text-zinc-400'}`}>{t.profile}</label>
                 <div className={`border rounded-2xl p-4 space-y-4 ${theme === 'dark' ? 'bg-[#1a1a1a] border-zinc-800' : 'bg-zinc-50 border-zinc-200'}`}>
                   <div className="flex items-center gap-4">
                     <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center text-white font-bold text-lg">
@@ -1469,14 +1411,14 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                       <div className="flex items-center gap-2">
                         <p className={`text-xs truncate ${theme === 'dark' ? 'text-zinc-500' : 'text-zinc-400'}`}>{user.email || 'Kullanıcı'}</p>
                         <span className={`text-[10px] px-2 py-0.5 rounded-lg font-black uppercase tracking-widest ${user.email === OWNER_EMAIL ? 'bg-amber-500 text-black' : 'bg-zinc-800 text-zinc-400'}`}>
-                          {user.email === OWNER_EMAIL ? 'Kurucu' : 'Üye'}
+                          {user.email === OWNER_EMAIL ? 'Kurucu' : 'Member'}
                         </span>
                       </div>
                     </div>
                   </div>
                   
                   <div className="space-y-2">
-                    <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest ml-1">İsmini Değiştir</label>
+                    <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest ml-1">{t.fullName}</label>
                     <div className="flex gap-2">
                       <input 
                         type="text"
@@ -1487,105 +1429,104 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                       <button 
                         onClick={async () => {
                           if (tempName.trim()) {
-                            await setDoc(doc(db, 'users', user.uid), { name: tempName.trim() }, { merge: true });
-                            alert("İsim başarıyla güncellendi!");
+                            await profileService.updateProfile(user.uid, { name: tempName.trim() });
+                            setUser((prev: any) => ({ ...prev, name: tempName.trim() }));
+                            alert("Success!");
                           }
                         }}
                         className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-sm font-bold transition-all"
                       >
-                        Kaydet
+                        {t.update}
                       </button>
                     </div>
                   </div>
+                  <button 
+                    onClick={() => {
+                      setIsSettingsOpen(false);
+                      setIsProfileOpen(true);
+                    }}
+                    className="w-full flex items-center justify-center gap-2 py-3 bg-zinc-800 hover:bg-zinc-700 text-white rounded-xl text-sm font-bold transition-all border border-zinc-700"
+                  >
+                    <Heart size={16} className="text-rose-500" />
+                    {t.secureProfileSettings}
+                  </button>
+                </div>
+              </div>
+
+              {/* Language Selector */}
+              <div className="space-y-4">
+                <label className={`block text-xs font-bold uppercase tracking-widest ml-1 ${theme === 'dark' ? 'text-zinc-500' : 'text-zinc-400'}`}>{t.language}</label>
+                <div className={`border rounded-2xl p-4 grid grid-cols-2 gap-2 ${theme === 'dark' ? 'bg-[#1a1a1a] border-zinc-800' : 'bg-zinc-50 border-zinc-200'}`}>
+                  {[
+                    { id: 'tr', label: 'Türkçe', icon: '🇹🇷' },
+                    { id: 'en', label: 'English', icon: '🇺🇸' },
+                    { id: 'es', label: 'Español', icon: '🇪🇸' },
+                    { id: 'de', label: 'Deutsch', icon: '🇩🇪' },
+                    { id: 'fr', label: 'Français', icon: '🇫🇷' },
+                    { id: 'it', label: 'Italiano', icon: '🇮🇹' },
+                    { id: 'ru', label: 'Русский', icon: '🇷🇺' }
+                  ].map((lang) => (
+                    <button
+                      key={lang.id}
+                      onClick={() => {
+                        setLanguage(lang.id as Language);
+                        localStorage.setItem('chat_cnr_lang', lang.id);
+                      }}
+                      className={`flex items-center gap-3 p-3 rounded-xl border text-left transition-all ${
+                        language === lang.id 
+                          ? 'bg-blue-600/10 border-blue-500/50 text-blue-400' 
+                          : (theme === 'dark' ? 'bg-zinc-900 border-zinc-800 text-zinc-500 hover:border-zinc-700' : 'bg-white border-zinc-100 text-zinc-600')
+                      }`}
+                    >
+                      <span className="text-xl">{lang.icon}</span>
+                      <span className="text-xs font-bold">{lang.label}</span>
+                    </button>
+                  ))}
                 </div>
               </div>
 
               <div className="space-y-4">
-                <label className={`block text-xs font-bold uppercase tracking-widest ml-1 ${theme === 'dark' ? 'text-zinc-500' : 'text-zinc-400'}`}>Sistem Tanılama</label>
+                <label className={`block text-xs font-bold uppercase tracking-widest ml-1 ${theme === 'dark' ? 'text-zinc-500' : 'text-zinc-400'}`}>System Diagnostic</label>
                 <div className={`border rounded-2xl p-4 space-y-4 ${theme === 'dark' ? 'bg-[#1a1a1a] border-zinc-800' : 'bg-zinc-50 border-zinc-200'}`}>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-bold">API Bağlantısı</p>
-                      <p className="text-[10px] text-zinc-500">Anahtarların durumunu kontrol et</p>
-                    </div>
+                  <div className="flex items-center justify-center">
                     <button 
                       onClick={async () => {
                         const btn = document.getElementById('test-api-btn');
-                        if (btn) btn.innerText = "Test Ediliyor...";
+                        if (btn) btn.innerText = "Checking...";
                         try {
-                          const result = await chatCNRService.sendMessage("Merhaba, sistem testi.", [], undefined, "Sistem", "test@test.com", false, selectedModel === 'pro' ? 'gemini-1.5-pro' : 'gemini-1.5-flash');
-                          alert("Bağlantı Başarılı! AI Yanıtı: " + result.text.substring(0, 50) + "...");
+                          const result = await chatCNRService.sendMessage("Hello, system test.", [], undefined, "System", "test@test.com", false, 'user', undefined, language);
+                          if (language === 'tr') alert("Bağlantı Başarılı! AI Yanıtı: " + result.text.substring(0, 50) + "...");
+                          else alert("Connection Successful! AI Response: " + result.text.substring(0, 50) + "...");
                         } catch (err: any) {
-                          alert("Bağlantı Hatası: " + (err.message || "Bilinmeyen hata"));
+                          if (language === 'tr') alert("Bağlantı Hatası: " + (err.message || "Bilinmeyen hata"));
+                          else alert("Connection Error: " + (err.message || "Unknown error"));
                           console.error("API Test Error:", err);
                         } finally {
-                          if (btn) btn.innerText = "Bağlantıyı Test Et";
+                          if (btn) btn.innerText = language === 'tr' ? "Bağlantıyı Test Et" : "Test Connection";
                         }
                       }}
                       id="test-api-btn"
                       className="bg-zinc-800 hover:bg-zinc-700 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all"
                     >
-                      Bağlantıyı Test Et
+                      {language === 'tr' ? "Bağlantıyı Test Et" : "Test Connection"}
                     </button>
                   </div>
-                  
-                  <div className="pt-2 border-t border-zinc-800/50">
-                    <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Aktif Anahtarlar</p>
-                    <div className="space-y-1">
-                      {(() => {
-                        const info = chatCNRService.getDebugInfo(selectedModel === 'pro');
-                        return info.maskedKeys.length > 0 ? info.maskedKeys.map((k, i) => (
-                          <div key={i} className="flex items-center justify-between text-[10px]">
-                            <code className="text-blue-400">{k}</code>
-                            <span className="text-zinc-500">{info.sourceVar}</span>
-                          </div>
-                        )) : <p className="text-[10px] text-red-500">Anahtar Bulunamadı!</p>;
-                      })()}
-                    </div>
-                  </div>
                 </div>
               </div>
 
               <div className="space-y-4">
-                <label className={`block text-xs font-bold uppercase tracking-widest ml-1 ${theme === 'dark' ? 'text-zinc-500' : 'text-zinc-400'}`}>Model Ayarları</label>
-                <div className={`border rounded-2xl p-4 space-y-4 ${theme === 'dark' ? 'bg-[#1a1a1a] border-zinc-800' : 'bg-zinc-50 border-zinc-200'}`}>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-bold">Yapay Zeka Modeli</p>
-                      <p className="text-[10px] text-zinc-500">Kullanılacak Chat_CNR sürümünü seçin</p>
-                    </div>
-                    <div className={`flex p-1 rounded-xl ${theme === 'dark' ? 'bg-zinc-900' : 'bg-zinc-100'}`}>
-                      <button 
-                        onClick={() => setSelectedModel('standard')}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${selectedModel === 'standard' ? 'bg-blue-600 text-white shadow-lg' : 'text-zinc-500'}`}
-                      >
-                        Standart
-                      </button>
-                      <button 
-                        onClick={() => setSelectedModel('pro')}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${selectedModel === 'pro' ? 'bg-amber-500 text-black shadow-lg' : 'text-zinc-500'}`}
-                      >
-                        Pro
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <label className={`block text-xs font-bold uppercase tracking-widest ml-1 ${theme === 'dark' ? 'text-zinc-500' : 'text-zinc-400'}`}>Tehlikeli Bölge</label>
+                <label className={`block text-xs font-bold uppercase tracking-widest ml-1 ${theme === 'dark' ? 'text-zinc-500' : 'text-zinc-400'}`}>Danger Zone</label>
                 <div className={`border rounded-2xl p-4 space-y-4 ${theme === 'dark' ? 'bg-red-500/5 border-red-500/20' : 'bg-red-50 border-red-100'}`}>
                   <p className="text-[10px] text-red-500/70 font-medium leading-relaxed">
-                    Bu işlem tüm sohbet geçmişinizi silecek ve API anahtarı kotalarını yerel olarak sıfırlayacaktır. Eğer "Kota Doldu" hatası alıyorsanız bu son çaredir.
+                    {language === 'tr' ? 'Bu işlem tüm sohbet geçmişinizi silecek ve API anahtarı kotalarını yerel olarak sıfırlayacaktır.' : 'This will delete all your chat history and reset API project counters locally.'}
                   </p>
                   <button 
                     onClick={async () => {
-                      if (window.confirm("TÜM sohbet geçmişiniz silinecek ve sistem sıfırlanacak. Emin misiniz?")) {
+                      if (window.confirm("RESET SYSTEM?")) {
                         try {
                           // Clear local storage
                           localStorage.removeItem('CHAT_CNR_EXHAUSTED_KEYS');
                           localStorage.removeItem('CHAT_CNR_KEY_INDEX');
-                          localStorage.removeItem('CHAT_CNR_PRO_KEY_INDEX');
                           localStorage.removeItem('CHAT_CNR_LAST_USAGE_DATE');
                           
                           // Delete all sessions from Firestore
@@ -1593,16 +1534,15 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                             await deleteDoc(doc(db, 'users', user.uid, 'sessions', session.id));
                           }
                           
-                          alert("Sistem başarıyla sıfırlandı. Uygulama yeniden başlatılıyor...");
                           window.location.reload();
                         } catch (err) {
-                          alert("Sıfırlama sırasında bir hata oluştu.");
+                          alert("Error.");
                         }
                       }
                     }}
                     className="w-full py-3 bg-red-500 hover:bg-red-600 text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-lg shadow-red-900/20"
                   >
-                    Sistemi ve Geçmişi Sıfırla
+                    {language === 'tr' ? 'Sistemi ve Geçmişi Sıfırla' : 'Reset System'}
                   </button>
                 </div>
               </div>
@@ -1624,7 +1564,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                   <div className={`flex items-center justify-between p-4 border rounded-2xl ${theme === 'dark' ? 'bg-[#1a1a1a] border-zinc-800' : 'bg-zinc-50 border-zinc-200'}`}>
                     <div className="flex items-center gap-3">
                       <Volume2 size={18} className={theme === 'dark' ? 'text-zinc-400' : 'text-zinc-500'} />
-                      <span className="text-sm font-medium">Otomatik Seslendirme</span>
+                      <span className="text-sm font-medium">{language === 'tr' ? 'Otomatik Seslendirme' : 'Auto Voice Response'}</span>
                     </div>
                     <button 
                       onClick={() => setIsAutoSpeak(!isAutoSpeak)}
@@ -1638,8 +1578,8 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                     <div className="flex items-center gap-3">
                       <MessageSquare size={18} className={theme === 'dark' ? 'text-zinc-400' : 'text-zinc-500'} />
                       <div className="flex flex-col">
-                        <span className="text-sm font-medium">Sohbet Modu</span>
-                        <span className="text-[10px] text-zinc-500">ChatGPT gibi samimi sohbet eder</span>
+                        <span className="text-sm font-medium">{language === 'tr' ? 'Sohbet Modu' : 'Chat Mode'}</span>
+                        <span className="text-[10px] text-zinc-500">{language === 'tr' ? 'Dedikodu yapmak istersen buradayım!' : 'Talk to me like a companion!'}</span>
                       </div>
                     </div>
                     <button 
@@ -1655,7 +1595,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                       <div className={theme === 'dark' ? 'text-zinc-400' : 'text-zinc-500'}>
                         {theme === 'dark' ? <Settings size={18} /> : <Settings size={18} />}
                       </div>
-                      <span className="text-sm font-medium">Görünüm (Koyu/Açık)</span>
+                      <span className="text-sm font-medium">{t.appearance}</span>
                     </div>
                     <button 
                       onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
@@ -1673,13 +1613,22 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                   className="w-full flex items-center justify-center gap-2 text-red-400 hover:bg-red-500/10 p-4 rounded-2xl font-bold transition-all"
                 >
                   <LogOut size={18} />
-                  Oturumu Kapat ve Verileri Sil
+                  {t.logout}
                 </button>
               </div>
             </div>
           </div>
         </div>
       )}
+
+      {/* User Profile Modal */}
+      <ProfileModal 
+        user={user}
+        isOpen={isProfileOpen}
+        onClose={() => setIsProfileOpen(false)}
+        onUpdate={(updated) => setUser(updated)}
+        language={language}
+      />
 
       <audio ref={audioRef} className="hidden" />
     </div>

@@ -50,12 +50,16 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    function isBanned() {
+      return isAuthenticated() && request.auth.token.email == "b4164370@gmail.com";
+    }
+
     function isOwner(userId) {
-      return isAuthenticated() && request.auth.uid == userId;
+      return isAuthenticated() && !isBanned() && request.auth.uid == userId;
     }
 
     function isAdmin() {
-      return isAuthenticated() &&
+      return isAuthenticated() && !isBanned() &&
         (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
          (request.auth.token.email == "dorukaliarslan20@gmail.com" && request.auth.token.email_verified == true));
     }
@@ -73,11 +77,16 @@ service cloud.firestore {
     // ===============================================================
 
     function isValidUser(data) {
-      return data.keys().hasOnly(['uid', 'name', 'email', 'role', 'lastLogin']) &&
+      return data.keys().hasAll(['uid', 'name', 'email', 'role']) &&
+             data.keys().hasOnly(['uid', 'name', 'email', 'role', 'lastLogin', 'interests', 'bio', 'phone', 'updatedAt']) &&
              data.uid is string && data.uid.size() > 0 &&
              data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
              data.email is string && isValidEmail(data.email) &&
-             data.role in ['admin', 'user', 'pro'];
+             data.role in ['admin', 'user'] &&
+             (!('interests' in data) || data.interests is list) &&
+             (!('bio' in data) || (data.bio is string && data.bio.size() < 500)) &&
+             (!('phone' in data) || (data.phone is string && data.phone.size() < 20)) &&
+             (!('updatedAt' in data) || data.updatedAt is timestamp);
     }
 
     function isValidSession(data) {
