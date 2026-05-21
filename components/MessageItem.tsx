@@ -95,7 +95,7 @@ const MessageItem: React.FC<MessageItemProps> = ({ message, themeColor, appearan
                 {message.grounded === true && (
                   <div className="flex items-center gap-1.5 bg-zinc-800 text-[9px] font-black text-emerald-400 px-2.5 py-1 rounded-full shadow-lg border border-zinc-700/50 uppercase tracking-widest">
                     <Search size={10} />
-                    <span>Google Search</span>
+                    <span>CNR Search</span>
                   </div>
                 )}
                 {message.grounded === false && (

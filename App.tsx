@@ -928,7 +928,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
       } catch (e) {}
 
       if (errorType === "QUOTA_EXCEEDED" || errorMessage.includes("429") || errorMessage.includes("quota") || errorMessage.includes("RESOURCE_EXHAUSTED")) {
-        setError(t.quotaExceeded || `SİSTEM KOTASI DOLDU: Günlük kullanım sınırına ulaşıldı. Google Gemini API ücretsiz sürümde kota sınırları bulunmaktadır. Kendi API anahtarınızı Profile -> Settings -> API Keys kısmından ekleyerek bu sınırı aşabilirsiniz.`);
+        setError(t.quotaExceeded || `SİSTEM KOTASI DOLDU: Günlük kullanım sınırına ulaşıldı. Ücretsiz sürümde kota sınırları bulunmaktadır. Kendi API anahtarınızı Profile -> Settings -> API Keys kısmından ekleyerek bu sınırı aşabilirsiniz.`);
       } else if (errorMessage === "API_KEY_MISSING") {
         setError("API Anahtarı bulunamadı. Lütfen AI Studio Build panelindeki Settings kısmından CHAT_CNR_API_KEY değişkenini tanımlayın.");
       } else if (
