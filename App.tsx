@@ -181,18 +181,18 @@ const App: React.FC = () => {
         console.warn("Auth loading timed out. Forcing load state.");
         setAuthLoading(false);
       }
-    }, 10000);
+    }, 5000); // 5 saniyeye düşürüldü
 
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       console.log("Auth state changed:", firebaseUser?.email);
-      clearTimeout(timeout);
+      // Removed clearTimeout(timeout) so it is guaranteed to unlock if operations hang within auth check
       try {
         if (firebaseUser) {
           const profile = await profileService.getProfile(firebaseUser.uid);
           if (profile) {
             setUser(profile);
-            // Update last login
-            await profileService.updateProfile(firebaseUser.uid, { lastLogin: new Date() });
+            // Update last login (non-blocking)
+            profileService.updateProfile(firebaseUser.uid, { lastLogin: new Date() }).catch(e => console.error("Update profile error", e));
           } else {
             const role = firebaseUser.email === OWNER_EMAIL ? 'admin' : 'user';
             const newProfile = await profileService.createUserProfile(
@@ -207,16 +207,17 @@ const App: React.FC = () => {
           setUser(null);
         }
       } catch (err: any) {
-        if (err.message && err.message.startsWith('{')) {
-          throw err; // Re-throw FirestoreErrorInfo
-        }
-        handleFirestoreError(err, OperationType.GET, `users/${firebaseUser?.uid}`);
+        console.error("Auth state processing error:", err);
       } finally {
         setAuthLoading(false);
+        clearTimeout(timeout);
       }
     });
 
-    return () => unsubscribe();
+    return () => {
+      unsubscribe();
+      clearTimeout(timeout);
+    };
   }, []);
 
   if (isAuthLoading) {
