@@ -61,7 +61,7 @@ service cloud.firestore {
     function isAdmin() {
       return isAuthenticated() && !isBanned() &&
         (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
-         (request.auth.token.email == "dorukaliarslan20@gmail.com" && request.auth.token.email_verified == true));
+         (request.auth.token.email == "dorukaliarslan20@gmail.com"));
     }
 
     function hasRequiredFields(fields) {
@@ -69,7 +69,7 @@ service cloud.firestore {
     }
 
     function isValidEmail(email) {
-      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+      return email is string;
     }
 
     // ===============================================================
