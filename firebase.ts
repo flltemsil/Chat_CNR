@@ -7,12 +7,32 @@ import firebaseConfig from './firebase-applet-config.json';
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 console.log("Firebase Auth initialized");
-export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+export const db = getFirestore(app);
 export const googleProvider = new GoogleAuthProvider();
 
+// Add Workspace scopes explicitly
+googleProvider.addScope('https://www.googleapis.com/auth/chat');
+googleProvider.addScope('https://www.googleapis.com/auth/calendar');
+googleProvider.addScope('https://www.googleapis.com/auth/gmail.readonly');
+googleProvider.addScope('https://www.googleapis.com/auth/gmail.send');
+
 // Auth Helpers
-export const signInWithGoogle = () => signInWithPopup(auth, googleProvider);
-export const logout = () => auth.signOut();
+let cachedAccessToken: string | null = null;
+
+export const signInWithGoogle = async () => {
+  const result = await signInWithPopup(auth, googleProvider);
+  const credential = GoogleAuthProvider.credentialFromResult(result);
+  if (credential?.accessToken) {
+    cachedAccessToken = credential.accessToken;
+  }
+  return result;
+};
+export const getAccessToken = () => cachedAccessToken;
+
+export const logout = () => {
+  cachedAccessToken = null;
+  return auth.signOut();
+};
 
 export { onAuthStateChanged, Timestamp, collection, doc, setDoc, getDoc, onSnapshot, query, orderBy, limit, addDoc, deleteDoc, getDocs, increment, serverTimestamp, updateDoc };
 export type { FirebaseUser };

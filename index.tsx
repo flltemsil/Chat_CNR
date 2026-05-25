@@ -8,13 +8,35 @@ import { registerSW } from 'virtual:pwa-register';
 const updateSW = registerSW({
   onNeedRefresh() {
     console.log('App needs refresh');
-    if (window.confirm("Chat CNR için yeni bir güncelleme mevcut. Yenilemek ister misiniz?")) {
+    if (window.confirm("Kritik Sistem Güncellemesi\n\nChat CNR - Professional Edition için yeni bir sürüm mevcut. Sürüm yükseltmek ve en iyi performansı almak için lütfen onaylayın.")) {
       updateSW(true);
     }
   },
   onOfflineReady() {
     console.log('App ready for offline use');
   },
+  onRegisteredSW(swUrl, r) {
+    console.log('SW Registered');
+    if (r) {
+      // Force update check now
+      r.update();
+      
+      // Check for updates every 10 minutes
+      setInterval(async () => {
+        if (!(!r.installing && navigator)) return;
+        if (('connection' in navigator) && !navigator.onLine) return;
+        console.log('Checking for SW update...');
+        await r.update();
+      }, 10 * 60 * 1000); // 10 mins
+
+      // Check when app resumes or comes to foreground
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+           r.update();
+        }
+      });
+    }
+  }
 });
 
 const rootElement = document.getElementById('root');

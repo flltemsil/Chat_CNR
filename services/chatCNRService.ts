@@ -107,6 +107,8 @@ ASLA kullanıcıyı yanıtsız bırakma veya "2026 verisi yok" diyerek kestirip 
     } catch (e) {}
 
     try {
+      const { getAccessToken } = await import('../firebase');
+      const googleAccessToken = getAccessToken();
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: {
@@ -118,7 +120,8 @@ ASLA kullanıcıyı yanıtsız bırakma veya "2026 verisi yok" diyerek kestirip 
           systemInstruction: fullSystemInstruction,
           image: currentImage,
           model: "gemini-2.5-flash",
-          userApiKey
+          userApiKey,
+          googleAccessToken
         })
       });
 

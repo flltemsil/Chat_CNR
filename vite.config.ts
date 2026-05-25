@@ -15,7 +15,7 @@ export default defineConfig(({ mode }) => {
       plugins: [
         react(),
         VitePWA({
-          registerType: 'autoUpdate',
+          registerType: 'prompt',
           manifest: {
             name: 'Chat CNR Bilgi Merkezi',
             short_name: 'Chat CNR',
@@ -82,6 +82,7 @@ export default defineConfig(({ mode }) => {
             orientation: "portrait"
           },
           workbox: {
+            cleanupOutdatedCaches: true,
             globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
             navigateFallbackDenylist: [/^\/api/],
             runtimeCaching: [
