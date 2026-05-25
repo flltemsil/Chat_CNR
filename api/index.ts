@@ -16,8 +16,6 @@ app.get("/api/health", (req, res) => {
   res.json({ status: "ok", time: new Date().toISOString() });
 });
 
-import { listCalendarEvents, searchGmail, listChatSpaces } from "./workspace.ts";
-
 // AI Chat Proxy Route
 app.post("/api/chat", async (req, res) => {
   const { prompt, history, systemInstruction, image, userApiKey, googleAccessToken } = req.body;
@@ -61,73 +59,11 @@ app.post("/api/chat", async (req, res) => {
       config.tools.push({ googleSearch: {} });
     }
 
-    if (googleAccessToken) {
-      config.tools.push({
-        functionDeclarations: [
-          {
-            name: "list_calendar_events",
-            description: "Fetch upcoming events from the user's Google Calendar.",
-            parameters: { type: "OBJECT", properties: { maxResults: { type: "INTEGER" } } }
-          },
-          {
-            name: "search_gmail",
-            description: "Search the user's Gmail messages.",
-            parameters: { type: "OBJECT", properties: { query: { type: "STRING" }, maxResults: { type: "INTEGER" } } }
-          },
-          {
-            name: "list_chat_spaces",
-            description: "List the user's Google Chat spaces.",
-            parameters: { type: "OBJECT", properties: {} }
-          }
-        ]
-      });
-    }
-
     let response = await ai.models.generateContent({
       model: modelName,
       contents: contents,
       config: config
     });
-
-    if (response.functionCalls && response.functionCalls.length > 0 && googleAccessToken) {
-      const toolResponses = [];
-      for (const call of response.functionCalls) {
-        let result: any = null;
-        try {
-          if (call.name === 'list_calendar_events') {
-            result = await listCalendarEvents(googleAccessToken, call.args?.maxResults as number || 10);
-          } else if (call.name === 'search_gmail') {
-            result = await searchGmail(googleAccessToken, call.args?.query as string || "", call.args?.maxResults as number || 5);
-          } else if (call.name === 'list_chat_spaces') {
-            result = await listChatSpaces(googleAccessToken);
-          }
-        } catch (e: any) {
-          result = { error: e.message };
-        }
-        
-        toolResponses.push({
-          functionResponse: {
-            name: call.name,
-            response: { result }
-          }
-        });
-      }
-
-      contents.push({
-        role: "model",
-        parts: response.candidates?.[0]?.content?.parts || []
-      });
-      contents.push({
-        role: "user",
-        parts: toolResponses
-      });
-
-      response = await ai.models.generateContent({
-        model: modelName,
-        contents: contents,
-        config: config
-      });
-    }
 
     return response;
   };

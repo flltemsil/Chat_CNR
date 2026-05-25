@@ -11,10 +11,6 @@ export const db = getFirestore(app);
 export const googleProvider = new GoogleAuthProvider();
 
 // Add Workspace scopes explicitly
-googleProvider.addScope('https://www.googleapis.com/auth/chat');
-googleProvider.addScope('https://www.googleapis.com/auth/calendar');
-googleProvider.addScope('https://www.googleapis.com/auth/gmail.readonly');
-googleProvider.addScope('https://www.googleapis.com/auth/gmail.send');
 
 // Auth Helpers
 let cachedAccessToken: string | null = null;
