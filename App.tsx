@@ -208,6 +208,7 @@ const App: React.FC = () => {
         }
       } catch (err: any) {
         console.error("Auth state processing error:", err);
+        alert(`Auth error: ${err.message}`);
         // Silently fail for the user, but we know it's an error. Actually, let's keep it silent to avoid annoying prompts.
         // Wait, I will just set user to null.
         setUser(null);
@@ -326,12 +327,24 @@ const App: React.FC = () => {
               onClick={async (e) => {
                 e.preventDefault();
                 if (isLoginLoading) return;
+
+                if (window.self !== window.top) {
+                  alert("Google Girişi bazen bu önizleme penceresinde çalışmayabilir. Sağ üst köşedeki 'Open in new tab' ikonuna veya ayarlardan 'Deploy' seçeneğine tıklayarak uygulamayı yeni sekmede açın ve tekrar deneyin.");
+                  // Fallback but let them try:
+                }
+
                 setIsLoginLoading(true);
                 try {
                   await signInWithGoogle();
                 } catch (err: any) {
                   console.error("Login error:", err);
-                  alert(`Giriş yapılamadı: ${err.message || "Bilinmeyen hata"}`);
+                  if (err.code === 'auth/unauthorized-domain') {
+                    alert(`Giriş hatası (Yetkisiz Alan Adı): Bu uygulamanın Firebase Console üzerinde 'Authorized domains' (Yetkili alan adları) kısmına şu anki linkin (domain) eklenmesi gerekiyor.\n\nLütfen Firebase konsolundan (Authentication -> Settings -> Authorized domains) bu uygulamanın linkini (${window.location.hostname}) ekleyin.`);
+                  } else if (err.code === 'auth/popup-closed-by-user') {
+                    // ignore or show a small message
+                  } else {
+                    alert(`Giriş yapılamadı: ${err.message || "Bilinmeyen hata"}\n\nEğer pencere kapanıp giriş yapmıyorsa sağ üstten uygulamayı yeni sekmede açın.`);
+                  }
                 } finally {
                   setIsLoginLoading(false);
                 }
