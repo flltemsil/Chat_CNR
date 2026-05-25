@@ -348,60 +348,47 @@ const App: React.FC = () => {
               <div className="relative flex justify-center text-xs uppercase"><span className="bg-[#0a0a0a] px-4 text-zinc-600 font-bold tracking-widest leading-none">Uygulama Olarak İndir</span></div>
             </div>
 
-            {(() => {
-              const iOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
-              const isStandalone = window.matchMedia('(display-mode: standalone)').matches || ((window.navigator as any).standalone === true);
-              
-              if (iOS && !isStandalone) {
-                return (
-                  <div className="grid grid-cols-1 mt-4">
-                    <button 
-                      onClick={() => alert("iPhone'a Yükleme Rehberi:\n\n1. Safari tarayıcınızın alt kısmındaki 'Paylaş' (Kare içinden yukarı ok çıkan) butonuna dokunun.\n2. Aşağı kaydırıp 'Ana Ekrana Ekle' seçeneğine dokunun.\n3. Sağ üstteki 'Ekle'ye basarak uygulamayı telefonunuza indirebilirsiniz.")}
-                      className="flex flex-col items-center justify-center gap-2 bg-blue-600/20 border-blue-500/30 hover:bg-zinc-800 border py-4 rounded-3xl transition-all group"
-                    >
-                      <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
-                        <Download size={20} className="text-white" />
-                      </div>
-                      <span className="text-[10px] font-black text-zinc-300 uppercase tracking-wider">
-                        iPhone'a Yükle (iOS)
-                      </span>
-                    </button>
-                  </div>
-                );
-              }
-              
-              return (
-                <div className="grid grid-cols-2 gap-4">
-                  <button 
-                    onClick={isInstallable ? handleInstallClick : () => {
-                      alert("EXE (Windows) Yükleme Rehberi: Tarayıcı adres çubuğundaki 'Yükle' ikonuna basın veya menuden 'Uygulamayı Yükle' seçeneğini seçin. Bu sayede uygulama masaüstünüze EXE olarak eklenecektir.");
-                    }}
-                    className={`flex flex-col items-center justify-center gap-2 ${isInstallable ? 'bg-blue-600/20 border-blue-500/30 font-bold' : 'bg-zinc-800/50 border-zinc-700'} hover:bg-zinc-800 border py-4 rounded-3xl transition-all group`}
-                  >
-                    <div className={`w-10 h-10 ${isInstallable ? 'bg-blue-600' : 'bg-zinc-700'} rounded-full flex items-center justify-center group-hover:scale-110 transition-transform`}>
-                      <Download size={20} className="text-white" />
-                    </div>
-                    <span className="text-[10px] font-black text-zinc-300 uppercase tracking-wider">
-                      {isInstallable ? 'Hemen Yükle (EXE)' : 'Windows (EXE)'}
-                    </span>
-                  </button>
-                  
-                  <button 
-                    onClick={isInstallable ? handleInstallClick : () => {
-                      alert("APK (Android) Yükleme Rehberi: Chrome menüsünden 'Ana Ekrana Ekle' seçeneğine dokunun. Uygulama telefonunuza APK olarak yüklenecektir.");
-                    }}
-                    className={`flex flex-col items-center justify-center gap-2 ${isInstallable ? 'bg-purple-600/20 border-purple-500/30' : 'bg-zinc-800/50 border-zinc-700'} hover:bg-zinc-800 border py-4 rounded-3xl transition-all group`}
-                  >
-                    <div className={`w-10 h-10 ${isInstallable ? 'bg-purple-600' : 'bg-zinc-700'} rounded-full flex items-center justify-center group-hover:scale-110 transition-transform`}>
-                      <Smartphone size={20} className="text-white" />
-                    </div>
-                    <span className="text-[10px] font-black text-zinc-300 uppercase tracking-wider">
-                      {isInstallable ? 'Hemen Yükle (APK)' : 'Android (APK)'}
-                    </span>
-                  </button>
+            <div className="grid grid-cols-2 gap-4">
+              <button 
+                onClick={isInstallable ? handleInstallClick : () => {
+                  alert("EXE (Windows) Yükleme Rehberi: Tarayıcı adres çubuğundaki 'Yükle' ikonuna veya menüden 'Uygulamayı Yükle' seçeneğine tıklayın. Bu sayede uygulama masaüstünüze EXE olarak eklenecektir.");
+                }}
+                className={`flex flex-col items-center justify-center gap-2 ${isInstallable ? 'bg-blue-600/20 border-blue-500/30 font-bold' : 'bg-zinc-800/50 border-zinc-700'} hover:bg-zinc-800 border py-4 rounded-3xl transition-all group`}
+              >
+                <div className={`w-10 h-10 ${isInstallable ? 'bg-blue-600' : 'bg-zinc-700'} rounded-full flex items-center justify-center group-hover:scale-110 transition-transform`}>
+                  <Download size={20} className="text-white" />
                 </div>
-              );
-            })()}
+                <span className="text-[10px] font-black text-zinc-300 uppercase tracking-wider text-center px-2">
+                  {isInstallable ? 'Hemen Yükle (EXE)' : 'Windows (EXE)'}
+                </span>
+              </button>
+              
+              <button 
+                onClick={isInstallable ? handleInstallClick : () => {
+                  alert("APK (Android) Yükleme Rehberi: Chrome menüsünden 'Ana Ekrana Ekle' seçeneğine dokunun. Uygulama telefonunuza APK olarak yüklenecektir.");
+                }}
+                className={`flex flex-col items-center justify-center gap-2 ${isInstallable ? 'bg-purple-600/20 border-purple-500/30 font-bold' : 'bg-zinc-800/50 border-zinc-700'} hover:bg-zinc-800 border py-4 rounded-3xl transition-all group`}
+              >
+                <div className={`w-10 h-10 ${isInstallable ? 'bg-purple-600' : 'bg-zinc-700'} rounded-full flex items-center justify-center group-hover:scale-110 transition-transform`}>
+                  <Smartphone size={20} className="text-white" />
+                </div>
+                <span className="text-[10px] font-black text-zinc-300 uppercase tracking-wider text-center px-2">
+                  {isInstallable ? 'Hemen Yükle (APK)' : 'Android (APK)'}
+                </span>
+              </button>
+
+              <button 
+                onClick={() => alert("iPhone'a Yükleme Rehberi:\n\n1. Safari tarayıcınızın alt kısmındaki 'Paylaş' (Yukarı ok çıkan kare) butonuna dokunun.\n2. Aşağı kaydırıp 'Ana Ekrana Ekle' seçeneğine dokunun.\n3. Sağ üstteki 'Ekle'ye basarak uygulamayı telefonunuza indirebilirsiniz.")}
+                className="col-span-2 flex flex-col items-center justify-center gap-2 bg-zinc-800/50 border-zinc-700 hover:bg-zinc-800 border py-4 rounded-3xl transition-all group"
+              >
+                <div className="w-10 h-10 bg-zinc-700 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <Smartphone size={20} className="text-white" />
+                </div>
+                <span className="text-[10px] font-black text-zinc-300 uppercase tracking-wider text-center px-2">
+                  iPhone / iOS (Rehber)
+                </span>
+              </button>
+            </div>
 
             <p className="text-[10px] text-center text-zinc-600 font-medium px-4">
               Copyright © 2026 Chat CNR Information Hub. Tüm hakları saklıdır. Professional Edition v2.0
