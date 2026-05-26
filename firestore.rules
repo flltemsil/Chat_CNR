@@ -60,8 +60,9 @@ service cloud.firestore {
 
     function isAdmin() {
       return isAuthenticated() && !isBanned() &&
-        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
-         (request.auth.token.email == "dorukaliarslan20@gmail.com"));
+        (request.auth.token.email == "dorukaliarslan20@gmail.com" ||
+         (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'));
     }
 
     function hasRequiredFields(fields) {

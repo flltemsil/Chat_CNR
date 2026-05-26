@@ -208,9 +208,7 @@ const App: React.FC = () => {
         }
       } catch (err: any) {
         console.error("Auth state processing error:", err);
-        alert(`Auth error: ${err.message}`);
-        // Silently fail for the user, but we know it's an error. Actually, let's keep it silent to avoid annoying prompts.
-        // Wait, I will just set user to null.
+        // Silently fail for the user, but we know it's an error. 
         setUser(null);
       } finally {
         setAuthLoading(false);
