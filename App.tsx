@@ -138,6 +138,7 @@ const App: React.FC = () => {
   const [isInstallable, setIsInstallable] = useState(false);
   const isAuthLoadingRef = useRef(true);
   const [debugStatus, setDebugStatus] = useState<string | null>(null);
+  const [loginError, setLoginError] = useState<string | null>(null);
 
   useEffect(() => {
     const handler = (e: any) => {
@@ -208,7 +209,7 @@ const App: React.FC = () => {
         }
       } catch (err: any) {
         console.error("Auth state processing error:", err);
-        // Silently fail for the user, but we know it's an error. 
+        setLoginError(`Profil yüklenirken bir hata oluştu: ${err.message}. Admin veya veritabanı kuralları (Firestore Rules) ile ilgili bir sorun olabilir.`);
         setUser(null);
       } finally {
         setAuthLoading(false);
@@ -320,15 +321,21 @@ const App: React.FC = () => {
                 <p className="text-sm text-zinc-500">Devam etmek için hesabınızı bağlayın.</p>
              </div>
 
+             {loginError && (
+               <div className="bg-red-500/10 border border-red-500/20 text-red-500 text-sm p-4 rounded-xl">
+                 {loginError}
+               </div>
+             )}
+
              <button 
               disabled={isLoginLoading}
               onClick={async (e) => {
                 e.preventDefault();
                 if (isLoginLoading) return;
+                setLoginError(null);
 
                 if (window.self !== window.top) {
-                  alert("Google Girişi bazen bu önizleme penceresinde çalışmayabilir. Sağ üst köşedeki 'Open in new tab' ikonuna veya ayarlardan 'Deploy' seçeneğine tıklayarak uygulamayı yeni sekmede açın ve tekrar deneyin.");
-                  // Fallback but let them try:
+                  setLoginError("Önizleme (Preview) modunda bağlantı sorunları yaşanabilir. Lütfen sağ üstten uygulamayı ayrı bir sekmede ('New Tab') açınız.");
                 }
 
                 setIsLoginLoading(true);
@@ -337,11 +344,11 @@ const App: React.FC = () => {
                 } catch (err: any) {
                   console.error("Login error:", err);
                   if (err.code === 'auth/unauthorized-domain') {
-                    alert(`Giriş hatası (Yetkisiz Alan Adı): Bu uygulamanın Firebase Console üzerinde 'Authorized domains' (Yetkili alan adları) kısmına şu anki linkin (domain) eklenmesi gerekiyor.\n\nLütfen Firebase konsolundan (Authentication -> Settings -> Authorized domains) bu uygulamanın linkini (${window.location.hostname}) ekleyin.`);
+                    setLoginError(`Bu uygulamanın Firebase Console üzerinde 'Authorized domains' kısmına şu anki linkin eklenmesi gerekiyor. URL: ${window.location.hostname}`);
                   } else if (err.code === 'auth/popup-closed-by-user') {
-                    // ignore or show a small message
+                     setLoginError("Giriş penceresi kapatıldı.");
                   } else {
-                    alert(`Giriş yapılamadı: ${err.message || "Bilinmeyen hata"}\n\nEğer pencere kapanıp giriş yapmıyorsa sağ üstten uygulamayı yeni sekmede açın.`);
+                    setLoginError(`Giriş başarısız: ${err.message || "Bilinmeyen hata"}. Lütfen uygulamayı yeni sekmede açın.`);
                   }
                 } finally {
                   setIsLoginLoading(false);

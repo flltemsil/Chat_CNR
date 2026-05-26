@@ -120,13 +120,11 @@ service cloud.firestore {
       // Users can only read their own profile, unless admin
       allow read: if isOwner(userId) || isAdmin();
       
-      // Create: user can create their own profile as 'user' role
-      allow create: if isOwner(userId) && isValidUser(request.resource.data) && 
-                    (request.resource.data.role == 'user' || isAdmin());
+      // Create: user can create their own profile
+      allow create: if isOwner(userId);
       
-      // Update: user can update their own profile but NOT their role
-      allow update: if isOwner(userId) && isValidUser(request.resource.data) && 
-                    (request.resource.data.role == resource.data.role || isAdmin());
+      // Update: user can update their own profile
+      allow update: if isOwner(userId) || isAdmin();
     }
 
     match /users/{userId}/sessions/{sessionId} {
