@@ -9,7 +9,7 @@ import { profileService } from './services/profileService';
 import { Menu, Plus, Trash2, X, MessageSquare, Settings, Mic, MicOff, Volume2, VolumeX, Camera, Send, User, LogOut, Shield, Users, Image as ImageIcon, Sparkles, Key, Check, ExternalLink, Heart, Cpu, Download, Smartphone, Brain, Microscope } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
-  auth, db, signInWithGoogle, logout, onAuthStateChanged, 
+  auth, db, signInWithGooglePopup, signInWithGoogleRedirect, checkRedirectResult, logout, onAuthStateChanged, 
   collection, doc, setDoc, getDoc, onSnapshot, query, orderBy, 
   Timestamp, addDoc, deleteDoc, getDocs, FirebaseUser,
   increment, serverTimestamp 
@@ -184,6 +184,16 @@ const App: React.FC = () => {
       }
     }, 5000); // 5 saniyeye düşürüldü
 
+    // Check redirect result first (useful for mobile)
+    checkRedirectResult().catch(err => {
+      console.error("Redirect check error:", err);
+      if (err.code === 'auth/unauthorized-domain') {
+        setLoginError(`Bu uygulamanın Firebase Console üzerinde 'Authorized domains' kısmına şu anki linkin eklenmesi gerekiyor. URL: ${window.location.hostname}`);
+      } else {
+        setLoginError(`Giriş başarısız: ${err.message || "Bilinmeyen hata"}.`);
+      }
+    });
+
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       console.log("Auth state changed:", firebaseUser?.email);
       // Removed clearTimeout(timeout) so it is guaranteed to unlock if operations hang within auth check
@@ -340,17 +350,28 @@ const App: React.FC = () => {
 
                 setIsLoginLoading(true);
                 try {
-                  await signInWithGoogle();
+                  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+                  if (isMobile) {
+                    // Mobile cihazlarda popup genellikle engellenir, redirect kullanalım.
+                    await signInWithGoogleRedirect();
+                    // Redirect olacağı için burada finally bloğu sayfayı yüklerken setLogin(false) yapabilir 
+                    // Ancak sayfa zaten yenilenecektir.
+                  } else {
+                    await signInWithGooglePopup();
+                    setIsLoginLoading(false);
+                  }
                 } catch (err: any) {
                   console.error("Login error:", err);
                   if (err.code === 'auth/unauthorized-domain') {
                     setLoginError(`Bu uygulamanın Firebase Console üzerinde 'Authorized domains' kısmına şu anki linkin eklenmesi gerekiyor. URL: ${window.location.hostname}`);
                   } else if (err.code === 'auth/popup-closed-by-user') {
-                     setLoginError("Giriş penceresi kapatıldı.");
+                     // Popup error, fallback to redirect if they click again, or just show error.
+                     setLoginError("Pop-up engellendi veya kapatıldı. Mobildeyseniz tarayıcı ayarlarınızı kontrol edin.");
+                  } else if (err.code === 'auth/popup-blocked') {
+                     setLoginError("Pop-up engellendi. Tarayıcınızda pop-up'lara izin verin veya mobildeyseniz redirect modunu deneyin.");
                   } else {
                     setLoginError(`Giriş başarısız: ${err.message || "Bilinmeyen hata"}. Lütfen uygulamayı yeni sekmede açın.`);
                   }
-                } finally {
                   setIsLoginLoading(false);
                 }
               }}

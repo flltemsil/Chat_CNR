@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
+import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import { getFirestore, collection, doc, setDoc, getDoc, onSnapshot, query, orderBy, limit, Timestamp, addDoc, deleteDoc, getDocs, increment, serverTimestamp, updateDoc } from 'firebase/firestore';
 import firebaseConfig from './firebase-applet-config.json';
 
@@ -15,7 +15,7 @@ export const googleProvider = new GoogleAuthProvider();
 // Auth Helpers
 let cachedAccessToken: string | null = null;
 
-export const signInWithGoogle = async () => {
+export const signInWithGooglePopup = async () => {
   const result = await signInWithPopup(auth, googleProvider);
   const credential = GoogleAuthProvider.credentialFromResult(result);
   if (credential?.accessToken) {
@@ -23,6 +23,24 @@ export const signInWithGoogle = async () => {
   }
   return result;
 };
+
+export const signInWithGoogleRedirect = async () => {
+  await signInWithRedirect(auth, googleProvider);
+};
+
+export const checkRedirectResult = async () => {
+  const result = await getRedirectResult(auth);
+  if (result) {
+    const credential = GoogleAuthProvider.credentialFromResult(result);
+    if (credential?.accessToken) {
+      cachedAccessToken = credential.accessToken;
+    }
+  }
+  return result;
+};
+
+// Deprecated, use popup or redirect explicitly
+export const signInWithGoogle = signInWithGooglePopup;
 export const getAccessToken = () => cachedAccessToken;
 
 export const logout = () => {
