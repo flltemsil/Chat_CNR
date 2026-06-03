@@ -9,7 +9,7 @@ import { profileService } from './services/profileService';
 import { Menu, Plus, Trash2, X, MessageSquare, Settings, Mic, MicOff, Volume2, VolumeX, Camera, Send, User, LogOut, Shield, Users, Image as ImageIcon, Sparkles, Key, Check, ExternalLink, Heart, Cpu, Download, Smartphone, Brain, Microscope } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
-  auth, db, signInWithGoogle, logout, onAuthStateChanged, 
+  auth, db, signInWithGooglePopup, signInWithGoogleRedirect, checkRedirectResult, logout, onAuthStateChanged, 
   collection, doc, setDoc, getDoc, onSnapshot, query, orderBy, 
   Timestamp, addDoc, deleteDoc, getDocs, FirebaseUser,
   increment, serverTimestamp 
@@ -184,6 +184,16 @@ const App: React.FC = () => {
       }
     }, 5000); // 5 saniyeye düşürüldü
 
+    // Check redirect result first (useful for mobile)
+    checkRedirectResult().catch(err => {
+      console.error("Redirect check error:", err);
+      if (err.code === 'auth/unauthorized-domain') {
+        setLoginError(`Bu uygulamanın Firebase Console üzerinde 'Authorized domains' kısmına URL'yi eklemeniz gerekiyor: ${window.location.hostname}`);
+      } else {
+        setLoginError(`Yönlendirme girişi başarısız: ${err.message || "Bilinmeyen hata"}`);
+      }
+    });
+
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       console.log("Auth state changed:", firebaseUser?.email);
       // Removed clearTimeout(timeout) so it is guaranteed to unlock if operations hang within auth check
@@ -327,43 +337,72 @@ const App: React.FC = () => {
                </div>
              )}
 
-             <button 
-              disabled={isLoginLoading}
-              onClick={async (e) => {
-                e.preventDefault();
-                if (isLoginLoading) return;
-                setLoginError(null);
+             <div className="space-y-4">
+               <button 
+                disabled={isLoginLoading}
+                onClick={async (e) => {
+                  e.preventDefault();
+                  if (isLoginLoading) return;
+                  setLoginError(null);
 
-                if (window.self !== window.top) {
-                  alert("Google Girişi AI Studio önizlemesinde (iframe) çalışmayabilir. Lütfen sağ üstten 'Open in New Tab' iconuna tıklayın.");
-                }
-
-                setIsLoginLoading(true);
-                try {
-                  await signInWithGoogle();
-                } catch (err: any) {
-                  console.error("Login error:", err);
-                  if (err.code === 'auth/unauthorized-domain') {
-                    setLoginError(`Bu uygulamanın Firebase Console üzerinde 'Authorized domains' kısmına şu anki linkin eklenmesi gerekiyor. URL: ${window.location.hostname}`);
-                  } else if (err.code === 'auth/popup-closed-by-user') {
-                     setLoginError("Giriş penceresi kapatıldı.");
-                  } else {
-                    setLoginError(`Giriş başarısız: ${err.message || "Bilinmeyen hata"}. Lütfen uygulamayı yeni sekmede açın.`);
+                  if (window.self !== window.top) {
+                    alert("Google Girişi AI Studio önizlemesinde (iframe) çalışmayabilir. Lütfen sağ üstten 'Open in New Tab' iconuna tıklayın.");
                   }
-                } finally {
-                  setIsLoginLoading(false);
-                }
-              }}
-              className="w-full flex items-center justify-center gap-3 bg-white hover:bg-zinc-100 disabled:opacity-50 text-black font-black py-4 rounded-2xl transition-all shadow-xl active:scale-[0.98] group"
-            >
-              {isLoginLoading ? (
-                 <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin"></div>
-              ) : (
-                 <img src="https://www.google.com/favicon.ico" className="w-6 h-6 border rounded-full p-0.5" alt="Google" />
-              )}
-              {isLoginLoading ? "Giriş Yapılıyor..." : "Google ile Başlat"}
-              <ExternalLink size={18} className="ml-2 group-hover:translate-x-1 transition-transform" />
-            </button>
+
+                  setIsLoginLoading(true);
+                  try {
+                    await signInWithGooglePopup();
+                  } catch (err: any) {
+                    console.error("Login error:", err);
+                    if (err.code === 'auth/unauthorized-domain') {
+                      setLoginError(`Bu uygulamanın Firebase Console üzerinde 'Authorized domains' kısmına şu anki linkin eklenmesi gerekiyor. URL: ${window.location.hostname}`);
+                    } else if (err.code === 'auth/popup-closed-by-user') {
+                       setLoginError("Giriş penceresi kapatıldı.");
+                    } else {
+                      setLoginError(`Giriş başarısız: ${err.message || "Bilinmeyen hata"}. Lütfen uygulamayı yeni sekmede açın.`);
+                    }
+                  } finally {
+                    setIsLoginLoading(false);
+                  }
+                }}
+                className="w-full flex items-center justify-center gap-3 bg-white hover:bg-zinc-100 disabled:opacity-50 text-black font-black py-4 rounded-2xl transition-all shadow-xl active:scale-[0.98] group"
+              >
+                {isLoginLoading ? (
+                   <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin"></div>
+                ) : (
+                   <img src="https://www.google.com/favicon.ico" className="w-6 h-6 border rounded-full p-0.5" alt="Google" />
+                )}
+                {isLoginLoading ? "Giriş Yapılıyor..." : "Google ile Başlat"}
+                <ExternalLink size={18} className="ml-2 group-hover:translate-x-1 transition-transform" />
+              </button>
+
+              <button 
+                disabled={isLoginLoading}
+                onClick={async (e) => {
+                  e.preventDefault();
+                  if (isLoginLoading) return;
+                  setLoginError(null);
+
+                  if (window.self !== window.top) {
+                    alert("Mobil Giriş (Redirect) AI Studio önizlemesinde çalışmaz. Lütfen sağ üstten 'Open in New Tab' iconuna tıklayın.");
+                    return;
+                  }
+
+                  setIsLoginLoading(true);
+                  try {
+                    await signInWithGoogleRedirect();
+                  } catch (err: any) {
+                    console.error("Redirect login error:", err);
+                    setLoginError(`Mobil giriş başlatılamadı: ${err.message}`);
+                    setIsLoginLoading(false);
+                  }
+                }}
+                className={`w-full flex items-center justify-center gap-3 py-4 rounded-2xl transition-all border-2 active:scale-[0.98] group border-zinc-800 hover:border-zinc-700 bg-zinc-900/50 text-white`}
+              >
+                <Smartphone size={20} className="opacity-70" />
+                <span className="font-bold text-sm">Giriş Yap (Mobil - Popup Açılmazsa)</span>
+              </button>
+            </div>
 
             <div className="relative">
               <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-zinc-800"></div></div>
@@ -494,23 +533,24 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
 
   useEffect(() => {
     if (!user) return;
-    const dateStr = new Date().toISOString().split('T')[0];
-    const usageRef = doc(db, 'users', user.uid, 'usage', dateStr);
-    
-    const unsubscribe = onSnapshot(usageRef, (docSnap) => {
-      if (docSnap.exists()) {
-        setDailyUsage({
-          messages: docSnap.data()?.messages || 0,
-          images: docSnap.data()?.images || 0
-        });
-      } else {
-        setDailyUsage({ messages: 0, images: 0 });
+    const fetchUsage = async () => {
+      const dateStr = new Date().toISOString().split('T')[0];
+      const usageRef = doc(db, 'users', user.uid, 'usage', dateStr);
+      try {
+        const docSnap = await getDoc(usageRef);
+        if (docSnap.exists()) {
+          setDailyUsage({
+            messages: docSnap.data()?.messages || 0,
+            images: docSnap.data()?.images || 0
+          });
+        } else {
+          setDailyUsage({ messages: 0, images: 0 });
+        }
+      } catch (err) {
+        handleFirestoreError(err, OperationType.GET, `users/${user.uid}/usage/current`);
       }
-    }, (err) => {
-      handleFirestoreError(err, OperationType.GET, `users/${user.uid}/usage/current`);
-    });
-
-    return () => unsubscribe();
+    };
+    fetchUsage();
   }, [user]);
 
   const incrementUsage = async (type: 'messages' | 'images') => {
@@ -542,17 +582,20 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
 
   useEffect(() => {
     if (user.email === OWNER_EMAIL && isAdminPanelOpen) {
-      const q = query(collection(db, 'users'));
-      const unsubscribe = onSnapshot(q, (snapshot) => {
-        const users = snapshot.docs.map(doc => ({
-          email: doc.data().email,
-          name: doc.data().name
-        }));
-        setAllUsers(users);
-      }, (err) => {
-        handleFirestoreError(err, OperationType.LIST, `users`);
-      });
-      return () => unsubscribe();
+      const fetchAllUsers = async () => {
+        const q = query(collection(db, 'users'));
+        try {
+          const snapshot = await getDocs(q);
+          const users = snapshot.docs.map(doc => ({
+            email: doc.data().email,
+            name: doc.data().name
+          }));
+          setAllUsers(users);
+        } catch (err) {
+          handleFirestoreError(err, OperationType.LIST, `users`);
+        }
+      };
+      fetchAllUsers();
     }
   }, [user.email, isAdminPanelOpen]);
 
@@ -565,55 +608,60 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
   useEffect(() => {
     if (!user) return;
     
-    const q = query(
-      collection(db, 'users', user.uid, 'sessions'),
-      orderBy('updatedAt', 'desc')
-    );
+    const fetchSessions = async () => {
+      const q = query(
+        collection(db, 'users', user.uid, 'sessions'),
+        orderBy('updatedAt', 'desc')
+      );
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      console.log("ChatApp: Sessions snapshot received", snapshot.size);
-      const fetchedSessions = snapshot.docs.map(doc => ({
-        id: doc.id,
-        title: doc.data()?.title || 'Yeni Sohbet',
-        ...doc.data(),
-        updatedAt: doc.data()?.updatedAt?.toDate() || new Date(),
-        createdAt: doc.data()?.createdAt?.toDate() || new Date(),
-        messages: []
-      })) as ChatSession[];
-      
-      setSessions(fetchedSessions);
-      if (fetchedSessions.length > 0 && !activeSessionId) {
-        setActiveSessionId(fetchedSessions[0].id);
+      try {
+        const snapshot = await getDocs(q);
+        console.log("ChatApp: Sessions fetched", snapshot.size);
+        const fetchedSessions = snapshot.docs.map(doc => ({
+          id: doc.id,
+          title: doc.data()?.title || 'Yeni Sohbet',
+          ...doc.data(),
+          updatedAt: doc.data()?.updatedAt?.toDate() || new Date(),
+          createdAt: doc.data()?.createdAt?.toDate() || new Date(),
+          messages: []
+        })) as ChatSession[];
+        
+        setSessions(fetchedSessions);
+        if (fetchedSessions.length > 0 && !activeSessionId) {
+          setActiveSessionId(fetchedSessions[0].id);
+        }
+      } catch (err) {
+        handleFirestoreError(err, OperationType.LIST, `users/${user.uid}/sessions`);
       }
-    }, (err) => {
-      handleFirestoreError(err, OperationType.LIST, `users/${user.uid}/sessions`);
-    });
-
-    return () => unsubscribe();
+    };
+    fetchSessions();
   }, [user.uid]);
 
   useEffect(() => {
     if (activeSessionId && user) {
-      const q = query(
-        collection(db, 'users', user.uid, 'sessions', activeSessionId, 'messages'),
-        orderBy('timestamp', 'asc')
-      );
+      const fetchMessages = async () => {
+        const q = query(
+          collection(db, 'users', user.uid, 'sessions', activeSessionId, 'messages'),
+          orderBy('timestamp', 'asc')
+        );
 
-      const unsubscribe = onSnapshot(q, (snapshot) => {
-        console.log("ChatApp: Messages snapshot received", snapshot.size);
-        const fetchedMessages = snapshot.docs.map(doc => ({
-          ...doc.data(),
-          timestamp: doc.data()?.timestamp?.toDate() || new Date(),
-        })) as Message[];
+        try {
+          const snapshot = await getDocs(q);
+          console.log("ChatApp: Messages fetched", snapshot.size);
+          const fetchedMessages = snapshot.docs.map(doc => ({
+            ...doc.data(),
+            timestamp: doc.data()?.timestamp?.toDate() || new Date(),
+          })) as Message[];
 
-        setSessions(prev => prev.map(s => 
-          (s && s.id === activeSessionId) ? { ...s, messages: fetchedMessages } : s
-        ));
-      }, (err) => {
-        handleFirestoreError(err, OperationType.LIST, `users/${user.uid}/sessions/${activeSessionId}/messages`);
-      });
-
-      return () => unsubscribe();
+          setSessions(prev => prev.map(s => 
+            (s && s.id === activeSessionId) ? { ...s, messages: fetchedMessages } : s
+          ));
+        } catch (err) {
+          handleFirestoreError(err, OperationType.LIST, `users/${user.uid}/sessions/${activeSessionId}/messages`);
+        }
+      };
+      
+      fetchMessages();
     }
   }, [activeSessionId, user.uid]);
 
@@ -689,6 +737,18 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
       createdAt: Timestamp.now(),
       updatedAt: Timestamp.now()
     };
+
+    const newLocalSession: ChatSession = {
+      id: newId,
+      title: 'Yeni Sohbet',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      messages: []
+    };
+    
+    // Add locally immediately
+    setSessions(prev => [newLocalSession, ...prev]);
+    setActiveSessionId(newId);
     
     try {
       await setDoc(doc(db, 'users', user.uid, 'sessions', newId), newSession);
@@ -936,6 +996,27 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
       }
 
       setStreamingMessage(null);
+
+      // Ekle: Modelin mesajını manuel olarak durum bilgisine kaydet
+      const finalModelMsg: Message = {
+        id: modelMsgId,
+        role: 'model',
+        text: finalResponseText,
+        sources: finalSources,
+        timestamp: new Date(),
+        isDeep: isDeepMode,
+        grounded: finalGrounded
+      };
+
+      setSessions(prev => prev.map(s => 
+        s.id === activeSessionId 
+          ? { 
+              ...s, 
+              messages: [...(s.messages || []), finalModelMsg],
+              updatedAt: new Date()
+            } 
+          : s
+      ));
 
       if (isAutoSpeak) {
         if ('speechSynthesis' in window) {
@@ -1389,10 +1470,12 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                   const id = deletingSessionId;
                   setDeletingSessionId(null);
                   try {
-                    await deleteDoc(doc(db, 'users', user.uid, 'sessions', id));
+                    // Update local state first
+                    setSessions(prev => prev.filter(s => s.id !== id));
                     if (activeSessionId === id) {
                       setActiveSessionId(null);
                     }
+                    await deleteDoc(doc(db, 'users', user.uid, 'sessions', id));
                   } catch (err) {
                     handleFirestoreError(err, OperationType.DELETE, `users/${user.uid}/sessions/${id}`);
                   }
