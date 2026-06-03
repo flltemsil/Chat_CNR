@@ -76,7 +76,7 @@ const handleFirestoreError = (error: unknown, operationType: OperationType, path
     path
   }
   console.error('Firestore Error: ', JSON.stringify(errInfo));
-  throw new Error(JSON.stringify(errInfo));
+  // Not throwing to prevent app crash loop. Unhandled errors should just gracefully fail.
 }
 
 // Helper to clean undefined values for Firestore
@@ -219,8 +219,25 @@ const App: React.FC = () => {
         }
       } catch (err: any) {
         console.error("Auth state processing error:", err);
-        setLoginError(`Profil yüklenirken bir hata oluştu: ${err.message}. Admin veya veritabanı kuralları (Firestore Rules) ile ilgili bir sorun olabilir.`);
-        setUser(null);
+        if (firebaseUser) {
+           console.log("Fallback: providing basic profile from auth token.");
+           const fallbackProfile = {
+              uid: firebaseUser.uid,
+              email: firebaseUser.email || '',
+              name: firebaseUser.displayName || 'Kullanıcı',
+              role: firebaseUser.email === OWNER_EMAIL ? 'admin' : 'user',
+              interests: [],
+              bio: '',
+              phone: '',
+              lastLogin: new Date(),
+              updatedAt: new Date()
+           } as UserProfile;
+           setUser(fallbackProfile);
+           setLoginError(`Profil çevrimdışı/sınırlı modda yüklendi (${err.message}).`);
+        } else {
+           setLoginError(`Giriş başarısız oldu: ${err.message}`);
+           setUser(null);
+        }
       } finally {
         setAuthLoading(false);
         clearTimeout(timeout);
