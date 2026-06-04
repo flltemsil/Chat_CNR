@@ -166,34 +166,6 @@ ASLA kullanıcıyı yanıtsız bırakma veya "2026 verisi yok" diyerek kestirip 
     }
   }
 
-  async generateImage(prompt: string): Promise<string> {
-    const userApiKey = localStorage.getItem('user_gemini_api_key:chat_cnr') || null;
-
-    try {
-      const response = await fetch("/api/generate-image", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt, userApiKey })
-      });
-
-      if (!response.ok) {
-        let errorData;
-        try {
-          errorData = await response.json();
-        } catch (e) {
-          throw new Error(`Görsel üretilirken sunucu hatası oluştu (${response.status}).`);
-        }
-        throw new Error(errorData.error || "Görsel üretim hatası");
-      }
-
-      const data = await response.json();
-      return data.imageUrl;
-    } catch (error: any) {
-      console.error("Image Generation Chat Service Error:", error);
-      throw error;
-    }
-  }
-
   async textToSpeech(text: string): Promise<string> {
     return '';
   }

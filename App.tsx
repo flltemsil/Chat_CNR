@@ -925,58 +925,12 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
     try {
       const modelMsgId = (Date.now() + 1).toString();
       
-      // Check if it's an image generation command
-      if (text.toLowerCase().startsWith("/imagine ") || text.toLowerCase().startsWith("/çiz ") || text.toLowerCase().startsWith("/resim ")) {
-        const imagePrompt = text.replace(/^\/(imagine|çiz|resim)\s+/i, '');
-        
-        // Add user message to Firestore
-        try {
-          await setDoc(doc(db, 'users', user.uid, 'sessions', activeSessionId!, 'messages', userMsg.id), cleanForFirestore({
-            ...userMsg,
-            timestamp: Timestamp.now()
-          }));
-        } catch (err) {
-          handleFirestoreError(err, OperationType.WRITE, `users/${user.uid}/sessions/${activeSessionId}/messages/${userMsg.id}`);
-        }
-
-        try {
-          const generatedImageUrl = await chatCNRService.generateImage(imagePrompt);
-          const finalModelMsg: Message = {
-            id: modelMsgId,
-            role: 'model',
-            text: `İstediğiniz "${imagePrompt}" görseli oluşturuldu:`,
-            imageUrl: generatedImageUrl,
-            timestamp: new Date(),
-          };
-
-          // Update Firestore with model message
-          try {
-            await setDoc(doc(db, 'users', user.uid, 'sessions', activeSessionId!, 'messages', modelMsgId), cleanForFirestore({
-              ...finalModelMsg,
-              timestamp: Timestamp.now()
-            }));
-          } catch (err) {
-             handleFirestoreError(err, OperationType.WRITE, `users/${user.uid}/sessions/${activeSessionId}/messages/${modelMsgId}`);
-          }
-
-          setSessions(prev => prev.map(s => 
-            s.id === activeSessionId 
-              ? { 
-                  ...s, 
-                  messages: [...(s.messages || []), finalModelMsg],
-                  updatedAt: new Date()
-                } 
-              : s
-          ));
-          setIsLoading(false);
-          return;
-        } catch (imgErr: any) {
-             let errorMsg = imgErr.message;
-             setError("Görsel oluşturulamadı: " + errorMsg);
-             setIsLoading(false);
-             return;
-        }
-      }
+      const initialModelMsg: Message = {
+        id: modelMsgId,
+        role: 'model',
+        text: '',
+        timestamp: new Date(),
+      };
 
       // Add user message to Firestore
       try {
