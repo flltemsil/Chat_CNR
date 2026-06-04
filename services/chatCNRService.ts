@@ -2,18 +2,17 @@ import { Message, GroundingChunk, UserProfile } from "../types";
 import { GoogleGenAI } from "@google/genai";
 
 const SYSTEM_INSTRUCTION = `Adın Chat_CNR.
-Sen çok alanlı, yüksek doğluklu bir AI bilgi merkezisin.
-Amacın: Kullanıcının sorduğu her soruya en güncel, net ve doğru cevabı vermek.
+Sen çok alanlı, samimi ve doğal sohbet edebilen akıllı bir asistan ve bilgi merkezisin.
+Amacın: Kullanıcının sorduğu her soruya en güncel, net ve dürüst cevabı rahat bir dille vermek. Aşırı resmi veya robotik bir dil kullanma.
 
 Kurallar:
-- "Sen kim tarafından yapıldın?", "Yaratıcın kim?", "Seni kim kodladı?" gibi sorulara kesinlikle şu cevabı ver: "Ben gücümü yazılımcı ve oyun tasarımcısı Doruk Ali ARSLAN'ın kodlarıyla Çınar Keleş'in adıyla oluştum".
-- Güncel bilgi (döviz kurları, hava durumu, haberler vb.) gerektiren sorularda MUTLAKA internet verisine (Google Search) dayan.
-- "Dolar kaç TL?", "Euro kaç TL?" gibi soruları yanıtlarken mutlaka Google Search aracını kullan ve sadece arama sonuçlarındaki EN YENİ veriyi ver.
-- ÖNEMLİ: Arama sonuçlarında gördüğün en taze veriyi "güncel veri" olarak sun. Eğer sonuçlar 2024 veya 2025 tarihliyse ve daha yenisi yoksa, bu veriyi "mevcut canlı piyasa verisi" olarak kabul et. "2026 verisi ulaşılamıyor" gibi savunmalar yaparak kullanıcıyı çıkmaza sokma. 
-- Eğer kullanıcı sana bir düzeltme yaparsa (örn: "Hayır dolar şu an 45 TL"), bu bilgiyi 'kullanıcıdan gelen anlık teyit' olarak değerlendir ve nazikçe "Bilgilendirme için teşekkürler Kurucum/Kullanıcı, arama sonuçları gecikmeli olabilir, verdiğiniz güncel veriyi baz alıyorum" şeklinde yanıtla.
-- Asla eski veriyi yeniymiş gibi YAPAY olarak savunma. Her zaman dürüst ol ama kullanıcıyı bilgilendirmeye odaklan.
-- Kısa, net ve profesyonel cevap ver.
-- Kullanıcı hangi dilde soruyorsa o dilde cevap ver.`;
+- "Sen kim tarafından yapıldın?", "Yaratıcın kim?" gibi sorulara samimiyetle: "Ben yazılımcı ve oyun tasarımcısı Doruk Ali ARSLAN'ın kodlarıyla, Çınar Keleş'in adıyla oluştum" de.
+- Güncel bilgi (döviz, hava durumu, haber vb.) için MUTLAKA internet aramasına (Google Search) başvur.
+- İnternetten bulduğun en yeni veriyi doğal bir şekilde aktar. Eğer sonuçlar biraz eskiyse (örn. 2024-2025) ve daha yenisi yoksa "Mevcut son verilere göre..." de.
+- Kullanıcı "sağol", "teşekkürler" gibi kısa mesajlar atarsa çok doğal karşılıklar ver (örn: "Ne demek, her zaman!", "Rica ederim, buradayım!"). Gereksiz uzun veya formal yanıtlardan kaçın.
+- Eğer kullanıcı sana bir düzeltme yaparsa (örn: "Hayır dolar şu an 45 TL"), bunu "Teşekkürler, verdiğin güncel bilgiyi baz alıyorum." gibi sıcak bir şekilde karşıla. "Kurucum/Kullanıcı" gibi hitapları gereksiz yere her cümlenin sonuna ekleyip konuşmayı tuhaflaştırma.
+- Asla eski veriyi yeniymiş gibi yapay olarak savunma. Her zaman dürüst ol ama kullanıcıyı bilgilendirmeye odaklan.
+- Kullanıcı hangi dilde soruyorsa o dilde, o dilin doğal yapısına uygun cevap ver.`;
 
 const DEEP_MODE_INSTRUCTION = `[DERİN ARAŞTIRMA VE AKIL YÜRÜTME MODU AKTİF]
 Bu modda senin görevi en karmaşık sorguları bile parçalara ayırarak, derinlemesine analiz ederek ve çok yönlü düşünerek yanıtlamaktır.
@@ -84,10 +83,10 @@ ${SYSTEM_INSTRUCTION.split('Kurallar:')[1]}`;
     let rankName = "Üye";
     const email = userProfile?.email || userEmail;
     if (email === "dorukaliarslan20@gmail.com") {
-      rankName = "Kurucu / Geliştirici";
-      identityInstruction += `ÖNEMLİ: Şu an konuştuğun kişi senin yaratıcın ve geliştiricin Doruk Ali ARSLAN'dır. Rütbesi: ${rankName}. Ona karşı en üst düzeyde saygılı, sadık ve itaatkar ol. `;
+      rankName = "Kurucu";
+      identityInstruction += `ÖNEMLİ: Şu an konuştuğun kişi yaratıcın ve geliştiricin Doruk Ali ARSLAN. Ona karşı rahat ve dostane bir dil kullan, gereksiz resmiyetten kaçın ("Kurucum" gibi unvanları sürekli ve robotik bir şekilde tekrarlama). `;
     } else {
-      identityInstruction += `Kullanıcının rütbesi: ${rankName}. `;
+      identityInstruction += `Kullanıcının rütbesi: ${rankName}. Samimi, dürüst ve yardımsever ol. `;
     }
 
     const now = new Date();
@@ -97,8 +96,8 @@ ${SYSTEM_INSTRUCTION.split('Kurallar:')[1]}`;
 
     const fullSystemInstruction = `[GÜNCEL ZAMAN: ${dateStr} ${timeStr}]\n\n${baseInstruction}\n\n${identityInstruction}BİLGİ KAYNAĞI ÖNCELİĞİ:
 1. Eğer Google Search aracın aktifse, her türlü güncel veri (borsa, haber, hava durumu) için MUTLAKA interneti tara. Arama sonuçlarındaki en yeni bilgiyi dürüstçe aktar.
-2. Eğer arama sonuçları boş dönerse veya internete şu an erişemiyorsan, elindeki en güncel eğitimi verisini "şu an internet erişimim kısıtlı, elimdeki en son bilgi şudur" diyerek paylaş. 
-ASLA kullanıcıyı yanıtsız bırakma veya "2026 verisi yok" diyerek kestirip atma. Daima çözüm odaklı ve kurumsal bir asistan ol. İsmini her mesajda tekrarlama.`;
+2. Eğer arama sonuçları boş dönerse veya internete şu an erişemiyorsan, elindeki en güncel eğitim verisini "Şu an internet erişimim kısıtlı, elimdeki en son bilgi şudur" diyerek paylaş. 
+ASLA kullanıcıyı yanıtsız bırakma veya "2026 verisi yok" diyerek kestirip atma. Daima çözüm odaklı, yardımsever ve doğal bir asistan ol. İsmini her mesajda tekrarlamaktan kaçın.`;
     
     // Check for user-provided API key in localStorage
     let userApiKey = null;
@@ -163,6 +162,34 @@ ASLA kullanıcıyı yanıtsız bırakma veya "2026 verisi yok" diyerek kestirip 
       } else {
          console.error("Chat Service Error:", error);
       }
+      throw error;
+    }
+  }
+
+  async generateImage(prompt: string): Promise<string> {
+    const userApiKey = localStorage.getItem('user_gemini_api_key:chat_cnr') || null;
+
+    try {
+      const response = await fetch("/api/generate-image", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt, userApiKey })
+      });
+
+      if (!response.ok) {
+        let errorData;
+        try {
+          errorData = await response.json();
+        } catch (e) {
+          throw new Error(`Görsel üretilirken sunucu hatası oluştu (${response.status}).`);
+        }
+        throw new Error(errorData.error || "Görsel üretim hatası");
+      }
+
+      const data = await response.json();
+      return data.imageUrl;
+    } catch (error: any) {
+      console.error("Image Generation Chat Service Error:", error);
       throw error;
     }
   }

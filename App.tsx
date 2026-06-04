@@ -456,7 +456,13 @@ const App: React.FC = () => {
               </button>
 
               <button 
-                onClick={() => alert("iPhone'a Yükleme Rehberi:\n\n1. Safari tarayıcınızın alt kısmındaki 'Paylaş' (Yukarı ok çıkan kare) butonuna dokunun.\n2. Aşağı kaydırıp 'Ana Ekrana Ekle' seçeneğine dokunun.\n3. Sağ üstteki 'Ekle'ye basarak uygulamayı telefonunuza indirebilirsiniz.")}
+                onClick={() => {
+                  if (window.self !== window.top) {
+                    alert("ÖNEMLİ: Uygulamanız şu an bir önizleme penceresinde çalışıyor.\n\niPhone'a Cihaz Uygulaması Olarak İndirmek İçin:\n1. Sağ üst köşeden (veya paylaşılan linkten) uygulamayı 'YENİ SEKMEYE' taşıyın.\n2. Safari'deyken tarayıcının alt orta kısmındaki 'Paylaş' (Kareden yukarı çıkan ok) ikonuna dokunun.\n3. Menüden 'Ana Ekrana Ekle' seçeneğini seçin.\n\nBu işlemle uygulama normal bir uygulama gibi telefonunuza inecektir.");
+                  } else {
+                    alert("iPhone'a Yükleme (İndirme) Rehberi:\n\n1. Safari tarayıcısında olduğunuza emin olun (Chrome veya uygulama içi tarayıcılarda çalışmaz).\n2. Ekranın alt kısmındaki 'Paylaş' butonuna (Kareden yukarı çıkan ok) dokunun.\n3. Listeyi aşağı kaydırıp 'Ana Ekrana Ekle' (Add to Home Screen) seçeneğine dokunun.\n4. Sağ üstteki 'Ekle'ye basın.\n\nUygulama başarıyla iPhone'unuza indirilecektir!");
+                  }
+                }}
                 className="col-span-2 flex flex-col items-center justify-center gap-2 bg-zinc-800/50 border-zinc-700 hover:bg-zinc-800 border py-4 rounded-3xl transition-all group"
               >
                 <div className="w-10 h-10 bg-zinc-700 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -918,12 +924,59 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
 
     try {
       const modelMsgId = (Date.now() + 1).toString();
-      const initialModelMsg: Message = {
-        id: modelMsgId,
-        role: 'model',
-        text: '',
-        timestamp: new Date(),
-      };
+      
+      // Check if it's an image generation command
+      if (text.toLowerCase().startsWith("/imagine ") || text.toLowerCase().startsWith("/çiz ") || text.toLowerCase().startsWith("/resim ")) {
+        const imagePrompt = text.replace(/^\/(imagine|çiz|resim)\s+/i, '');
+        
+        // Add user message to Firestore
+        try {
+          await setDoc(doc(db, 'users', user.uid, 'sessions', activeSessionId!, 'messages', userMsg.id), cleanForFirestore({
+            ...userMsg,
+            timestamp: Timestamp.now()
+          }));
+        } catch (err) {
+          handleFirestoreError(err, OperationType.WRITE, `users/${user.uid}/sessions/${activeSessionId}/messages/${userMsg.id}`);
+        }
+
+        try {
+          const generatedImageUrl = await chatCNRService.generateImage(imagePrompt);
+          const finalModelMsg: Message = {
+            id: modelMsgId,
+            role: 'model',
+            text: `İstediğiniz "${imagePrompt}" görseli oluşturuldu:`,
+            imageUrl: generatedImageUrl,
+            timestamp: new Date(),
+          };
+
+          // Update Firestore with model message
+          try {
+            await setDoc(doc(db, 'users', user.uid, 'sessions', activeSessionId!, 'messages', modelMsgId), cleanForFirestore({
+              ...finalModelMsg,
+              timestamp: Timestamp.now()
+            }));
+          } catch (err) {
+             handleFirestoreError(err, OperationType.WRITE, `users/${user.uid}/sessions/${activeSessionId}/messages/${modelMsgId}`);
+          }
+
+          setSessions(prev => prev.map(s => 
+            s.id === activeSessionId 
+              ? { 
+                  ...s, 
+                  messages: [...(s.messages || []), finalModelMsg],
+                  updatedAt: new Date()
+                } 
+              : s
+          ));
+          setIsLoading(false);
+          return;
+        } catch (imgErr: any) {
+             let errorMsg = imgErr.message;
+             setError("Görsel oluşturulamadı: " + errorMsg);
+             setIsLoading(false);
+             return;
+        }
+      }
 
       // Add user message to Firestore
       try {
