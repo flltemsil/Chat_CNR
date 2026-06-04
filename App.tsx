@@ -1043,24 +1043,28 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
       ));
 
       if (isAutoSpeak) {
-        if ('speechSynthesis' in window) {
-          window.speechSynthesis.cancel();
-          const utterance = new SpeechSynthesisUtterance(finalResponseText);
-          const voiceLangMap: Record<string, string> = {
-            'tr': 'tr-TR',
-            'en': 'en-US',
-            'es': 'es-ES',
-            'de': 'de-DE',
-            'fr': 'fr-FR',
-            'it': 'it-IT',
-            'ru': 'ru-RU'
-          };
-          utterance.lang = voiceLangMap[language] || 'tr-TR';
-          window.speechSynthesis.speak(utterance);
-        } else {
-          const audioBase64 = await chatCNRService.textToSpeech(finalResponseText);
+        try {
+          const audioBase64 = await chatCNRService.textToSpeech(finalResponseText, language);
           if (audioBase64) {
             playPCM(audioBase64);
+          } else {
+            throw new Error('TTS fallback');
+          }
+        } catch (ttsErr) {
+          if ('speechSynthesis' in window) {
+            window.speechSynthesis.cancel();
+            const utterance = new SpeechSynthesisUtterance(finalResponseText);
+            const voiceLangMap: Record<string, string> = {
+              'tr': 'tr-TR',
+              'en': 'en-US',
+              'es': 'es-ES',
+              'de': 'de-DE',
+              'fr': 'fr-FR',
+              'it': 'it-IT',
+              'ru': 'ru-RU'
+            };
+            utterance.lang = voiceLangMap[language] || 'tr-TR';
+            window.speechSynthesis.speak(utterance);
           }
         }
       }

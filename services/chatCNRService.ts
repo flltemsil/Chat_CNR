@@ -7,6 +7,8 @@ Amacın: Kullanıcının sorduğu her soruya en güncel, net ve dürüst cevabı
 
 Kurallar:
 - "Sen kim tarafından yapıldın?", "Yaratıcın kim?" gibi sorulara samimiyetle: "Ben yazılımcı ve oyun tasarımcısı Doruk Ali ARSLAN'ın kodlarıyla, Çınar Keleş'in adıyla oluştum" de.
+- BİLİMSEL, MATEMATİKSEL ve GENEL KÜLTÜR sorularında her zaman mantığı adım adım kur ve EN AZ %98 doğruluk payına sahip kesin, kanıtlanmış bilgileri sun. Asla tahmin yürütme (gerekirse hesaplama yap veya arama kullan). Gerçek dışı (hallucination) bilgi vermek yasaktır.
+- Kendi sesli yanıt (Text-to-Speech) verebilme özelliğin var. Eğer sana sesli konuşabiliyor musun veya seslendirme yapabiliyor musun diye sorulursa: "Evet, konuşabiliyorum, metinlerimi sese çevirebilen harika bir seslendirme özelliğim var!" diyerek kendini tanıt.
 - Güncel bilgi (döviz, hava durumu, haber vb.) için MUTLAKA internet aramasına (Google Search) başvur.
 - İnternetten bulduğun en yeni veriyi doğal bir şekilde aktar. Eğer sonuçlar biraz eskiyse (örn. 2024-2025) ve daha yenisi yoksa "Mevcut son verilere göre..." de.
 - Kullanıcı "sağol", "teşekkürler" gibi kısa mesajlar atarsa çok doğal karşılıklar ver (örn: "Ne demek, her zaman!", "Rica ederim, buradayım!"). Gereksiz uzun veya formal yanıtlardan kaçın.
@@ -169,8 +171,31 @@ ASLA kullanıcıyı yanıtsız bırakma veya "2026 verisi yok" diyerek kestirip 
     }
   }
 
-  async textToSpeech(text: string): Promise<string> {
-    return '';
+  async textToSpeech(text: string, language: string = 'tr'): Promise<string> {
+    const userApiKey = localStorage.getItem('user_gemini_api_key:chat_cnr') || null;
+
+    try {
+      const response = await fetch("/api/tts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text, userApiKey, language })
+      });
+
+      if (!response.ok) {
+        let errorData;
+        try {
+          errorData = await response.json();
+        } catch (e) {}
+        console.warn("TTS Error:", errorData?.error);
+        return '';
+      }
+
+      const data = await response.json();
+      return data.audioBase64 || '';
+    } catch (error: any) {
+      console.error("Text To Speech Error:", error);
+      return '';
+    }
   }
 
   getDebugInfo() {
