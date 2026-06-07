@@ -764,7 +764,6 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
     const newLocalSession: ChatSession = {
       id: newId,
       title: 'Yeni Sohbet',
-      createdAt: new Date(),
       updatedAt: new Date(),
       messages: []
     };

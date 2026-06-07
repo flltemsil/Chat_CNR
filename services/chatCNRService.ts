@@ -136,8 +136,8 @@ ASLA kullanıcıyı yanıtsız bırakma veya "2026 verisi yok" diyerek kestirip 
             }
             throw new Error(errorData.error || "Sunucu hatası");
           } catch (e: any) {
-            if (e.message && (e.message.includes("QUOTA_EXCEEDED") || e.message === "QUOTA_EXCEEDED")) throw e;
-            throw new Error(`Sunucu Hatası: Geçersiz veri formatı (${response.status})`);
+            if (e.message) throw e;
+            throw new Error(`Sunucu Hatası (${response.status})`);
           }
         } else {
           try {
