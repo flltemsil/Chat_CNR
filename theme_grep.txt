@@ -1,0 +1,69 @@
+517:  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+519:      return (localStorage.getItem('chat_cnr_theme') as 'light' | 'dark') || 'dark';
+1147:    <div className={`flex h-[100dvh] overflow-hidden font-['Inter'] transition-colors duration-300 ${theme === 'dark' ? 'bg-[#0a0a0a] text-zinc-100' : 'bg-zinc-50 text-zinc-900'}`}>
+1149:      <aside className={`fixed inset-y-0 left-0 z-[60] w-72 border-r transition-all duration-500 ease-[0.23, 1, 0.32, 1] lg:relative lg:translate-x-0 ${isSidebarOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full'} ${theme === 'dark' ? 'bg-[#050505] border-zinc-800/80 shadow-[10px_0_40px_rgba(0,0,0,0.4)]' : 'bg-white border-zinc-200'}`}>
+1151:          <div className={`px-6 py-6 border-b flex items-center justify-between ${theme === 'dark' ? 'border-zinc-800/50' : 'border-zinc-100'}`}>
+1158:            <button onClick={() => setIsSidebarOpen(false)} className={`lg:hidden p-2 rounded-lg transition-colors ${theme === 'dark' ? 'text-zinc-500 hover:bg-zinc-800 hover:text-white' : 'text-zinc-500 hover:bg-zinc-100'}`}>
+1188:                      ? (theme === 'dark' ? 'bg-zinc-800/50 border-zinc-700 text-white shadow-inner' : 'bg-zinc-100 border-zinc-200 text-zinc-900 shadow-inner')
+1189:                      : (theme === 'dark' ? 'border-transparent hover:bg-zinc-900/50 hover:border-zinc-800 text-zinc-500 hover:text-zinc-300' : 'border-transparent hover:bg-zinc-50 hover:border-zinc-200 text-zinc-600')
+1192:                  <div className={`p-1.5 rounded-lg flex-shrink-0 transition-colors ${activeSessionId === session.id ? 'text-blue-500' : (theme === 'dark' ? 'text-zinc-600 group-hover:text-zinc-400' : 'text-zinc-400 group-hover:text-zinc-500')}`}>
+1203:                      theme === 'dark' ? 'hover:bg-red-500/20 text-zinc-600 hover:text-red-500' : 'hover:bg-red-50 text-zinc-400 hover:text-red-500'
+1214:          <div className={`p-4 border-t ${theme === 'dark' ? 'border-zinc-800/50 bg-[#070707]' : 'border-zinc-100 bg-zinc-50/50'}`}>
+1215:            <div className={`flex items-center gap-3 p-3 rounded-xl border transition-all ${theme === 'dark' ? 'bg-zinc-900/50 border-zinc-800 hover:border-zinc-700' : 'bg-white border-zinc-200 hover:border-zinc-300'}`}>
+1216:              <div className={`w-9 h-9 rounded-lg flex items-center justify-center transition-all ${theme === 'dark' ? 'bg-zinc-800 text-blue-400 group-hover:text-blue-300' : 'bg-zinc-100 text-blue-600'}`}>
+1247:        <header className={`h-16 border-b backdrop-blur-md flex items-center justify-between px-4 md:px-6 sticky top-0 z-50 ${theme === 'dark' ? 'border-zinc-800/50 bg-[#0a0a0a]/70' : 'border-zinc-200/50 bg-white/70'}`}>
+1251:              className={`lg:hidden p-2 -ml-2 rounded-lg transition-all flex-shrink-0 ${theme === 'dark' ? 'text-zinc-400 hover:bg-zinc-800' : 'text-zinc-500 hover:bg-zinc-100'}`}
+1265:                  <span className={`text-[9px] uppercase tracking-[0.15em] font-black ${theme === 'dark' ? 'text-emerald-500/80' : 'text-emerald-600'}`}>{t.online}</span>
+1275:                className={`p-2 rounded-lg transition-all border ${theme === 'dark' ? 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-white' : 'bg-white border-zinc-200 text-zinc-500 hover:text-zinc-900'}`}
+1283:              className={`p-2 rounded-lg transition-all border ${isAutoSpeak ? 'bg-blue-600 border-blue-500 text-white' : (theme === 'dark' ? 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-white' : 'bg-white border-zinc-200 text-zinc-500 hover:text-zinc-900')}`}
+1290:              className={`p-2 rounded-lg transition-all border ${theme === 'dark' ? 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-white' : 'bg-white border-zinc-200 text-zinc-500 hover:text-zinc-900'}`}
+1299:        <main className={`flex-1 overflow-y-auto custom-scrollbar relative px-4 md:px-8 py-8 space-y-8 ${theme === 'dark' ? 'bg-[#030303]' : 'bg-zinc-50'}`}>
+1323:                        <div key={i} className={`p-4 rounded-2xl border text-left transition-all hover:scale-[1.02] cursor-pointer ${theme === 'dark' ? 'bg-zinc-900/40 border-zinc-800 hover:border-zinc-700' : 'bg-white border-zinc-200'}`}>
+1334:                    <MessageItem key={msg.id} message={msg} themeColor="blue" appearance={theme} language={language} />
+1347:                    themeColor="blue" 
+1348:                    appearance={theme} 
+1366:                <div className={`w-9 h-9 rounded-xl flex-shrink-0 ${theme === 'dark' ? 'bg-zinc-900 border border-zinc-800' : 'bg-zinc-200'}`} />
+1368:                  <div className={`h-3 rounded-full w-1/4 ${theme === 'dark' ? 'bg-zinc-900' : 'bg-zinc-200'}`} />
+1369:                  <div className={`h-3 rounded-full w-3/4 ${theme === 'dark' ? 'bg-zinc-900' : 'bg-zinc-200'}`} />
+1370:                  <div className={`h-3 rounded-full w-1/2 ${theme === 'dark' ? 'bg-zinc-800' : 'bg-zinc-100'}`} />
+1402:        <footer className={`px-4 py-4 md:p-6 pb-[calc(env(safe-area-inset-bottom,0)+16px)] border-t transition-colors duration-500 ${theme === 'dark' ? 'bg-[#050505]/95 backdrop-blur-2xl border-zinc-800/40 shadow-[0_-20px_50px_rgba(0,0,0,0.5)]' : 'bg-white border-zinc-100'}`}>
+1410:                <img src={selectedImage} alt="Seçilen" className={`h-28 w-28 object-cover rounded-2xl border-2 ${theme === 'dark' ? 'border-blue-500/40 ring-8 ring-blue-500/5' : 'border-blue-200'}`} />
+1422:                theme === 'dark' 
+1434:                    className={`flex-1 bg-transparent border-none focus:ring-0 py-2 resize-none max-h-40 md:max-h-56 custom-scrollbar text-[15px] font-medium leading-relaxed tracking-tight placeholder:text-zinc-700 disabled:opacity-50 ${theme === 'dark' ? 'text-white' : 'text-zinc-900'}`}
+1456:                          : (theme === 'dark' ? 'text-zinc-500 hover:text-white hover:bg-zinc-800/50' : 'text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100')
+1466:                      className={`p-2 rounded-xl transition-all disabled:opacity-30 ${theme === 'dark' ? 'text-zinc-500 hover:text-white hover:bg-zinc-800/50' : 'text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100'}`}
+1488:                          : (theme === 'dark' ? 'text-zinc-500 hover:text-white hover:bg-zinc-800/50' : 'text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100')
+1499:                          : (theme === 'dark' ? 'bg-zinc-800 text-zinc-600' : 'bg-zinc-200 text-zinc-400')
+1517:          <div className={`w-full max-w-sm border rounded-3xl p-6 shadow-2xl ${theme === 'dark' ? 'bg-[#121212] border-zinc-800 text-white' : 'bg-white border-zinc-200 text-zinc-900'}`}>
+1527:                className={`flex-1 py-3 rounded-xl font-bold transition-all ${theme === 'dark' ? 'bg-zinc-800 hover:bg-zinc-700 text-zinc-300' : 'bg-zinc-100 hover:bg-zinc-200 text-zinc-600'}`}
+1558:          <div className={`w-full max-w-md border rounded-3xl p-6 shadow-2xl ${theme === 'dark' ? 'bg-[#121212] border-zinc-800 text-white' : 'bg-white border-zinc-200 text-zinc-900'}`}>
+1564:              <button onClick={() => setIsAdminPanelOpen(false)} className={`p-2 rounded-xl transition-all ${theme === 'dark' ? 'text-zinc-400 hover:bg-zinc-800' : 'text-zinc-500 hover:bg-zinc-100'}`}>
+1572:                  <div key={i} className={`p-4 rounded-2xl border ${theme === 'dark' ? 'bg-[#1a1a1a] border-zinc-800' : 'bg-zinc-50 border-zinc-200'}`}>
+1586:          <div className={`w-full max-w-md border rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] ${theme === 'dark' ? 'bg-[#121212] border-zinc-800 text-white' : 'bg-white border-zinc-200 text-zinc-900'}`}>
+1592:              <button onClick={() => setIsSettingsOpen(false)} className={`p-2 rounded-xl transition-all ${theme === 'dark' ? 'text-zinc-400 hover:bg-zinc-800' : 'text-zinc-500 hover:bg-zinc-100'}`}>
+1599:                <label className={`block text-xs font-bold uppercase tracking-widest ml-1 ${theme === 'dark' ? 'text-zinc-500' : 'text-zinc-400'}`}>{t.profile}</label>
+1600:                <div className={`border rounded-2xl p-4 space-y-4 ${theme === 'dark' ? 'bg-[#1a1a1a] border-zinc-800' : 'bg-zinc-50 border-zinc-200'}`}>
+1608:                        <p className={`text-xs truncate ${theme === 'dark' ? 'text-zinc-500' : 'text-zinc-400'}`}>{user.email || 'Kullanıcı'}</p>
+1623:                        className={`flex-1 bg-transparent border rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600/50 transition-all ${theme === 'dark' ? 'border-zinc-800 text-white' : 'border-zinc-200 text-zinc-900'}`}
+1654:                <label className={`block text-xs font-bold uppercase tracking-widest ml-1 ${theme === 'dark' ? 'text-zinc-500' : 'text-zinc-400'}`}>{t.language}</label>
+1655:                <div className={`border rounded-2xl p-4 grid grid-cols-2 gap-2 ${theme === 'dark' ? 'bg-[#1a1a1a] border-zinc-800' : 'bg-zinc-50 border-zinc-200'}`}>
+1674:                          : (theme === 'dark' ? 'bg-zinc-900 border-zinc-800 text-zinc-500 hover:border-zinc-700' : 'bg-white border-zinc-100 text-zinc-600')
+1685:                <label className={`block text-xs font-bold uppercase tracking-widest ml-1 ${theme === 'dark' ? 'text-zinc-500' : 'text-zinc-400'}`}>System Diagnostic</label>
+1686:                <div className={`border rounded-2xl p-4 space-y-4 ${theme === 'dark' ? 'bg-[#1a1a1a] border-zinc-800' : 'bg-zinc-50 border-zinc-200'}`}>
+1714:                <label className={`block text-xs font-bold uppercase tracking-widest ml-1 ${theme === 'dark' ? 'text-zinc-500' : 'text-zinc-400'}`}>Danger Zone</label>
+1715:                <div className={`border rounded-2xl p-4 space-y-4 ${theme === 'dark' ? 'bg-red-500/5 border-red-500/20' : 'bg-red-50 border-red-100'}`}>
+1747:                <label className={`block text-xs font-bold uppercase tracking-widest ml-1 ${theme === 'dark' ? 'text-zinc-500' : 'text-zinc-400'}`}>Hesap</label>
+1758:                <label className={`block text-xs font-bold uppercase tracking-widest ml-1 ${theme === 'dark' ? 'text-zinc-500' : 'text-zinc-400'}`}>Tercihler</label>
+1760:                  <div className={`flex items-center justify-between p-4 border rounded-2xl ${theme === 'dark' ? 'bg-[#1a1a1a] border-zinc-800' : 'bg-zinc-50 border-zinc-200'}`}>
+1762:                      <Volume2 size={18} className={theme === 'dark' ? 'text-zinc-400' : 'text-zinc-500'} />
+1767:                      className={`w-12 h-6 rounded-full transition-all relative ${isAutoSpeak ? 'bg-blue-600' : (theme === 'dark' ? 'bg-zinc-700' : 'bg-zinc-300')}`}
+1773:                  <div className={`flex items-center justify-between p-4 border rounded-2xl ${theme === 'dark' ? 'bg-[#1a1a1a] border-zinc-800' : 'bg-zinc-50 border-zinc-200'}`}>
+1775:                      <MessageSquare size={18} className={theme === 'dark' ? 'text-zinc-400' : 'text-zinc-500'} />
+1783:                      className={`w-12 h-6 rounded-full transition-all relative ${isChatMode ? 'bg-blue-600' : (theme === 'dark' ? 'bg-zinc-700' : 'bg-zinc-300')}`}
+1789:                  <div className={`flex items-center justify-between p-4 border rounded-2xl ${theme === 'dark' ? 'bg-[#1a1a1a] border-zinc-800' : 'bg-zinc-50 border-zinc-200'}`}>
+1791:                      <div className={theme === 'dark' ? 'text-zinc-400' : 'text-zinc-500'}>
+1792:                        {theme === 'dark' ? <Settings size={18} /> : <Settings size={18} />}
+1797:                      onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+1798:                      className={`w-12 h-6 rounded-full transition-all relative ${theme === 'light' ? 'bg-blue-600' : (theme === 'dark' ? 'bg-zinc-700' : 'bg-zinc-300')}`}
+1800:                      <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${theme === 'light' ? 'right-1' : 'left-1'}`} />
+1806:              <div className={`pt-4 border-t ${theme === 'dark' ? 'border-zinc-800' : 'border-zinc-200'}`}>

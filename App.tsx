@@ -6,7 +6,7 @@ import { translations } from './translations';
 import MessageItem from './components/MessageItem';
 import ProfileModal from './components/ProfileModal';
 import { profileService } from './services/profileService';
-import { Menu, Plus, Trash2, X, MessageSquare, Settings, Mic, MicOff, Volume2, VolumeX, Camera, Send, User, LogOut, Shield, Users, Image as ImageIcon, Sparkles, Key, Check, ExternalLink, Heart, Cpu, Download, Smartphone, Brain, Microscope } from 'lucide-react';
+import { Menu, Plus, Trash2, X, MessageSquare, Settings, Mic, MicOff, Volume2, VolumeX, Camera, Send, User, LogOut, Shield, Users, Image as ImageIcon, Sparkles, Key, Check, ExternalLink, Heart, Cpu, Download, Smartphone, Brain, Microscope, Sun, Moon, Monitor } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   auth, db, signInWithGooglePopup, signInWithGoogleRedirect, checkRedirectResult, logout, onAuthStateChanged, 
@@ -514,13 +514,43 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
     }
   });
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+  const [themeMode, setThemeMode] = useState<'auto' | 'light' | 'dark'>(() => {
     try {
-      return (localStorage.getItem('chat_cnr_theme') as 'light' | 'dark') || 'dark';
-    } catch (e) {
-      return 'dark';
+      return (localStorage.getItem('chat_cnr_theme_mode') as 'auto' | 'light' | 'dark') || 'auto';
+    } catch {
+      return 'auto';
     }
   });
+
+  const getAutoTheme = () => {
+    const hour = new Date().getHours();
+    return (hour >= 6 && hour <= 19) ? 'light' : 'dark';
+  };
+
+  const [theme, setTheme] = useState<'light' | 'dark'>(
+    themeMode === 'auto' ? getAutoTheme() : themeMode
+  );
+
+  useEffect(() => {
+    if (themeMode !== 'auto') {
+      setTheme(themeMode);
+      return;
+    }
+    setTheme(getAutoTheme());
+    const interval = setInterval(() => {
+      setTheme(getAutoTheme());
+    }, 60000);
+    return () => clearInterval(interval);
+  }, [themeMode]);
+
+  const handleThemeModeToggle = () => {
+    const nextMode = themeMode === 'auto' ? 'light' : themeMode === 'light' ? 'dark' : 'auto';
+    setThemeMode(nextMode);
+    try {
+      localStorage.setItem('chat_cnr_theme_mode', nextMode);
+    } catch (e) {}
+  };
+
   const [language, setLanguage] = useState<Language>(() => {
     try {
       return (localStorage.getItem('chat_cnr_lang') as Language) || 'tr';
@@ -1041,6 +1071,42 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
           : s
       ));
 
+      // Background Preference Learning
+      const currentMessagesCount = (activeSession?.messages?.length || 0) + 2;
+      if (currentMessagesCount > 0 && currentMessagesCount % 4 === 0) {
+         (async () => {
+             try {
+                const combinedHistory = [...(activeSession?.messages || []), userMsg, finalModelMsg];
+                const res = await fetch('/api/analyze-preferences', {
+                   method: 'POST',
+                   headers: { 'Content-Type': 'application/json' },
+                   body: JSON.stringify({
+                      history: combinedHistory,
+                      currentBio: user.bio,
+                      currentInterests: user.interests,
+                      userApiKey: localStorage.getItem('CHAT_CNR_USER_API_KEY')
+                   })
+                });
+                if (res.ok) {
+                   const result = await res.json();
+                   if (result.bio || result.interests) {
+                      const updates: any = {};
+                      if (result.bio && result.bio !== user.bio) updates.bio = result.bio;
+                      if (result.interests && Array.isArray(result.interests)) updates.interests = result.interests;
+                      
+                      if (Object.keys(updates).length > 0) {
+                         await profileService.updateProfile(user.uid, updates);
+                         setUser((prev: any) => ({ ...prev, ...updates }));
+                         console.log("Background profile learning updated user preferences", updates);
+                      }
+                   }
+                }
+             } catch(err) {
+                console.warn("Background profile learning failed", err);
+             }
+         })();
+      }
+
       if (isAutoSpeak) {
         try {
           const audioBase64 = await chatCNRService.textToSpeech(finalResponseText, language);
@@ -1186,9 +1252,9 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                   <span className={`text-[8px] px-1.5 py-0.5 rounded-md font-black uppercase tracking-widest ${
                     user.email === OWNER_EMAIL 
                       ? 'bg-amber-500/10 text-amber-500 border border-amber-500/20' 
-                      : 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
+                      : 'bg-zinc-500/10 text-zinc-500 border border-zinc-500/20'
                   }`}>
-                    {user.email === OWNER_EMAIL ? 'SİSTEM SORUMLUSU' : 'PREMIUM'}
+                    {user.email === OWNER_EMAIL ? 'SİSTEM SORUMLUSU' : 'STANDART'}
                   </span>
                 </div>
               </div>
@@ -1753,15 +1819,15 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                   <div className={`flex items-center justify-between p-4 border rounded-2xl ${theme === 'dark' ? 'bg-[#1a1a1a] border-zinc-800' : 'bg-zinc-50 border-zinc-200'}`}>
                     <div className="flex items-center gap-3">
                       <div className={theme === 'dark' ? 'text-zinc-400' : 'text-zinc-500'}>
-                        {theme === 'dark' ? <Settings size={18} /> : <Settings size={18} />}
+                        {themeMode === 'light' ? <Sun size={18} /> : themeMode === 'dark' ? <Moon size={18} /> : <Monitor size={18} />}
                       </div>
-                      <span className="text-sm font-medium">{t.appearance}</span>
+                      <span className="text-sm font-medium">{t.appearance || (language === 'tr' ? 'Görünüm' : 'Appearance')}</span>
                     </div>
                     <button 
-                      onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-                      className={`w-12 h-6 rounded-full transition-all relative ${theme === 'light' ? 'bg-blue-600' : (theme === 'dark' ? 'bg-zinc-700' : 'bg-zinc-300')}`}
+                      onClick={handleThemeModeToggle}
+                      className="px-4 py-1.5 text-xs font-bold bg-blue-600/10 text-blue-500 rounded-lg hover:bg-blue-600/20 uppercase tracking-widest transition-all"
                     >
-                      <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${theme === 'light' ? 'right-1' : 'left-1'}`} />
+                      {themeMode === 'auto' ? (language === 'tr' ? 'Oto' : 'Auto') : themeMode === 'dark' ? (language === 'tr' ? 'Koyu' : 'Dark') : (language === 'tr' ? 'Açık' : 'Light')}
                     </button>
                   </div>
                 </div>

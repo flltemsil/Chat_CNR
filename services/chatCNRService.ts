@@ -81,7 +81,7 @@ ${SYSTEM_INSTRUCTION.split('Kurallar:')[1]}`;
         identityInstruction += `Kullanıcının ilgi alanları: ${userProfile.interests.join(', ')}. Yanıtlarını ve önerilerini bu ilgi alanlarına göre şekillendirebilirsin. `;
       }
       if (userProfile.bio) {
-        identityInstruction += `Kullanıcı hakkında kısa bilgi: ${userProfile.bio}. `;
+        identityInstruction += `Sistem tarafından öğrenilen kullanıcı karakteri/tercihleri: ${userProfile.bio}. ÇOK ÖNEMLİ: Herkese aynı kalitede sıradan standart mesajlar VERME. Bilinen bu kişilik özelliklerine, zevklerine ve güncel ayarlarına göre yanıtının TÜRÜNÜ, TONUNU ve İÇERİĞİNİ özel olarak değiştir ve kişiselleştir! `;
       }
     }
     

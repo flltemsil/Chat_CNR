@@ -353,6 +353,66 @@ app.post("/api/tts", async (req, res) => {
   }
 });
 
+app.post("/api/analyze-preferences", async (req, res) => {
+  const { history, currentBio, currentInterests, userApiKey } = req.body;
+  if (!history || history.length === 0) return res.json({});
+
+  const modelName = "gemini-2.5-flash"; 
+  
+  const generateWithKey = async (key: string) => {
+    const ai = new GoogleGenAI({ apiKey: key });
+    
+    // Sadece son 10 mesajı alalım ki token sınırı aşılmasın ve en güncel veriler üzerinden çıkarım yapılsın
+    const recentHistory = history.slice(-10);
+    const conversationStr = recentHistory.map((m: any) => `${m.role}: ${m.text}`).join("\n");
+    
+    const prompt = `Aşağıdaki sohbet geçmişini analiz et ve kullanıcının ZEVKLERİ, İLGİ ALANLARI, SEVDİĞİ ŞEYLER ve GENEL PROFİLİ (Kişiliği, ne tür yanıtlar sevdiği) hakkında çıkarımlar yap. Amacımız yapay zekanın her kullanıcıya GÖRE ÖZELLEŞMİŞ yanıtlar vermesidir.
+Mevcut Bio: ${currentBio || "Yok"}
+Mevcut İlgi Alanları: ${currentInterests ? currentInterests.join(", ") : "Yok"}
+
+Sohbet Geçmişi:
+${conversationStr}
+
+Eğer kullanıcının profiline eklenmesi gereken YENİ/FARKLI bir şey varsa (önceki verilerle tutarlı olacak şekilde güncelleyerek), sonucu AŞAĞIDAKİ GİBİ SADECE JSON formatında döndür. Hiçbir fazladan yazı yazma, sadece JSON.
+{
+  "bio": "Kullanıcının sevdiklerini ve kişiliğini özetleyen çok detaylı yeni veya güncellenmiş biyografi. Örn: 'Teknolojiyi seviyor, detaylı ve uzun yanıtlar istiyor.'",
+  "interests": ["ilgi1", "ilgi2", "ilgi3"]
+}`;
+
+    const response = await ai.models.generateContent({
+      model: modelName,
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
+      config: {
+        responseMimeType: "application/json",
+        temperature: 0.1
+      }
+    });
+
+    const text = response.text || (response.candidates?.[0]?.content?.parts?.[0]?.text) || "{}";
+    try {
+        return JSON.parse(text);
+    } catch(e) {
+        return {};
+    }
+  };
+
+  try {
+    let keyToUse = userApiKey;
+    if (!keyToUse) {
+       const apiKeysString = (process.env.CHAT_CNR_API_KEY || "").trim();
+       if (!apiKeysString) return res.status(400).json({ error: "No API Key" });
+       const apiKeys = apiKeysString.split(",").map(k => k.trim()).filter(k => k.length > 0);
+       keyToUse = apiKeys[Math.floor(Math.random() * apiKeys.length)];
+    }
+
+    const data = await generateWithKey(keyToUse);
+    res.json(data);
+  } catch (err: any) {
+    console.error("Analyze Prefs Error:", err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Vercel handles serving static files automatically, but for local container execution we start standard server.
 const isVercel = process.env.VERCEL === "1" || process.env.VERCEL_ENV !== undefined;
 
