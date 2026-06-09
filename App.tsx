@@ -3,10 +3,11 @@ import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { chatCNRService } from './services/chatCNRService';
 import { Message, ChatSession, ThemeColor, AppearanceMode, Language } from './types';
 import { translations } from './translations';
+import { ThoughtNetwork } from './components/ThoughtNetwork';
 import MessageItem from './components/MessageItem';
 import ProfileModal from './components/ProfileModal';
 import { profileService } from './services/profileService';
-import { Menu, Plus, Trash2, X, MessageSquare, Settings, Mic, MicOff, Volume2, VolumeX, Camera, Send, User, LogOut, Shield, Users, Image as ImageIcon, Sparkles, Key, Check, ExternalLink, Heart, Cpu, Download, Smartphone, Brain, Microscope, Sun, Moon, Monitor } from 'lucide-react';
+import { Menu, Plus, Trash2, X, MessageSquare, Settings, Mic, MicOff, Volume2, VolumeX, Camera, Send, User, LogOut, Shield, Users, Image as ImageIcon, Sparkles, Key, Check, ExternalLink, Heart, Cpu, Download, Smartphone, Brain, Microscope, Sun, Moon, Monitor, Network } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   auth, db, signInWithGooglePopup, signInWithGoogleRedirect, checkRedirectResult, logout, onAuthStateChanged, 
@@ -514,6 +515,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
     }
   });
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [isThoughtNetworkOpen, setIsThoughtNetworkOpen] = useState(false);
   const [themeMode, setThemeMode] = useState<'auto' | 'light' | 'dark'>(() => {
     try {
       return (localStorage.getItem('chat_cnr_theme_mode') as 'auto' | 'light' | 'dark') || 'auto';
@@ -1299,6 +1301,13 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
           </div>
           
           <div className="flex items-center gap-1.5">
+            <button 
+              onClick={() => setIsThoughtNetworkOpen(!isThoughtNetworkOpen)}
+              className={`p-2 rounded-lg transition-all border ${isThoughtNetworkOpen ? 'bg-blue-600 border-blue-500 text-white' : (theme === 'dark' ? 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-white' : 'bg-white border-zinc-200 text-zinc-500 hover:text-zinc-900')}`}
+              title={language === 'tr' ? 'Canlı Zihin Haritası' : 'Thought Network'}
+            >
+              <Network size={16} />
+            </button>
             {user.email === OWNER_EMAIL && (
               <button 
                 onClick={() => setIsAdminPanelOpen(true)}
@@ -1846,6 +1855,34 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
           </div>
         </div>
       )}
+
+      {/* Thought Network Panel */}
+      <AnimatePresence>
+        {isThoughtNetworkOpen && (
+          <motion.div 
+            initial={{ x: '100%', opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            exit={{ x: '100%', opacity: 0 }}
+            transition={{ ease: [0.23, 1, 0.32, 1], duration: 0.5 }}
+            className={`absolute right-0 top-0 bottom-0 w-96 border-l z-40 hidden lg:flex flex-col shadow-2xl ${theme === 'dark' ? 'bg-[#050505]/95 backdrop-blur-xl border-zinc-800' : 'bg-white/95 backdrop-blur-xl border-zinc-200'}`}
+          >
+            <div className={`h-16 border-b flex items-center justify-between px-6 flex-none ${theme === 'dark' ? 'border-zinc-800' : 'border-zinc-200'}`}>
+              <div className="flex flex-col">
+                <h2 className="font-bold text-[13px] tracking-[0.2em] uppercase flex items-center gap-2">
+                  <Network size={16} className="text-blue-500" />
+                  {language === 'tr' ? 'Canlı Zihin Haritası' : 'Thought Network'}
+                </h2>
+              </div>
+              <button onClick={() => setIsThoughtNetworkOpen(false)} className={`p-2 rounded-lg transition-all ${theme === 'dark' ? 'hover:bg-zinc-800 text-zinc-400' : 'hover:bg-zinc-100 text-zinc-500'}`}>
+                <X size={16} />
+              </button>
+            </div>
+            <div className="flex-1 relative">
+              <ThoughtNetwork messages={activeSession?.messages || []} theme={theme} />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* User Profile Modal */}
       <ProfileModal 
