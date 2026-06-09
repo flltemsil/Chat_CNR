@@ -1,0 +1,252 @@
+101:      <div className="min-h-screen bg-black flex items-center justify-center p-6 text-center font-['Inter']">
+102:        <div className="max-w-md w-full space-y-8 animate-in fade-in zoom-in duration-500">
+103:          <div className="w-24 h-24 bg-red-600 rounded-full flex items-center justify-center mx-auto shadow-2xl shadow-red-900/40">
+105:          </div>
+106:          <div className="space-y-4">
+111:            <div className="bg-red-500/10 border border-red-500/20 p-4 rounded-2xl">
+115:            </div>
+116:          </div>
+123:        </div>
+124:      </div>
+256:      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
+257:        <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+258:      </div>
+264:      <div className="flex flex-col items-center justify-center h-screen bg-[#0a0a0a] text-white p-6 text-center">
+265:        <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mb-6">
+267:        </div>
+270:        <div className="bg-zinc-900 p-4 rounded-xl text-left mb-8 w-full max-w-lg overflow-auto border border-red-500/30">
+275:        </div>
+276:        <div className="flex gap-4">
+293:        </div>
+294:      </div>
+300:      <div className="min-h-screen bg-[#0a0a0a] flex flex-col items-center justify-center p-4 font-['Inter'] relative overflow-hidden">
+302:        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-600/10 blur-[120px] rounded-full pointer-events-none" />
+303:        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-purple-600/10 blur-[120px] rounded-full pointer-events-none" />
+305:        <motion.div 
+312:          <div className="space-y-8 text-center md:text-left">
+313:            <div className="flex items-center justify-center md:justify-start gap-4">
+314:              <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center shadow-2xl shadow-blue-900/30">
+316:              </div>
+318:            </div>
+320:            <div className="space-y-4">
+327:            </div>
+329:            <div className="flex flex-wrap gap-4 justify-center md:justify-start">
+330:              <div className="flex items-center gap-2 bg-zinc-900/50 border border-zinc-800 px-4 py-2 rounded-full">
+333:              </div>
+334:              <div className="flex items-center gap-2 bg-zinc-900/50 border border-zinc-800 px-4 py-2 rounded-full">
+337:              </div>
+338:               <div className="flex items-center gap-2 bg-zinc-900/50 border border-zinc-800 px-4 py-2 rounded-full">
+341:              </div>
+342:            </div>
+343:          </div>
+346:          <div className="bg-zinc-900/30 border border-white/5 backdrop-blur-xl rounded-[40px] p-8 md:p-10 space-y-6 shadow-3xl">
+347:             <div className="space-y-2">
+350:             </div>
+353:               <div className="bg-red-500/10 border border-red-500/20 text-red-500 text-sm p-4 rounded-xl">
+355:               </div>
+358:             <div className="space-y-4">
+389:                   <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin"></div>
+423:            </div>
+425:            <div className="relative">
+426:              <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-zinc-800"></div></div>
+427:              <div className="relative flex justify-center text-xs uppercase"><span className="bg-[#0a0a0a] px-4 text-zinc-600 font-bold tracking-widest leading-none">Uygulama Olarak İndir</span></div>
+428:            </div>
+430:            <div className="grid grid-cols-2 gap-4">
+437:                <div className={`w-10 h-10 ${isInstallable ? 'bg-blue-600' : 'bg-zinc-700'} rounded-full flex items-center justify-center group-hover:scale-110 transition-transform`}>
+439:                </div>
+451:                <div className={`w-10 h-10 ${isInstallable ? 'bg-purple-600' : 'bg-zinc-700'} rounded-full flex items-center justify-center group-hover:scale-110 transition-transform`}>
+453:                </div>
+469:                <div className="w-10 h-10 bg-zinc-700 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
+471:                </div>
+476:            </div>
+481:          </div>
+482:        </motion.div>
+483:      </div>
+1178:    <div className={`flex h-[100dvh] overflow-hidden font-['Inter'] transition-colors duration-300 ${theme === 'dark' ? 'bg-[#0a0a0a] text-zinc-100' : 'bg-zinc-50 text-zinc-900'}`}>
+1181:        <div className="flex flex-col h-full overflow-hidden">
+1182:          <div className={`px-6 py-6 border-b flex items-center justify-between ${theme === 'dark' ? 'border-zinc-800/50' : 'border-zinc-100'}`}>
+1183:            <div className="flex items-center gap-3">
+1184:              <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center shadow-lg shadow-blue-500/20">
+1186:              </div>
+1188:            </div>
+1192:          </div>
+1194:          <div className="p-6">
+1202:          </div>
+1204:          <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-1.5 custom-scrollbar">
+1207:                <motion.div 
+1223:                  <div className={`p-1.5 rounded-lg flex-shrink-0 transition-colors ${activeSessionId === session.id ? 'text-blue-500' : (theme === 'dark' ? 'text-zinc-600 group-hover:text-zinc-400' : 'text-zinc-400 group-hover:text-zinc-500')}`}>
+1225:                  </div>
+1239:                </motion.div>
+1242:          </div>
+1245:          <div className={`p-4 border-t ${theme === 'dark' ? 'border-zinc-800/50 bg-[#070707]' : 'border-zinc-100 bg-zinc-50/50'}`}>
+1246:            <div className={`flex items-center gap-3 p-3 rounded-xl border transition-all ${theme === 'dark' ? 'bg-zinc-900/50 border-zinc-800 hover:border-zinc-700' : 'bg-white border-zinc-200 hover:border-zinc-300'}`}>
+1247:              <div className={`w-9 h-9 rounded-lg flex items-center justify-center transition-all ${theme === 'dark' ? 'bg-zinc-800 text-blue-400 group-hover:text-blue-300' : 'bg-zinc-100 text-blue-600'}`}>
+1249:              </div>
+1250:              <div className="flex-1 overflow-hidden">
+1252:                <div className="flex items-center gap-2">
+1260:                </div>
+1261:              </div>
+1262:            </div>
+1263:          </div>
+1264:        </div>
+1268:      <div className="flex-1 flex min-w-0 relative overflow-hidden">
+1270:        <div className={`flex-1 flex flex-col min-w-0 relative ${theme === 'dark' ? 'bg-[#030303]' : 'bg-zinc-50'}`}>
+1274:            <div 
+1282:          <div className="flex items-center gap-3 md:gap-4 overflow-hidden">
+1289:            <div className="flex items-center gap-3 overflow-hidden">
+1290:              <div className="hidden sm:flex w-8 h-8 bg-blue-600 rounded-lg items-center justify-center shadow-lg shadow-blue-500/10 flex-shrink-0">
+1292:              </div>
+1293:              <div className="flex flex-col min-w-0">
+1297:                <div className="flex items-center gap-2">
+1298:                  <div className="w-1 h-1 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.6)]"></div>
+1300:                </div>
+1301:              </div>
+1302:            </div>
+1303:          </div>
+1305:          <div className="flex items-center gap-1.5 relative z-50">
+1329:          </div>
+1334:          <div className="max-w-4xl mx-auto w-full">
+1338:                  <motion.div 
+1343:                    <div className="w-20 h-20 bg-blue-600/10 rounded-[2rem] flex items-center justify-center mb-6 shadow-[0_0_40px_rgba(37,99,235,0.1)] border border-blue-500/20">
+1345:                    </div>
+1351:                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-12 w-full max-w-md">
+1357:                        <div key={i} className={`p-4 rounded-2xl border text-left transition-all hover:scale-[1.02] cursor-pointer ${theme === 'dark' ? 'bg-zinc-900/40 border-zinc-800 hover:border-zinc-700' : 'bg-white border-zinc-200'}`}>
+1358:                          <div className="text-blue-500 mb-2">{item.icon}</div>
+1359:                          <div className="font-bold text-[12px]">{item.label}</div>
+1360:                          <div className="text-[10px] text-zinc-500">{item.desc}</div>
+1361:                        </div>
+1363:                    </div>
+1364:                  </motion.div>
+1366:                <div className="space-y-2">
+1370:                </div>
+1389:              <div className="h-[70vh] flex flex-col items-center justify-center text-center p-8">
+1390:                <div className="w-24 h-24 bg-zinc-900 rounded-[2.5rem] flex items-center justify-center mb-8 border border-zinc-800 shadow-2xl relative group overflow-hidden">
+1391:                  <div className="absolute inset-0 bg-blue-600 opacity-0 group-hover:opacity-10 transition-opacity" />
+1393:                </div>
+1396:              </div>
+1399:              <div className="flex gap-4 animate-pulse px-2">
+1400:                <div className={`w-9 h-9 rounded-xl flex-shrink-0 ${theme === 'dark' ? 'bg-zinc-900 border border-zinc-800' : 'bg-zinc-200'}`} />
+1401:                <div className="space-y-3 flex-1 pt-2">
+1402:                  <div className={`h-3 rounded-full w-1/4 ${theme === 'dark' ? 'bg-zinc-900' : 'bg-zinc-200'}`} />
+1403:                  <div className={`h-3 rounded-full w-3/4 ${theme === 'dark' ? 'bg-zinc-900' : 'bg-zinc-200'}`} />
+1404:                  <div className={`h-3 rounded-full w-1/2 ${theme === 'dark' ? 'bg-zinc-800' : 'bg-zinc-100'}`} />
+1405:                </div>
+1406:              </div>
+1409:              <motion.div 
+1414:                <div className="flex items-center gap-4">
+1415:                  <div className="w-10 h-10 bg-red-500/20 rounded-full flex items-center justify-center">
+1417:                  </div>
+1418:                  <div className="flex-1">
+1421:                  </div>
+1422:                </div>
+1429:              </motion.div>
+1431:            <div ref={messagesEndRef} className="h-12" />
+1432:          </div>
+1437:          <div className="max-w-4xl mx-auto">
+1439:              <motion.div 
+1451:              </motion.div>
+1455:              <div className={`flex-1 border-2 rounded-3xl p-2 md:p-3 flex flex-col transition-all duration-500 shadow-inner relative overflow-hidden group ${
+1461:                <div className="flex items-end gap-2 px-1">
+1478:                </div>
+1481:                <div className="flex items-center justify-between mt-1 md:mt-2 px-1">
+1482:                  <div className="flex items-center gap-1">
+1512:                  </div>
+1514:                  <div className="flex items-center gap-1">
+1538:                  </div>
+1539:                </div>
+1540:              </div>
+1542:            <div className="mt-4 flex items-center justify-between px-2">
+1543:            </div>
+1544:          </div>
+1546:      </div>
+1550:        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-300">
+1551:          <div className={`w-full max-w-sm border rounded-3xl p-6 shadow-2xl ${theme === 'dark' ? 'bg-[#121212] border-zinc-800 text-white' : 'bg-white border-zinc-200 text-zinc-900'}`}>
+1552:            <div className="w-16 h-16 bg-red-500/20 rounded-2xl flex items-center justify-center mb-6">
+1554:            </div>
+1558:            <div className="flex gap-3">
+1584:            </div>
+1585:          </div>
+1586:        </div>
+1591:        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-300">
+1592:          <div className={`w-full max-w-md border rounded-3xl p-6 shadow-2xl ${theme === 'dark' ? 'bg-[#121212] border-zinc-800 text-white' : 'bg-white border-zinc-200 text-zinc-900'}`}>
+1593:            <div className="flex items-center justify-between mb-8">
+1601:            </div>
+1603:            <div className="space-y-3 max-h-[400px] overflow-y-auto custom-scrollbar pr-2">
+1606:                  <div key={i} className={`p-4 rounded-2xl border ${theme === 'dark' ? 'bg-[#1a1a1a] border-zinc-800' : 'bg-zinc-50 border-zinc-200'}`}>
+1609:                  </div>
+1614:            </div>
+1615:          </div>
+1616:        </div>
+1619:        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-300">
+1620:          <div className={`w-full max-w-md border rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] ${theme === 'dark' ? 'bg-[#121212] border-zinc-800 text-white' : 'bg-white border-zinc-200 text-zinc-900'}`}>
+1621:            <div className="flex items-center justify-between p-6 border-b border-zinc-800/50">
+1629:            </div>
+1631:            <div className="p-6 space-y-6 overflow-y-auto custom-scrollbar">
+1632:              <div className="space-y-4">
+1634:                <div className={`border rounded-2xl p-4 space-y-4 ${theme === 'dark' ? 'bg-[#1a1a1a] border-zinc-800' : 'bg-zinc-50 border-zinc-200'}`}>
+1635:                  <div className="flex items-center gap-4">
+1636:                    <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center text-white font-bold text-lg">
+1638:                    </div>
+1639:                    <div className="flex-1 overflow-hidden">
+1641:                      <div className="flex items-center gap-2">
+1646:                      </div>
+1647:                    </div>
+1648:                  </div>
+1650:                  <div className="space-y-2">
+1652:                    <div className="flex gap-2">
+1671:                    </div>
+1672:                  </div>
+1683:                </div>
+1684:              </div>
+1687:              <div className="space-y-4">
+1689:                <div className={`border rounded-2xl p-4 grid grid-cols-2 gap-2 ${theme === 'dark' ? 'bg-[#1a1a1a] border-zinc-800' : 'bg-zinc-50 border-zinc-200'}`}>
+1715:                </div>
+1716:              </div>
+1718:              <div className="space-y-4">
+1720:                <div className={`border rounded-2xl p-4 space-y-4 ${theme === 'dark' ? 'bg-[#1a1a1a] border-zinc-800' : 'bg-zinc-50 border-zinc-200'}`}>
+1721:                  <div className="flex items-center justify-center">
+1743:                  </div>
+1744:                </div>
+1745:              </div>
+1747:              <div className="space-y-4">
+1749:                <div className={`border rounded-2xl p-4 space-y-4 ${theme === 'dark' ? 'bg-red-500/5 border-red-500/20' : 'bg-red-50 border-red-100'}`}>
+1777:                </div>
+1778:              </div>
+1780:              <div className="space-y-4">
+1789:              </div>
+1791:              <div className="space-y-4">
+1793:                <div className="space-y-2">
+1794:                  <div className={`flex items-center justify-between p-4 border rounded-2xl ${theme === 'dark' ? 'bg-[#1a1a1a] border-zinc-800' : 'bg-zinc-50 border-zinc-200'}`}>
+1795:                    <div className="flex items-center gap-3">
+1798:                    </div>
+1803:                      <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${isAutoSpeak ? 'right-1' : 'left-1'}`} />
+1805:                  </div>
+1807:                  <div className={`flex items-center justify-between p-4 border rounded-2xl ${theme === 'dark' ? 'bg-[#1a1a1a] border-zinc-800' : 'bg-zinc-50 border-zinc-200'}`}>
+1808:                    <div className="flex items-center gap-3">
+1810:                      <div className="flex flex-col">
+1813:                      </div>
+1814:                    </div>
+1819:                      <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${isChatMode ? 'right-1' : 'left-1'}`} />
+1821:                  </div>
+1823:                  <div className={`flex items-center justify-between p-4 border rounded-2xl ${theme === 'dark' ? 'bg-[#1a1a1a] border-zinc-800' : 'bg-zinc-50 border-zinc-200'}`}>
+1824:                    <div className="flex items-center gap-3">
+1825:                      <div className={theme === 'dark' ? 'text-zinc-400' : 'text-zinc-500'}>
+1827:                      </div>
+1829:                    </div>
+1836:                  </div>
+1837:                </div>
+1838:              </div>
+1840:              <div className={`pt-4 border-t ${theme === 'dark' ? 'border-zinc-800' : 'border-zinc-200'}`}>
+1848:              </div>
+1849:            </div>
+1850:          </div>
+1851:        </div>
+1854:      </div> {/* Close Chat Area */}
+1857:      <div className={`hidden xl:flex w-80 2xl:w-96 border-l flex-col flex-shrink-0 relative overflow-hidden transition-all ${theme === 'dark' ? 'bg-[#050505] border-zinc-800' : 'bg-[#fafafa] border-zinc-200'}`}>
+1858:        <div className={`h-16 border-b flex items-center justify-between px-6 flex-none ${theme === 'dark' ? 'border-zinc-800' : 'border-zinc-200'}`}>
+1863:        </div>
+1864:        <div className="flex-1 relative">
+1866:        </div>
+1867:      </div>
+1869:    </div>
+1881:    </div>

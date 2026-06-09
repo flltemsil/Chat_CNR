@@ -16,7 +16,7 @@ interface MessageItemProps {
   language?: Language;
 }
 
-const MessageItem: React.FC<MessageItemProps> = ({ message, themeColor, appearance, isStreaming, onSpeak, language = 'tr' }) => {
+const MessageItem: React.FC<MessageItemProps> = React.memo(({ message, themeColor, appearance, isStreaming, onSpeak, language = 'tr' }) => {
   const t = translations[language] || translations.tr;
   const isUser = message.role === 'user';
   const isDark = appearance === 'dark';
@@ -190,6 +190,6 @@ const MessageItem: React.FC<MessageItemProps> = ({ message, themeColor, appearan
       </div>
     </motion.div>
   );
-};
+});
 
 export default MessageItem;
