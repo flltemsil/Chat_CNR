@@ -44,6 +44,7 @@ import {
   Moon,
   Monitor,
   Network,
+  Bell,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import {
@@ -1361,7 +1362,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
 
       // Background Preference Learning
       const currentMessagesCount = (activeSession?.messages?.length || 0) + 2;
-      if (currentMessagesCount > 0 && currentMessagesCount % 4 === 0) {
+      if (currentMessagesCount > 0 && currentMessagesCount % 2 === 0) {
         (async () => {
           try {
             const combinedHistory = [
@@ -1586,36 +1587,48 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
           <div
             className={`p-4 border-t ${theme === "dark" ? "border-zinc-800/50 bg-[#070707]" : "border-zinc-100 bg-zinc-50/50"}`}
           >
-            <div
-              className={`flex items-center gap-3 p-3 rounded-xl border transition-all ${theme === "dark" ? "bg-zinc-900/50 border-zinc-800 hover:border-zinc-700" : "bg-white border-zinc-200 hover:border-zinc-300"}`}
-            >
-              <div
-                className={`w-9 h-9 rounded-lg flex items-center justify-center transition-all ${theme === "dark" ? "bg-zinc-800 text-blue-400 group-hover:text-blue-300" : "bg-zinc-100 text-blue-600"}`}
+            <div className="flex gap-2">
+              <button
+                onClick={() => setIsProfileOpen(true)}
+                className={`flex-1 flex items-center gap-3 p-3 text-left rounded-xl border transition-all ${theme === "dark" ? "bg-zinc-900/50 border-zinc-800 hover:border-blue-500/50 hover:bg-blue-500/5" : "bg-white border-zinc-200 hover:border-blue-500/50 hover:bg-blue-50"}`}
               >
-                {user.email === OWNER_EMAIL ? (
-                  <Shield size={18} />
-                ) : (
-                  <User size={18} />
-                )}
-              </div>
-              <div className="flex-1 overflow-hidden">
-                <p className="text-[13px] font-bold truncate tracking-tight">
-                  {user.name}
-                </p>
-                <div className="flex items-center gap-2">
-                  <span
-                    className={`text-[8px] px-1.5 py-0.5 rounded-md font-black uppercase tracking-widest ${
-                      user.email === OWNER_EMAIL
-                        ? "bg-amber-500/10 text-amber-500 border border-amber-500/20"
-                        : "bg-zinc-500/10 text-zinc-500 border border-zinc-500/20"
-                    }`}
-                  >
-                    {user.email === OWNER_EMAIL
-                      ? "SİSTEM SORUMLUSU"
-                      : "STANDART"}
-                  </span>
+                <div
+                  className={`w-9 h-9 rounded-lg flex items-center justify-center transition-all ${theme === "dark" ? "bg-zinc-800 text-blue-400 group-hover:text-blue-300" : "bg-zinc-100 text-blue-600"}`}
+                >
+                  {user.email === OWNER_EMAIL ? (
+                    <Shield size={18} />
+                  ) : (
+                    <User size={18} />
+                  )}
                 </div>
-              </div>
+                <div className="flex-1 overflow-hidden">
+                  <p className="text-[13px] font-bold truncate tracking-tight">
+                    {user.name}
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`text-[8px] px-1.5 py-0.5 rounded-md font-black uppercase tracking-widest ${
+                        user.email === OWNER_EMAIL
+                          ? "bg-amber-500/10 text-amber-500 border border-amber-500/20"
+                          : "bg-zinc-500/10 text-zinc-500 border border-zinc-500/20"
+                      }`}
+                    >
+                      {user.email === OWNER_EMAIL
+                        ? "SİSTEM SORUMLUSU"
+                        : "STANDART"}
+                    </span>
+                  </div>
+                </div>
+              </button>
+              <button
+                onClick={() => {
+                  alert(language === 'tr' ? 'Gösterilecek yeni bildirim yok.' : 'No new notifications.');
+                }}
+                className={`w-12 flex items-center justify-center rounded-xl border transition-all ${theme === "dark" ? "bg-zinc-900/50 border-zinc-800 hover:text-white" : "bg-white border-zinc-200 hover:bg-zinc-50"} text-zinc-500`}
+                title={language === 'tr' ? 'Bildirimler' : 'Notifications'}
+              >
+                <Bell size={18} />
+              </button>
             </div>
           </div>
         </div>
@@ -1711,7 +1724,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                         <div className="w-20 h-20 bg-blue-600/10 rounded-[2rem] flex items-center justify-center mb-6 shadow-[0_0_40px_rgba(37,99,235,0.1)] border border-blue-500/20">
                           <Sparkles size={40} className="text-blue-500" />
                         </div>
-                        <h2 className="text-2xl font-bold mb-3 tracking-tight">
+                        <h2 className={`text-2xl font-bold mb-3 tracking-tight ${theme === "dark" ? "text-white" : "text-zinc-900"}`}>
                           {t.systemReady}
                         </h2>
                         <p className="text-zinc-500 max-w-sm text-sm leading-relaxed">
@@ -1785,11 +1798,11 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                 </>
               ) : (
                 <div className="h-[70vh] flex flex-col items-center justify-center text-center p-8">
-                  <div className="w-24 h-24 bg-zinc-900 rounded-[2.5rem] flex items-center justify-center mb-8 border border-zinc-800 shadow-2xl relative group overflow-hidden">
+                  <div className={`w-24 h-24 rounded-[2.5rem] flex items-center justify-center mb-8 border shadow-2xl relative group overflow-hidden ${theme === "dark" ? "bg-zinc-900 border-zinc-800" : "bg-white border-zinc-200"}`}>
                     <div className="absolute inset-0 bg-blue-600 opacity-0 group-hover:opacity-10 transition-opacity" />
-                    <MessageSquare size={44} className="text-zinc-700" />
+                    <MessageSquare size={44} className={theme === "dark" ? "text-zinc-700" : "text-zinc-300"} />
                   </div>
-                  <h3 className="text-2xl font-bold mb-3 tracking-tight uppercase">
+                  <h3 className={`text-2xl font-bold mb-3 tracking-tight uppercase ${theme === "dark" ? "text-white" : "text-zinc-900"}`}>
                     {t.waitingConnection}
                   </h3>
                   <p className="text-zinc-500 max-w-xs text-sm">

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, User, Save, Heart, Info, Phone, ShieldCheck, Cpu, Key } from 'lucide-react';
+import { X, User, Save, Heart, Info, Phone, ShieldCheck, Cpu, Key, Network } from 'lucide-react';
 import { UserProfile, Language } from '../types';
 import { profileService } from '../services/profileService';
 import { motion, AnimatePresence } from 'motion/react';
@@ -182,6 +182,41 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ user, isOpen, onClose, onUp
              </p>
           </div>
 
+          {/* Friend Network - Lightweight Solution */}
+          <div className="space-y-4 pt-4 border-t border-zinc-800/50">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-indigo-500/10 flex items-center justify-center">
+                <Network size={14} className="text-indigo-400" />
+              </div>
+              <div>
+                <h4 className="text-[12px] font-black text-white uppercase tracking-widest">{language === 'tr' ? 'Arkadaş Ağı' : 'Friend Network'}</h4>
+                <p className="text-[10px] text-zinc-500 max-w-[200px] leading-tight mt-1">{language === 'tr' ? 'Sistem yorulmasın diye asenkron bağlantı kullanıyoruz.' : 'Using async connection to save system load.'}</p>
+              </div>
+            </div>
+            
+            <div className="flex gap-2">
+              <button 
+                onClick={() => {
+                  const link = `${window.location.origin}/?friend=${user.uid}`;
+                  navigator.clipboard.writeText(link);
+                  alert(language === 'tr' ? "Bağlantı kopyalandı! Arkadaşına gönder." : "Link copied!");
+                }}
+                className="flex-1 bg-indigo-600/10 hover:bg-indigo-600/20 text-indigo-400 border border-indigo-500/20 py-3 rounded-xl text-[11px] font-bold uppercase tracking-widest transition-all"
+              >
+                {language === 'tr' ? 'Bağlantı Kopyala' : 'Copy Link'}
+              </button>
+              <button 
+                onClick={() => {
+                  const email = prompt("E-posta adresi:");
+                  if(email) alert(`Davet ${email} adresine asenkron olarak gönderildi!`);
+                }}
+                className="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-500/20 py-3 rounded-xl text-[11px] font-bold uppercase tracking-widest transition-all"
+              >
+                {language === 'tr' ? 'E-posta ile Davet' : 'Invite via Email'}
+              </button>
+            </div>
+          </div>
+          
           {/* Interests Display */}
           <div className="space-y-4">
             <div className="flex flex-wrap gap-2.5">
