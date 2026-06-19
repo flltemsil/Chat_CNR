@@ -80,7 +80,7 @@ ${SYSTEM_INSTRUCTION.split('Kurallar:')[1]}`;
         identityInstruction += `Kullanıcının ilgi alanları: ${userProfile.interests.join(', ')}. Yanıtlarını ve önerilerini bu ilgi alanlarına göre şekillendirebilirsin. `;
       }
       if (userProfile.bio) {
-        identityInstruction += `Sistem tarafından öğrenilen kullanıcı karakteri/tercihleri: ${userProfile.bio}. ÇOK ÖNEMLİ: Herkese aynı kalitede sıradan standart mesajlar VERME. Bilinen bu kişilik özelliklerine, zevklerine ve güncel ayarlarına göre yanıtının TÜRÜNÜ, TONUNU ve İÇERİĞİNİ özel olarak değiştir ve kişiselleştir! `;
+        identityInstruction += `Geçmiş sohbetlerden öğrenilmiş UZUN SÜRELİ SOHBET HAFIZASI VE KİŞİSEL BİLGİLER: ${userProfile.bio}. ÇOK ÖNEMLİ: Bu hafızadaki bilgilere dayanarak tıpkı bir insan gibi "hatırlama" yapısı kur. Kullanıcının eski anılarını, mesleğini, tercihlerini yanıtlarına doğal bir dille yedir. Herkese aynı sıradan yanıtlar VERME. Bilinen bu geçmiş konuşmalara, karakter analizine ve güncel ayarlarına göre yanıtının TÜRÜNÜ, TONUNU ve İÇERİĞİNİ özel olarak kişiselleştir! `;
       }
     }
     
@@ -194,6 +194,35 @@ ASLA kullanıcıyı yanıtsız bırakma veya "2026 verisi yok" diyerek kestirip 
     } catch (error: any) {
       console.error("Text To Speech Error:", error);
       return '';
+    }
+  }
+
+  async generateImage(prompt: string): Promise<string> {
+    const userApiKey = localStorage.getItem('CHAT_CNR_USER_API_KEY') || null;
+
+    try {
+      const response = await fetch("/api/generate-image", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt, userApiKey })
+      });
+
+      if (!response.ok) {
+        let errorData;
+        try {
+          errorData = await response.json();
+        } catch (e) {}
+        throw new Error(errorData?.error || `Image generation failed (${response.status})`);
+      }
+
+      const data = await response.json();
+      if (!data.imageBase64) {
+        throw new Error("Resim oluşturulamadı.");
+      }
+      return data.imageBase64;
+    } catch (error: any) {
+      console.error("Image Generation Error:", error);
+      throw error;
     }
   }
 

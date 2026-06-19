@@ -37,6 +37,8 @@ export interface UserProfile {
   phone?: string;
   lastLogin?: Date;
   updatedAt?: Date;
+  isOnline?: boolean;
+  lastActive?: Date;
 }
 
 export type ThemeColor = 'blue' | 'indigo' | 'rose' | 'emerald' | 'amber' | 'violet';

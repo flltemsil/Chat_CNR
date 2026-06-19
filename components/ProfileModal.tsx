@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, User, Save, Heart, Info, Phone, ShieldCheck, Cpu, Key, Network } from 'lucide-react';
+import { X, User, Save, Heart, Info, Phone, ShieldCheck, Cpu, Key, Brain, Trash2, RefreshCw, Sparkles, Plus } from 'lucide-react';
 import { UserProfile, Language } from '../types';
 import { profileService } from '../services/profileService';
 import { motion, AnimatePresence } from 'motion/react';
@@ -28,8 +28,31 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ user, isOpen, onClose, onUp
     }
   });
   const [isSaving, setIsSaving] = useState(false);
+  const [manualFact, setManualFact] = useState('');
 
   if (!isOpen) return null;
+
+  const handleAddManualFact = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (manualFact.trim()) {
+      const trimmed = manualFact.trim();
+      setBio(prev => {
+        const text = prev.trim();
+        if (!text) {
+          return `- ${trimmed}`;
+        }
+        return `${text}\n- ${trimmed}`;
+      });
+      setManualFact('');
+    }
+  };
+
+  const handleResetMemory = () => {
+    if (confirm(language === 'tr' ? "Yapay zeka sohbet hafızasını tamamen sıfırlamak istiyor musunuz? Bu işlem geri alınamaz." : "Are you sure you want to completely clear the AI memory? This cannot be undone.")) {
+      setBio('');
+      setInterests([]);
+    }
+  };
 
   const handleAddInterest = (e: React.FormEvent) => {
     e.preventDefault();
@@ -182,39 +205,64 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ user, isOpen, onClose, onUp
              </p>
           </div>
 
-          {/* Friend Network - Lightweight Solution */}
-          <div className="space-y-4 pt-4 border-t border-zinc-800/50">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-indigo-500/10 flex items-center justify-center">
-                <Network size={14} className="text-indigo-400" />
+          {/* AI Chat Memory Section */}
+          <div className="space-y-5 pt-6 border-t border-zinc-800/50">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-violet-600/10 flex items-center justify-center border border-violet-500/20 shadow-[0_0_15px_rgba(139,92,246,0.1)]">
+                  <Brain size={16} className="text-violet-400" />
+                </div>
+                <div>
+                  <h4 className="text-[12px] font-black text-white uppercase tracking-widest">
+                    {language === 'tr' ? 'Yapay Zeka Sohbet Hafızası' : 'AI Chat Memory'}
+                  </h4>
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    <span className="text-[9px] font-black text-emerald-400 uppercase tracking-widest">
+                      {language === 'tr' ? 'Aktif Öğrenme' : 'Active Learning'}
+                    </span>
+                  </div>
+                </div>
               </div>
-              <div>
-                <h4 className="text-[12px] font-black text-white uppercase tracking-widest">{language === 'tr' ? 'Arkadaş Ağı' : 'Friend Network'}</h4>
-                <p className="text-[10px] text-zinc-500 max-w-[200px] leading-tight mt-1">{language === 'tr' ? 'Sistem yorulmasın diye asenkron bağlantı kullanıyoruz.' : 'Using async connection to save system load.'}</p>
-              </div>
-            </div>
-            
-            <div className="flex gap-2">
+              
               <button 
-                onClick={() => {
-                  const link = `${window.location.origin}/?friend=${user.uid}`;
-                  navigator.clipboard.writeText(link);
-                  alert(language === 'tr' ? "Bağlantı kopyalandı! Arkadaşına gönder." : "Link copied!");
-                }}
-                className="flex-1 bg-indigo-600/10 hover:bg-indigo-600/20 text-indigo-400 border border-indigo-500/20 py-3 rounded-xl text-[11px] font-bold uppercase tracking-widest transition-all"
+                type="button"
+                onClick={handleResetMemory}
+                className="flex items-center gap-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/25 px-3 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all"
+                title={language === 'tr' ? 'Tüm hafızayı sıfırla' : 'Reset all memory'}
               >
-                {language === 'tr' ? 'Bağlantı Kopyala' : 'Copy Link'}
-              </button>
-              <button 
-                onClick={() => {
-                  const email = prompt("E-posta adresi:");
-                  if(email) alert(`Davet ${email} adresine asenkron olarak gönderildi!`);
-                }}
-                className="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-500/20 py-3 rounded-xl text-[11px] font-bold uppercase tracking-widest transition-all"
-              >
-                {language === 'tr' ? 'E-posta ile Davet' : 'Invite via Email'}
+                <Trash2 size={12} />
+                {language === 'tr' ? 'Hafızayı Sıfırla' : 'Reset'}
               </button>
             </div>
+
+            <p className="text-[11px] text-zinc-500 leading-relaxed font-medium">
+              {language === 'tr' 
+                ? 'Chat_CNR, konuştuğunuz konuları ve tercihlerinizi her 2 mesajda bir arka planda analiz ederek hafızasına kaydeder ve yanıtları size özel hale getirir.' 
+                : 'Chat_CNR analyzes past topics and preferences in the background every 2 messages to build a custom profile and personalize future responses.'}
+            </p>
+
+            {/* Manual Fact Training */}
+            <form onSubmit={handleAddManualFact} className="space-y-2">
+              <label className="text-[9px] font-black text-zinc-500 uppercase tracking-widest px-1">
+                {language === 'tr' ? 'Hafızayı Elle Eğit (Bilgi Ekle)' : 'Manually Train Memory (Add Fact)'}
+              </label>
+              <div className="flex gap-2">
+                <input 
+                  type="text"
+                  value={manualFact}
+                  onChange={(e) => setManualFact(e.target.value)}
+                  className="flex-1 bg-[#111111] border border-zinc-800/80 rounded-xl px-4 py-3 text-[12px] font-medium text-white focus:outline-none focus:border-violet-500/50 transition-all placeholder:text-zinc-600"
+                  placeholder={language === 'tr' ? "Örn: React ile oyun geliştiriyorum..." : "e.g., I like morning coffee..."}
+                />
+                <button 
+                  type="submit"
+                  className="bg-violet-600 hover:bg-violet-500 text-white p-3 rounded-xl transition-all shadow-md shadow-violet-500/10 active:scale-95 flex items-center justify-center animate-none"
+                >
+                  <Plus size={16} />
+                </button>
+              </div>
+            </form>
           </div>
           
           {/* Interests Display */}

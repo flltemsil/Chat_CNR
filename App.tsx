@@ -45,6 +45,7 @@ import {
   Monitor,
   Network,
   Bell,
+  Share2,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import {
@@ -719,9 +720,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [tempName, setTempName] = useState(user.name);
-  const [allUsers, setAllUsers] = useState<{ email: string; name: string }[]>(
-    [],
-  );
+  const [allUsers, setAllUsers] = useState<any[]>([]);
   const [isAdminPanelOpen, setIsAdminPanelOpen] = useState(false);
   const [deletingSessionId, setDeletingSessionId] = useState<string | null>(
     null,
@@ -804,14 +803,13 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
   };
 
   useEffect(() => {
-    if (user.email === OWNER_EMAIL && isAdminPanelOpen) {
+    if (isAdminPanelOpen) {
       const fetchAllUsers = async () => {
         const q = query(collection(db, "users"));
         try {
           const snapshot = await getDocs(q);
           const users = snapshot.docs.map((doc) => ({
-            email: doc.data().email,
-            name: doc.data().name,
+            ...doc.data(),
           }));
           setAllUsers(users);
         } catch (err) {
@@ -820,7 +818,22 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
       };
       fetchAllUsers();
     }
-  }, [user.email, isAdminPanelOpen]);
+  }, [isAdminPanelOpen]);
+
+  useEffect(() => {
+    if (!user) return;
+    const updatePresence = async () => {
+      try {
+        await updateDoc(doc(db, "users", user.uid), {
+          isOnline: true,
+          lastActive: serverTimestamp()
+        });
+      } catch (err) {}
+    };
+    updatePresence();
+    const interval = setInterval(updatePresence, 120000); // 2 minutes
+    return () => clearInterval(interval);
+  }, [user]);
 
   const activeSession = useMemo(() => {
     if (!activeSessionId) return null;
@@ -832,6 +845,46 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
     if (!user) return;
 
     const fetchSessions = async () => {
+      let importedSharedId: string | null = null;
+      const urlParams = new URLSearchParams(window.location.search);
+      const shareId = urlParams.get("shareId");
+
+      if (shareId) {
+        window.history.replaceState({}, document.title, window.location.pathname);
+        try {
+          const sharedDoc = await getDoc(doc(db, "shared_sessions", shareId));
+          if (sharedDoc.exists()) {
+            const sharedData = sharedDoc.data();
+            // Assign a new ID to user to avoid collision
+            const newSessionId = `shared_${Date.now()}`;
+            const newSession = {
+              id: newSessionId,
+              title: `[Paylaşılan] ${sharedData.title || "Sohbet"}`,
+              createdAt: serverTimestamp(),
+              updatedAt: serverTimestamp(),
+              messages: [],
+            };
+            await setDoc(doc(db, "users", user.uid, "sessions", newSessionId), newSession);
+            
+            // Add messages
+            if (sharedData.messages && Array.isArray(sharedData.messages)) {
+                for (const msg of sharedData.messages) {
+                   await setDoc(doc(db, "users", user.uid, "sessions", newSessionId, "messages", msg.id), {
+                      ...msg,
+                      timestamp: msg.timestamp || serverTimestamp()
+                   });
+                }
+            }
+            importedSharedId = newSessionId;
+            alert(language === 'tr' ? "Paylaşılan sohbet hesabınıza aktarıldı!" : "Shared chat imported to your account!");
+          } else {
+             alert(language === 'tr' ? "Paylaşılan sohbet bulunamadı veya silinmiş." : "Shared chat not found or deleted.");
+          }
+        } catch (err: any) {
+          console.error("Shared chat error:", err);
+        }
+      }
+
       const q = query(
         collection(db, "users", user.uid, "sessions"),
         orderBy("updatedAt", "desc"),
@@ -850,8 +903,10 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
         })) as ChatSession[];
 
         setSessions(fetchedSessions);
-        if (fetchedSessions.length > 0 && !activeSessionId) {
-          setActiveSessionId(fetchedSessions[0].id);
+        if (importedSharedId) {
+           setActiveSessionId(importedSharedId);
+        } else if (fetchedSessions.length > 0 && !activeSessionId) {
+           setActiveSessionId(fetchedSessions[0].id);
         }
       } catch (err) {
         handleFirestoreError(
@@ -1254,55 +1309,77 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
       let finalResponseText = "";
       let finalSources: any[] = [];
       let finalGrounded = false;
-      const stream = chatCNRService.sendMessageStream(
-        userMsg.text,
-        activeSession?.messages || [],
-        userMsg.imageUrl,
-        user.name,
-        user.email,
-        isChatMode,
-        user.role,
-        user,
-        language,
-        isDeepMode,
-      );
+      let finalImageUrl: string | undefined = undefined;
 
-      // Show streaming message locally only
-      setStreamingMessage({ id: modelMsgId, text: "", sources: [] });
+      const lowerText = userMsg.text.toLowerCase();
+      const isImageGenRequest = lowerText.startsWith('/resim') || lowerText.startsWith('/çiz') || lowerText.startsWith('/hayal et') || lowerText.startsWith('/image') || lowerText.startsWith('/draw');
 
-      let isFirstChunk = true;
-      for await (const chunk of stream) {
-        if (!chunk) continue;
-
-        const chunkText = chunk.text || "";
-        const chunkSources = chunk.sources || [];
-        const chunkGrounded = !!chunk.grounded;
-
-        if (isFirstChunk && chunkText.trim()) {
+      if (isImageGenRequest) {
+        setIsLoading(true);
+        try {
+          const prompt = userMsg.text.replace(/^\/(resim|çiz|hayal et|image|draw)\s+/i, '').trim();
+          if (!prompt) throw new Error("Lütfen oluşturmamı istediğiniz resim için bir açıklama girin.");
+          const base64Image = await chatCNRService.generateImage(prompt);
+          finalResponseText = translations[language]?.imageGenerated || "İşte hayal ettiğin görsel:";
+          finalImageUrl = `data:image/jpeg;base64,${base64Image}`;
           setIsLoading(false);
-          isFirstChunk = false;
+        } catch (error: any) {
+          setIsLoading(false);
+          const errorMsg = error.message || "Resim oluşturulamadı.";
+          setError(errorMsg);
+          return; // Stop processing if image generation fails
         }
-        finalResponseText = chunkText;
-        finalSources = chunkSources;
-        finalGrounded = chunkGrounded;
+      } else {
+        const stream = chatCNRService.sendMessageStream(
+          userMsg.text,
+          activeSession?.messages || [],
+          userMsg.imageUrl,
+          user.name,
+          user.email,
+          isChatMode,
+          user.role,
+          user,
+          language,
+          isDeepMode,
+        );
 
-        // Update local streaming state ONLY
-        if (chunkText.trim()) {
-          setStreamingMessage({
-            id: modelMsgId,
-            text: chunkText,
-            sources: finalSources,
-          });
+        // Show streaming message locally only
+        setStreamingMessage({ id: modelMsgId, text: "", sources: [] });
+
+        let isFirstChunk = true;
+        for await (const chunk of stream) {
+          if (!chunk) continue;
+
+          const chunkText = chunk.text || "";
+          const chunkSources = chunk.sources || [];
+          const chunkGrounded = !!chunk.grounded;
+
+          if (isFirstChunk && chunkText.trim()) {
+            setIsLoading(false);
+            isFirstChunk = false;
+          }
+          finalResponseText = chunkText;
+          finalSources = chunkSources;
+          finalGrounded = chunkGrounded;
+
+          // Update local streaming state ONLY
+          if (chunkText.trim()) {
+            setStreamingMessage({
+              id: modelMsgId,
+              text: chunkText,
+              sources: finalSources,
+            });
+          }
         }
-      }
 
-      if (!finalResponseText.trim()) {
-        console.error(
-          "Empty response from AI. (History hidden to prevent spam)",
-        );
-        throw new Error(
-          "Yapay zeka şu an yanıt veremiyor. Sunucu boş bir yanıt döndürdü. Lütfen tekrar deneyin.",
-        );
+        if (!finalResponseText.trim()) {
+          console.error(
+            "Empty response from AI. (History hidden to prevent spam)",
+          );
+          throw new Error(
+            "Yapay zeka şu an yanıt veremiyor. Sunucu boş bir yanıt döndürdü. Lütfen tekrar deneyin.",
+          );
+        }
       }
 
       // Final update to Firestore ONCE at the end
@@ -1324,6 +1401,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
             sources: finalSources,
             isDeep: isDeepMode,
             grounded: finalGrounded,
+            imageUrl: finalImageUrl,
             timestamp: Timestamp.now(),
           }),
         );
@@ -1346,6 +1424,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
         timestamp: new Date(),
         isDeep: isDeepMode,
         grounded: finalGrounded,
+        imageUrl: finalImageUrl,
       };
 
       setSessions((prev) =>
@@ -1681,15 +1760,42 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
             </div>
 
             <div className="flex items-center gap-1.5 relative z-50">
-              {user.email === OWNER_EMAIL && (
-                <button
-                  onClick={() => setIsAdminPanelOpen(true)}
-                  className={`p-2 rounded-lg transition-all border ${theme === "dark" ? "bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-white" : "bg-white border-zinc-200 text-zinc-500 hover:text-zinc-900"}`}
-                  title={t.userList}
-                >
-                  <Users size={16} />
-                </button>
-              )}
+              <button
+                onClick={() => setIsAdminPanelOpen(true)}
+                className={`p-2 rounded-lg transition-all border ${theme === "dark" ? "bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-white" : "bg-white border-zinc-200 text-zinc-500 hover:text-zinc-900"}`}
+                title={t.userList || "Kişiler"}
+              >
+                <Users size={16} />
+              </button>
+              
+              <button
+                onClick={async () => {
+                  if (activeSession) {
+                    try {
+                      // Add to shared_sessions
+                      await setDoc(doc(db, "shared_sessions", activeSession.id), {
+                        ...activeSession,
+                        sharedBy: user.uid,
+                        sharedAt: serverTimestamp()
+                      });
+                      const shareUrl = `${window.location.origin}/?shareId=${activeSession.id}`;
+                      try {
+                        await navigator.clipboard.writeText(shareUrl);
+                        alert(language === 'tr' ? "Sohbet başarıyla paylaşıldı ve bağlantı kopyalandı!" : "Chat shared and link copied!");
+                      } catch (e) {
+                        prompt("Bağlantı Linkiniz:", shareUrl);
+                      }
+                    } catch (err: any) {
+                      alert("Paylaşım başarısız oldu: " + err.message);
+                    }
+                  }
+                }}
+                className={`hidden sm:flex p-2 rounded-lg transition-all border ${theme === "dark" ? "bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-indigo-400" : "bg-white border-zinc-200 text-zinc-500 hover:text-indigo-600"}`}
+                title="Paylaş"
+              >
+                <Share2 size={16} />
+              </button>
+
               <button
                 onClick={() => setIsAutoSpeak(!isAutoSpeak)}
                 className={`p-2 rounded-lg transition-all border ${isAutoSpeak ? "bg-blue-600 border-blue-500 text-white" : theme === "dark" ? "bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-white" : "bg-white border-zinc-200 text-zinc-500 hover:text-zinc-900"}`}
@@ -1938,6 +2044,15 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                       <button
                         type="button"
                         disabled={!activeSession}
+                        onClick={() => setInput(prev => (prev + (prev.endsWith(" ") || prev === "" ? "" : " ") + (language === 'tr' ? "/resim " : "/image ")))}
+                        className={`p-2 rounded-xl transition-all disabled:opacity-30 ${theme === "dark" ? "text-zinc-500 hover:text-blue-400 hover:bg-zinc-800/50" : "text-zinc-500 hover:text-blue-600 hover:bg-zinc-100"}`}
+                        title={t.generateImage}
+                      >
+                        <Sparkles size={18} />
+                      </button>
+                      <button
+                        type="button"
+                        disabled={!activeSession}
                         onClick={() => setIsCameraOpen(true)}
                         className={`p-2 rounded-xl transition-all disabled:opacity-30 ${theme === "dark" ? "text-zinc-500 hover:text-white hover:bg-zinc-800/50" : "text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100"}`}
                         title="Fotoğraf Çek"
@@ -2076,15 +2191,34 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
 
               <div className="space-y-3 max-h-[400px] overflow-y-auto custom-scrollbar pr-2">
                 {allUsers.length > 0 ? (
-                  allUsers.map((u, i) => (
+                  allUsers.map((u, i) => {
+                    let isUserOnline = false;
+                    if (u.isOnline && u.lastActive) {
+                       const lastActiveTime = u.lastActive.toDate ? u.lastActive.toDate().getTime() : new Date(u.lastActive).getTime();
+                       isUserOnline = (new Date().getTime() - lastActiveTime) < 3 * 60 * 1000;
+                    }
+                    return (
                     <div
                       key={i}
-                      className={`p-4 rounded-2xl border ${theme === "dark" ? "bg-[#1a1a1a] border-zinc-800" : "bg-zinc-50 border-zinc-200"}`}
+                      className={`flex items-center justify-between p-4 rounded-2xl border ${theme === "dark" ? "bg-[#1a1a1a] border-zinc-800" : "bg-zinc-50 border-zinc-200"}`}
                     >
-                      <p className="font-bold text-sm">{u.name}</p>
-                      <p className="text-xs text-zinc-500">{u.email}</p>
+                      <div>
+                        <p className="font-bold text-sm flex items-center gap-2">
+                           {u.name}
+                           {u.uid === user.uid && <span className="text-[10px] bg-blue-500/10 text-blue-500 px-2 rounded-full">Sen</span>}
+                        </p>
+                        <p className="text-xs text-zinc-500">{u.email}</p>
+                      </div>
+                      <div className="flex flex-col items-end gap-1">
+                          <div className="flex items-center gap-1.5">
+                            <span className={`w-2 h-2 rounded-full ${isUserOnline ? "bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]" : "bg-zinc-500"}`}></span>
+                            <span className={`text-[10px] font-bold uppercase tracking-wider ${isUserOnline ? "text-emerald-500" : "text-zinc-500"}`}>
+                              {isUserOnline ? (language === 'tr' ? 'Çevrimiçi' : 'Online') : (language === 'tr' ? 'Çevrimdışı' : 'Offline')}
+                            </span>
+                          </div>
+                      </div>
                     </div>
-                  ))
+                  )})
                 ) : (
                   <p className="text-center text-zinc-500 py-8">{t.noData}</p>
                 )}

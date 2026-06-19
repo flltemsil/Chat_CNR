@@ -51,7 +51,9 @@ export const translations: Record<Language, any> = {
     deepMode: "Derin Araştırma Modu",
     deepModeDesc: "Daha derin analiz ve karmaşık akıl yürütme için gelişmiş mantık sistemini aktifleştirir.",
     installApp: "Uygulamayı Yükle (EXE/APK)",
-    installGuide: "Windows/Android cihazınıza yüklemek için tarayıcı menüsünden 'Ana Ekrana Ekle' veya 'Uygulamayı Yükle' seçeneğini kullanabilirsiniz. Bu, uygulamayı gerçek bir EXE veya APK gibi tam ekran ve hızlı çalıştıracaktır."
+    installGuide: "Windows/Android cihazınıza yüklemek için tarayıcı menüsünden 'Ana Ekrana Ekle' veya 'Uygulamayı Yükle' seçeneğini kullanabilirsiniz. Bu, uygulamayı gerçek bir EXE veya APK gibi tam ekran ve hızlı çalıştıracaktır.",
+    imageGenerated: "İşte hayal ettiğiniz görsel:",
+    imagePlaceholder: "Görsel çizdirmek için /resim komutu ile başlayın... Başka bir dil için /image"
   },
   en: {
     newChat: "NEW CHAT",
@@ -103,7 +105,9 @@ export const translations: Record<Language, any> = {
     deepMode: "Deep Research Mode",
     deepModeDesc: "Activates the advanced logic system for deeper analysis and complex reasoning.",
     installApp: "Install App (EXE/APK)",
-    installGuide: "To install on Windows/Android, use 'Add to Home Screen' or 'Install App' from your browser menu. This will run the app in full screen like a native EXE/APK."
+    installGuide: "To install on Windows/Android, use 'Add to Home Screen' or 'Install App' from your browser menu. This will run the app in full screen like a native EXE/APK.",
+    imageGenerated: "Here is the image you imagined:",
+    imagePlaceholder: "Start with /image to generate a picture... Or /draw"
   },
   es: {
     newChat: "NUEVO CHAT",
