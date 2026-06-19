@@ -1770,7 +1770,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                     }
                   }
                 }}
-                className={`hidden sm:flex p-2 rounded-lg transition-all border ${theme === "dark" ? "bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-indigo-400" : "bg-white border-zinc-200 text-zinc-500 hover:text-indigo-600"}`}
+                className={`p-2 rounded-lg transition-all border ${theme === "dark" ? "bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-indigo-400" : "bg-white border-zinc-200 text-zinc-500 hover:text-indigo-600"}`}
                 title="Paylaş"
               >
                 <Share2 size={16} />

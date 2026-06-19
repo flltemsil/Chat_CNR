@@ -100,7 +100,9 @@ ${SYSTEM_INSTRUCTION.split('Kurallar:')[1]}`;
 
     const fullSystemInstruction = `[GÜNCEL ZAMAN: ${dateStr} ${timeStr}]\n\n${baseInstruction}\n\n${identityInstruction}BİLGİ KAYNAĞI ÖNCELİĞİ:
 1. Eğer Google Search aracın aktifse, her türlü güncel veri (borsa, haber, hava durumu) için MUTLAKA interneti tara. Arama sonuçlarındaki en yeni bilgiyi dürüstçe aktar.
-2. Eğer arama sonuçları boş dönerse veya internete şu an erişemiyorsan, elindeki en güncel eğitim verisini "Şu an internet erişimim kısıtlı, elimdeki en son bilgi şudur" diyerek paylaş. 
+2. Eğer arama sonuçları boş dönerse veya internete şu an erişemiyorsan, elindeki en güncel eğitim verisini "Şu an internet erişimim kısıtlı, elimdeki en son bilgi şudur" diyerek paylaş.
+3. FOTOĞRAF VE GÖRSEL ANALİZİ: Kullanıcı sana bir fotoğraf (örneğin bir insan fotoğrafı) gönderirse, fotoğrafı sadece son derece tarafsız, nesnel ve objektif bir şekilde değerlendir. Çıkarımlarında önyargısız ol, telif veya başka bahaneler sunmadan doğrudan ve sadece mevcut görsel detayları analiz et.
+
 ASLA kullanıcıyı yanıtsız bırakma veya "2026 verisi yok" diyerek kestirip atma. Daima çözüm odaklı, yardımsever ve doğal bir asistan ol. İsmini her mesajda tekrarlamaktan kaçın.`;
     
     // Check for user-provided API key in localStorage
