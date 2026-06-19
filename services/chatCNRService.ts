@@ -197,35 +197,6 @@ ASLA kullanıcıyı yanıtsız bırakma veya "2026 verisi yok" diyerek kestirip 
     }
   }
 
-  async generateImage(prompt: string): Promise<string> {
-    const userApiKey = localStorage.getItem('CHAT_CNR_USER_API_KEY') || null;
-
-    try {
-      const response = await fetch("/api/generate-image", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt, userApiKey })
-      });
-
-      if (!response.ok) {
-        let errorData;
-        try {
-          errorData = await response.json();
-        } catch (e) {}
-        throw new Error(errorData?.error || `Image generation failed (${response.status})`);
-      }
-
-      const data = await response.json();
-      if (!data.imageBase64) {
-        throw new Error("Resim oluşturulamadı.");
-      }
-      return data.imageBase64;
-    } catch (error: any) {
-      console.error("Image Generation Error:", error);
-      throw error;
-    }
-  }
-
   getDebugInfo() {
     return { 
       totalKeys: "Sunucu", 

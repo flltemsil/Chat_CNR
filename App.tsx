@@ -1311,75 +1311,55 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
       let finalGrounded = false;
       let finalImageUrl: string | undefined = undefined;
 
-      const lowerText = userMsg.text.toLowerCase();
-      const isImageGenRequest = lowerText.startsWith('/resim') || lowerText.startsWith('/çiz') || lowerText.startsWith('/hayal et') || lowerText.startsWith('/image') || lowerText.startsWith('/draw');
+      const stream = chatCNRService.sendMessageStream(
+        userMsg.text,
+        activeSession?.messages || [],
+        userMsg.imageUrl,
+        user.name,
+        user.email,
+        isChatMode,
+        user.role,
+        user,
+        language,
+        isDeepMode,
+      );
 
-      if (isImageGenRequest) {
-        setIsLoading(true);
-        try {
-          const prompt = userMsg.text.replace(/^\/(resim|çiz|hayal et|image|draw)\s+/i, '').trim();
-          if (!prompt) throw new Error("Lütfen oluşturmamı istediğiniz resim için bir açıklama girin.");
-          const base64Image = await chatCNRService.generateImage(prompt);
-          finalResponseText = translations[language]?.imageGenerated || "İşte hayal ettiğin görsel:";
-          finalImageUrl = `data:image/jpeg;base64,${base64Image}`;
+      // Show streaming message locally only
+      setStreamingMessage({ id: modelMsgId, text: "", sources: [] });
+
+      let isFirstChunk = true;
+      for await (const chunk of stream) {
+        if (!chunk) continue;
+
+        const chunkText = chunk.text || "";
+        const chunkSources = chunk.sources || [];
+        const chunkGrounded = !!chunk.grounded;
+
+        if (isFirstChunk && chunkText.trim()) {
           setIsLoading(false);
-        } catch (error: any) {
-          setIsLoading(false);
-          const errorMsg = error.message || "Resim oluşturulamadı.";
-          setError(errorMsg);
-          return; // Stop processing if image generation fails
+          isFirstChunk = false;
         }
-      } else {
-        const stream = chatCNRService.sendMessageStream(
-          userMsg.text,
-          activeSession?.messages || [],
-          userMsg.imageUrl,
-          user.name,
-          user.email,
-          isChatMode,
-          user.role,
-          user,
-          language,
-          isDeepMode,
+        finalResponseText = chunkText;
+        finalSources = chunkSources;
+        finalGrounded = chunkGrounded;
+
+        // Update local streaming state ONLY
+        if (chunkText.trim()) {
+          setStreamingMessage({
+            id: modelMsgId,
+            text: chunkText,
+            sources: finalSources,
+          });
+        }
+      }
+
+      if (!finalResponseText.trim()) {
+        console.error(
+          "Empty response from AI. (History hidden to prevent spam)",
         );
-
-        // Show streaming message locally only
-        setStreamingMessage({ id: modelMsgId, text: "", sources: [] });
-
-        let isFirstChunk = true;
-        for await (const chunk of stream) {
-          if (!chunk) continue;
-
-          const chunkText = chunk.text || "";
-          const chunkSources = chunk.sources || [];
-          const chunkGrounded = !!chunk.grounded;
-
-          if (isFirstChunk && chunkText.trim()) {
-            setIsLoading(false);
-            isFirstChunk = false;
-          }
-          finalResponseText = chunkText;
-          finalSources = chunkSources;
-          finalGrounded = chunkGrounded;
-
-          // Update local streaming state ONLY
-          if (chunkText.trim()) {
-            setStreamingMessage({
-              id: modelMsgId,
-              text: chunkText,
-              sources: finalSources,
-            });
-          }
-        }
-
-        if (!finalResponseText.trim()) {
-          console.error(
-            "Empty response from AI. (History hidden to prevent spam)",
-          );
-          throw new Error(
-            "Yapay zeka şu an yanıt veremiyor. Sunucu boş bir yanıt döndürdü. Lütfen tekrar deneyin.",
-          );
-        }
+        throw new Error(
+          "Yapay zeka şu an yanıt veremiyor. Sunucu boş bir yanıt döndürdü. Lütfen tekrar deneyin.",
+        );
       }
 
       // Final update to Firestore ONCE at the end
@@ -2040,15 +2020,6 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                           size={18}
                           className={isDeepMode ? "animate-pulse" : ""}
                         />
-                      </button>
-                      <button
-                        type="button"
-                        disabled={!activeSession}
-                        onClick={() => setInput(prev => (prev + (prev.endsWith(" ") || prev === "" ? "" : " ") + (language === 'tr' ? "/resim " : "/image ")))}
-                        className={`p-2 rounded-xl transition-all disabled:opacity-30 ${theme === "dark" ? "text-zinc-500 hover:text-blue-400 hover:bg-zinc-800/50" : "text-zinc-500 hover:text-blue-600 hover:bg-zinc-100"}`}
-                        title={t.generateImage}
-                      >
-                        <Sparkles size={18} />
                       </button>
                       <button
                         type="button"
