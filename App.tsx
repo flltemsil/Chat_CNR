@@ -1759,11 +1759,35 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                         sharedAt: serverTimestamp()
                       });
                       const shareUrl = `${window.location.origin}/?shareId=${activeSession.id}`;
+                      
+                      let copied = false;
                       try {
-                        await navigator.clipboard.writeText(shareUrl);
-                        alert(language === 'tr' ? "Sohbet başarıyla paylaşıldı ve bağlantı kopyalandı!" : "Chat shared and link copied!");
+                        if (navigator.clipboard && window.isSecureContext) {
+                          await navigator.clipboard.writeText(shareUrl);
+                          copied = true;
+                        } else {
+                          throw new Error("clipboard not available");
+                        }
                       } catch (e) {
-                        prompt("Bağlantı Linkiniz:", shareUrl);
+                        try {
+                          const textArea = document.createElement("textarea");
+                          textArea.value = shareUrl;
+                          textArea.style.position = "fixed";
+                          textArea.style.left = "-999999px";
+                          document.body.appendChild(textArea);
+                          textArea.focus();
+                          textArea.select();
+                          copied = document.execCommand('copy');
+                          document.body.removeChild(textArea);
+                        } catch (err) {
+                           console.error(err);
+                        }
+                      }
+                      
+                      if (copied) {
+                        alert(language === 'tr' ? "Sohbet başarıyla paylaşıldı ve bağlantı kopyalandı!" : "Chat shared and link copied!");
+                      } else {
+                        window.prompt(language === 'tr' ? "Bağlantı Linkiniz (lütfen manuel kopyalayın):" : "Your Link (please copy manually):", shareUrl);
                       }
                     } catch (err: any) {
                       alert("Paylaşım başarısız oldu: " + err.message);
