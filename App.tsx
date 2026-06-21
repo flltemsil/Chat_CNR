@@ -644,6 +644,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isCameraOpen, setIsCameraOpen] = useState(false);
+  const [shareDialogUrl, setShareDialogUrl] = useState<string | null>(null);
 
   const [dailyUsage, setDailyUsage] = useState({ messages: 0, images: 0 });
   const [isRecording, setIsRecording] = useState(false);
@@ -902,11 +903,31 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
           messages: [],
         })) as ChatSession[];
 
-        setSessions(fetchedSessions);
         if (importedSharedId) {
+           setSessions(fetchedSessions);
            setActiveSessionId(importedSharedId);
-        } else if (fetchedSessions.length > 0 && !activeSessionId) {
-           setActiveSessionId(fetchedSessions[0].id);
+        } else if (!activeSessionId) {
+           const newId = Date.now().toString();
+           const newSession = {
+             id: newId,
+             userId: user.uid,
+             title: "Yeni Sohbet",
+             createdAt: serverTimestamp(),
+             updatedAt: serverTimestamp(),
+           };
+           const newLocalSession: ChatSession = {
+             id: newId,
+             title: "Yeni Sohbet",
+             updatedAt: new Date(),
+             messages: [],
+           };
+           setSessions([newLocalSession, ...fetchedSessions]);
+           setActiveSessionId(newId);
+           setDoc(doc(db, "users", user.uid, "sessions", newId), newSession).catch(err => {
+              console.error("Error creating new session on load:", err);
+           });
+        } else {
+           setSessions(fetchedSessions);
         }
       } catch (err) {
         handleFirestoreError(
@@ -1759,36 +1780,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                         sharedAt: serverTimestamp()
                       });
                       const shareUrl = `${window.location.origin}/?shareId=${activeSession.id}`;
-                      
-                      let copied = false;
-                      try {
-                        if (navigator.clipboard && window.isSecureContext) {
-                          await navigator.clipboard.writeText(shareUrl);
-                          copied = true;
-                        } else {
-                          throw new Error("clipboard not available");
-                        }
-                      } catch (e) {
-                        try {
-                          const textArea = document.createElement("textarea");
-                          textArea.value = shareUrl;
-                          textArea.style.position = "fixed";
-                          textArea.style.left = "-999999px";
-                          document.body.appendChild(textArea);
-                          textArea.focus();
-                          textArea.select();
-                          copied = document.execCommand('copy');
-                          document.body.removeChild(textArea);
-                        } catch (err) {
-                           console.error(err);
-                        }
-                      }
-                      
-                      if (copied) {
-                        alert(language === 'tr' ? "Sohbet başarıyla paylaşıldı ve bağlantı kopyalandı!" : "Chat shared and link copied!");
-                      } else {
-                        window.prompt(language === 'tr' ? "Bağlantı Linkiniz (lütfen manuel kopyalayın):" : "Your Link (please copy manually):", shareUrl);
-                      }
+                      setShareDialogUrl(shareUrl);
                     } catch (err: any) {
                       alert("Paylaşım başarısız oldu: " + err.message);
                     }
@@ -2626,6 +2618,58 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
         onCapture={handleCameraCapture}
         theme={theme}
       />
+
+      {shareDialogUrl && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className={`w-full max-w-md p-6 rounded-2xl shadow-xl ${theme === "dark" ? "bg-zinc-900 border border-zinc-800" : "bg-white border border-zinc-200"}`}>
+            <h3 className={`text-xl font-bold mb-4 ${theme === "dark" ? "text-white" : "text-zinc-900"}`}>
+              {language === 'tr' ? "Sohbet Paylaşımı" : "Share Chat"}
+            </h3>
+            <p className={`mb-4 text-sm ${theme === "dark" ? "text-zinc-400" : "text-zinc-500"}`}>
+              {language === 'tr' ? "Bağlantıyı kopyalayarak bu sohbeti arkadaşlarınızla paylaşabilirsiniz." : "Copy the link to share this chat with your friends."}
+            </p>
+            <div className="flex items-center gap-2 mb-6">
+              <input
+                type="text"
+                readOnly
+                value={shareDialogUrl}
+                onClick={(e) => (e.target as HTMLInputElement).select()}
+                className={`flex-1 p-3 rounded-xl border text-sm outline-none ${theme === "dark" ? "bg-zinc-950 border-zinc-800 text-zinc-300" : "bg-zinc-50 border-zinc-300 text-zinc-700"}`}
+              />
+              <button
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(shareDialogUrl);
+                    alert(language === 'tr' ? "Kopyalandı!" : "Copied!");
+                  } catch (e) {
+                    try {
+                      const textArea = document.createElement("textarea");
+                      textArea.value = shareDialogUrl;
+                      document.body.appendChild(textArea);
+                      textArea.focus();
+                      textArea.select();
+                      document.execCommand('copy');
+                      document.body.removeChild(textArea);
+                      alert(language === 'tr' ? "Kopyalandı!" : "Copied!");
+                    } catch (err) {
+                      alert(language === 'tr' ? "Manuel kopyalayın." : "Please copy manually.");
+                    }
+                  }
+                }}
+                className="px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium transition-colors"
+              >
+                {language === 'tr' ? "Kopyala" : "Copy"}
+              </button>
+            </div>
+            <button
+              onClick={() => setShareDialogUrl(null)}
+              className={`w-full py-3 rounded-xl font-medium transition-colors ${theme === "dark" ? "bg-zinc-800 hover:bg-zinc-700 text-white" : "bg-zinc-100 hover:bg-zinc-200 text-zinc-900"}`}
+            >
+              {language === 'tr' ? "Kapat" : "Close"}
+            </button>
+          </div>
+        </div>
+      )}
 
       <audio ref={audioRef} className="hidden" />
     </div>
