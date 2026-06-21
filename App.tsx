@@ -711,6 +711,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
   const t = translations[language] || translations.tr;
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
+  const sessionInitRef = useRef(false);
   const [isDeepMode, setIsDeepMode] = useState(() => {
     try {
       return localStorage.getItem("chat_cnr_deep_mode") === "true";
@@ -870,8 +871,10 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
             // Add messages
             if (sharedData.messages && Array.isArray(sharedData.messages)) {
                 for (const msg of sharedData.messages) {
-                   await setDoc(doc(db, "users", user.uid, "sessions", newSessionId, "messages", msg.id), {
+                   const msgId = msg.id || Date.now().toString() + Math.random().toString(36).substring(7);
+                   await setDoc(doc(db, "users", user.uid, "sessions", newSessionId, "messages", msgId), {
                       ...msg,
+                      id: msgId,
                       timestamp: msg.timestamp || serverTimestamp()
                    });
                 }
@@ -907,25 +910,34 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
            setSessions(fetchedSessions);
            setActiveSessionId(importedSharedId);
         } else if (!activeSessionId) {
-           const newId = Date.now().toString();
-           const newSession = {
-             id: newId,
-             userId: user.uid,
-             title: "Yeni Sohbet",
-             createdAt: serverTimestamp(),
-             updatedAt: serverTimestamp(),
-           };
-           const newLocalSession: ChatSession = {
-             id: newId,
-             title: "Yeni Sohbet",
-             updatedAt: new Date(),
-             messages: [],
-           };
-           setSessions([newLocalSession, ...fetchedSessions]);
-           setActiveSessionId(newId);
-           setDoc(doc(db, "users", user.uid, "sessions", newId), newSession).catch(err => {
-              console.error("Error creating new session on load:", err);
-           });
+           if (fetchedSessions.length > 0) {
+             setSessions(fetchedSessions);
+             setActiveSessionId(fetchedSessions[0].id);
+           } else {
+             const hasInitialized = sessionStorage.getItem("session_initialized");
+             if (!hasInitialized) {
+               sessionStorage.setItem("session_initialized", "true");
+               const newId = Date.now().toString();
+               const newSession = {
+                 id: newId,
+                 userId: user.uid,
+                 title: "Yeni Sohbet",
+                 createdAt: serverTimestamp(),
+                 updatedAt: serverTimestamp(),
+               };
+               const newLocalSession: ChatSession = {
+                 id: newId,
+                 title: "Yeni Sohbet",
+                 updatedAt: new Date(),
+                 messages: [],
+               };
+               setSessions(prev => [...prev, newLocalSession]);
+               setActiveSessionId(newId);
+               setDoc(doc(db, "users", user.uid, "sessions", newId), newSession).catch(err => {
+                  console.error("Error creating new session on load:", err);
+               });
+             }
+           }
         } else {
            setSessions(fetchedSessions);
         }
@@ -959,6 +971,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
           const snapshot = await getDocs(q);
           console.log("ChatApp: Messages fetched", snapshot.size);
           const fetchedMessages = snapshot.docs.map((doc) => ({
+            id: doc.id,
             ...doc.data(),
             timestamp: doc.data()?.timestamp?.toDate() || new Date(),
           })) as Message[];
