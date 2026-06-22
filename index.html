@@ -90,8 +90,14 @@
             font-size: 14px;
             line-height: 1.6;
             color: inherit;
+            word-wrap: break-word;
+            word-break: break-word;
+            overflow-wrap: break-word;
         }
-        .markdown-body p { margin-bottom: 1rem; }
+        .markdown-body p { 
+            margin-bottom: 1rem; 
+            white-space: pre-wrap;
+        }
         .markdown-body p:last-child { margin-bottom: 0; }
         .markdown-body code {
             background: rgba(128, 128, 128, 0.15);
