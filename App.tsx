@@ -380,7 +380,7 @@ const App: React.FC = () => {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-[#0a0a0a] flex flex-col items-center justify-center p-4 font-['Inter'] relative overflow-hidden">
+      <div className="min-h-screen bg-[#0a0a0a] flex flex-col items-center justify-center p-4 font-['Inter'] relative overflow-y-auto custom-scrollbar">
         {/* Background Decorative Elements */}
         <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-600/10 blur-[120px] rounded-full pointer-events-none" />
         <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-purple-600/10 blur-[120px] rounded-full pointer-events-none" />
@@ -389,7 +389,7 @@ const App: React.FC = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8 }}
-          className="w-full max-w-4xl grid md:grid-cols-2 gap-12 items-center relative z-10"
+          className="w-full max-w-4xl grid md:grid-cols-2 gap-12 items-center relative z-10 py-12 md:py-24"
         >
           {/* Left Side: Brand & Hero */}
           <div className="space-y-8 text-center md:text-left">
@@ -397,9 +397,14 @@ const App: React.FC = () => {
               <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center shadow-2xl shadow-blue-900/30">
                 <Cpu size={32} className="text-white" />
               </div>
-              <h1 className="text-4xl font-black text-white tracking-tighter uppercase italic">
-                Chat_CNR
-              </h1>
+              <div className="flex items-baseline gap-3">
+                <h1 className="text-4xl font-black text-white tracking-tighter uppercase italic">
+                  Chat_CNR
+                </h1>
+                <span className="text-sm font-bold text-blue-400 border border-blue-400/30 bg-blue-400/10 px-2 py-0.5 rounded-md uppercase tracking-wider">
+                  1.0 Edition
+                </span>
+              </div>
             </div>
 
             <div className="space-y-4">
@@ -911,33 +916,31 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
            setSessions(fetchedSessions);
            setActiveSessionId(importedSharedId);
         } else if (!activeSessionId) {
-           if (fetchedSessions.length > 0) {
-             setSessions(fetchedSessions);
+           setSessions(fetchedSessions);
+           const hasInitialized = sessionStorage.getItem("session_initialized");
+           if (!hasInitialized) {
+             sessionStorage.setItem("session_initialized", "true");
+             const newId = Date.now().toString();
+             const newSession = {
+               id: newId,
+               userId: user.uid,
+               title: "Yeni Sohbet",
+               createdAt: serverTimestamp(),
+               updatedAt: serverTimestamp(),
+             };
+             const newLocalSession: ChatSession = {
+               id: newId,
+               title: "Yeni Sohbet",
+               updatedAt: new Date(),
+               messages: [],
+             };
+             setSessions(prev => [newLocalSession, ...prev]);
+             setActiveSessionId(newId);
+             setDoc(doc(db, "users", user.uid, "sessions", newId), newSession).catch(err => {
+                console.error("Error creating new session on load:", err);
+             });
+           } else if (fetchedSessions.length > 0) {
              setActiveSessionId(fetchedSessions[0].id);
-           } else {
-             const hasInitialized = sessionStorage.getItem("session_initialized");
-             if (!hasInitialized) {
-               sessionStorage.setItem("session_initialized", "true");
-               const newId = Date.now().toString();
-               const newSession = {
-                 id: newId,
-                 userId: user.uid,
-                 title: "Yeni Sohbet",
-                 createdAt: serverTimestamp(),
-                 updatedAt: serverTimestamp(),
-               };
-               const newLocalSession: ChatSession = {
-                 id: newId,
-                 title: "Yeni Sohbet",
-                 updatedAt: new Date(),
-                 messages: [],
-               };
-               setSessions(prev => [...prev, newLocalSession]);
-               setActiveSessionId(newId);
-               setDoc(doc(db, "users", user.uid, "sessions", newId), newSession).catch(err => {
-                  console.error("Error creating new session on load:", err);
-               });
-             }
            }
         } else {
            setSessions(fetchedSessions);

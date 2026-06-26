@@ -85,22 +85,22 @@ const MessageItem: React.FC<MessageItemProps> = React.memo(({ message, themeColo
               : `${isDark ? 'bg-[#111111]/80 backdrop-blur-sm text-zinc-100 border-zinc-800/60 shadow-[0_8px_30px_rgba(0,0,0,0.2)]' : 'bg-white text-zinc-900 border-zinc-200 shadow-sm'} border rounded-tl-none`
           }`}>
             {!isUser && (message.isDeep || message.grounded !== undefined) && (
-              <div className="absolute -top-3 left-6 flex items-center gap-1.5 animate-in fade-in slide-in-from-bottom-2 z-10">
+              <div className="flex flex-wrap items-center gap-2 mb-3 animate-in fade-in slide-in-from-bottom-2">
                 {message.isDeep && (
-                  <div className="flex items-center gap-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 text-[9px] font-black text-white px-2.5 py-1 rounded-full shadow-lg shadow-purple-500/20 border border-white/10 uppercase tracking-widest">
-                    <Brain size={10} className="animate-pulse" />
+                  <div className="flex items-center gap-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 text-[10px] font-black text-white px-2.5 py-1 rounded-md shadow-lg shadow-purple-500/20 border border-white/10 uppercase tracking-widest">
+                    <Brain size={12} className="animate-pulse" />
                     <span>{t.deepMode}</span>
                   </div>
                 )}
                 {message.grounded === true && (
-                  <div className="flex items-center gap-1.5 bg-zinc-800 text-[9px] font-black text-emerald-400 px-2.5 py-1 rounded-full shadow-lg border border-zinc-700/50 uppercase tracking-widest">
-                    <Search size={10} />
+                  <div className="flex items-center gap-1.5 bg-emerald-500/10 text-[10px] font-black text-emerald-500 px-2.5 py-1 rounded-md border border-emerald-500/20 uppercase tracking-widest">
+                    <Search size={12} />
                     <span>CNR Search</span>
                   </div>
                 )}
                 {message.grounded === false && (
-                  <div className="flex items-center gap-1.5 bg-zinc-800 text-[9px] font-black text-zinc-500 px-2.5 py-1 rounded-full shadow-lg border border-zinc-700/50 uppercase tracking-widest">
-                    <Search size={10} />
+                  <div className="flex items-center gap-1.5 bg-zinc-500/10 text-[10px] font-black text-zinc-500 px-2.5 py-1 rounded-md border border-zinc-500/20 uppercase tracking-widest">
+                    <Search size={12} />
                     <span>Offline Mode</span>
                   </div>
                 )}
