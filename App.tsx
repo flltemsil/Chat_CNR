@@ -70,6 +70,7 @@ import {
   FirebaseUser,
   increment,
   serverTimestamp,
+  updateDoc,
 } from "./firebase";
 import firebaseConfig from "./firebase-applet-config.json";
 import { UserProfile } from "./types";
