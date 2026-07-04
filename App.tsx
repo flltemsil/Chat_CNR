@@ -721,6 +721,9 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
   const [dailyUsage, setDailyUsage] = useState({ messages: 0, images: 0 });
   const [isRecording, setIsRecording] = useState(false);
   const [isAutoSpeak, setIsAutoSpeak] = useState(false);
+  const [voiceMode, setVoiceMode] = useState<"fast" | "quality">(() => {
+    return (localStorage.getItem("chat_cnr_voice_mode") as "fast" | "quality") || "fast";
+  });
   const [isChatMode, setIsChatMode] = useState(() => {
     try {
       return localStorage.getItem("chat_cnr_chat_mode") === "true";
@@ -1432,6 +1435,11 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
       setStreamingMessage({ id: modelMsgId, text: "", sources: [] });
 
       let isFirstChunk = true;
+      let lastSpokenIndex = 0;
+      if (isAutoSpeak && voiceMode === "fast" && "speechSynthesis" in window) {
+        window.speechSynthesis.cancel();
+      }
+
       for await (const chunk of stream) {
         if (!chunk) continue;
 
@@ -1446,6 +1454,27 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
         finalResponseText = chunkText;
         finalSources = chunkSources;
         finalGrounded = chunkGrounded;
+
+        if (isAutoSpeak && voiceMode === "fast" && "speechSynthesis" in window) {
+          const sentenceRegex = /([.?!:])\s/g;
+          let match;
+          let sentenceEnd = -1;
+          while ((match = sentenceRegex.exec(finalResponseText)) !== null) {
+            sentenceEnd = match.index + match[1].length;
+          }
+          if (sentenceEnd > lastSpokenIndex) {
+            const sentence = finalResponseText.slice(lastSpokenIndex, sentenceEnd).trim();
+            if (sentence) {
+              const utterance = new SpeechSynthesisUtterance(sentence);
+              const voiceLangMap: Record<string, string> = {
+                tr: "tr-TR", en: "en-US", es: "es-ES", de: "de-DE", fr: "fr-FR", it: "it-IT", ru: "ru-RU"
+              };
+              utterance.lang = voiceLangMap[language] || "tr-TR";
+              window.speechSynthesis.speak(utterance);
+              lastSpokenIndex = sentenceEnd;
+            }
+          }
+        }
 
         // Update local streaming state ONLY
         if (chunkText.trim()) {
@@ -1569,31 +1598,45 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
       }
 
       if (isAutoSpeak) {
-        try {
-          const audioBase64 = await chatCNRService.textToSpeech(
-            finalResponseText,
-            language,
-          );
-          if (audioBase64) {
-            playPCM(audioBase64);
-          } else {
-            throw new Error("TTS fallback");
-          }
-        } catch (ttsErr) {
+        if (voiceMode === "fast") {
           if ("speechSynthesis" in window) {
-            window.speechSynthesis.cancel();
-            const utterance = new SpeechSynthesisUtterance(finalResponseText);
-            const voiceLangMap: Record<string, string> = {
-              tr: "tr-TR",
-              en: "en-US",
-              es: "es-ES",
-              de: "de-DE",
-              fr: "fr-FR",
-              it: "it-IT",
-              ru: "ru-RU",
-            };
-            utterance.lang = voiceLangMap[language] || "tr-TR";
-            window.speechSynthesis.speak(utterance);
+            const remaining = finalResponseText.slice(lastSpokenIndex).trim();
+            if (remaining) {
+              const utterance = new SpeechSynthesisUtterance(remaining);
+              const voiceLangMap: Record<string, string> = {
+                tr: "tr-TR", en: "en-US", es: "es-ES", de: "de-DE", fr: "fr-FR", it: "it-IT", ru: "ru-RU"
+              };
+              utterance.lang = voiceLangMap[language] || "tr-TR";
+              window.speechSynthesis.speak(utterance);
+            }
+          }
+        } else {
+          try {
+            const audioBase64 = await chatCNRService.textToSpeech(
+              finalResponseText,
+              language,
+            );
+            if (audioBase64) {
+              playPCM(audioBase64);
+            } else {
+              throw new Error("TTS fallback");
+            }
+          } catch (ttsErr) {
+            if ("speechSynthesis" in window) {
+              window.speechSynthesis.cancel();
+              const utterance = new SpeechSynthesisUtterance(finalResponseText);
+              const voiceLangMap: Record<string, string> = {
+                tr: "tr-TR",
+                en: "en-US",
+                es: "es-ES",
+                de: "de-DE",
+                fr: "fr-FR",
+                it: "it-IT",
+                ru: "ru-RU",
+              };
+              utterance.lang = voiceLangMap[language] || "tr-TR";
+              window.speechSynthesis.speak(utterance);
+            }
           }
         }
       }
@@ -2594,6 +2637,44 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                           className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${isAutoSpeak ? "right-1" : "left-1"}`}
                         />
                       </button>
+                    </div>
+                    
+                    <div
+                      className={`flex items-center justify-between p-4 border rounded-2xl ${theme === "dark" ? "bg-[#1a1a1a] border-zinc-800" : "bg-zinc-50 border-zinc-200"}`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <Volume2
+                          size={18}
+                          className={
+                            theme === "dark" ? "text-zinc-400" : "text-zinc-500"
+                          }
+                        />
+                        <div className="flex flex-col">
+                          <span className="text-sm font-medium">
+                            {language === "tr" ? "Ses Modu" : "Voice Mode"}
+                          </span>
+                          <span className="text-[10px] text-zinc-500 max-w-[120px]">
+                            {language === "tr"
+                              ? "Hızlı mod cihaz sesini, Kalite mod yapay zekayı kullanır."
+                              : "Fast uses device, Quality uses AI TTS."}
+                          </span>
+                        </div>
+                      </div>
+                      <select
+                        value={voiceMode}
+                        onChange={(e) => {
+                          setVoiceMode(e.target.value as "fast" | "quality");
+                          localStorage.setItem("chat_cnr_voice_mode", e.target.value);
+                        }}
+                        className={`text-sm p-2 rounded-xl outline-none transition-all ${
+                          theme === "dark"
+                            ? "bg-[#2a2a2a] border-zinc-700"
+                            : "bg-zinc-100 border-zinc-200"
+                        } border font-medium`}
+                      >
+                        <option value="fast">{language === "tr" ? "Hızlı" : "Fast"}</option>
+                        <option value="quality">{language === "tr" ? "Kaliteli" : "Quality"}</option>
+                      </select>
                     </div>
 
                     <div
