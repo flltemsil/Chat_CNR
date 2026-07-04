@@ -208,6 +208,23 @@ const App: React.FC = () => {
   const isAuthLoadingRef = useRef(true);
   const [debugStatus, setDebugStatus] = useState<string | null>(null);
   const [loginError, setLoginError] = useState<string | null>(null);
+  const [installGuide, setInstallGuide] = useState<'ios' | 'android' | 'windows' | null>(null);
+  const [bypassInstall, setBypassInstall] = useState(false);
+
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+  const isAndroid = /android/i.test(navigator.userAgent);
+  const [isStandalone, setIsStandalone] = useState(
+    window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone
+  );
+
+  useEffect(() => {
+    const handler = (e: MediaQueryListEvent) => {
+      setIsStandalone(e.matches);
+    };
+    const mql = window.matchMedia('(display-mode: standalone)');
+    mql.addEventListener('change', handler);
+    return () => mql.removeEventListener('change', handler);
+  }, []);
 
   useEffect(() => {
     const handler = (e: any) => {
@@ -372,6 +389,86 @@ const App: React.FC = () => {
             className="px-8 py-3 bg-red-600 hover:bg-red-700 rounded-xl font-bold transition-all"
           >
             Sıfırla ve Yenile
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const isInIframe = window.self !== window.top;
+  const shouldEnforceInstall = !isInIframe && (isIOS || isAndroid) && !isStandalone && !bypassInstall;
+
+  if (shouldEnforceInstall) {
+    return (
+      <div className="min-h-screen bg-[#0a0a0a] flex flex-col items-center justify-center p-6 text-center font-['Inter'] relative overflow-hidden">
+        {/* Background Decorative Elements */}
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-600/10 blur-[120px] rounded-full pointer-events-none" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-purple-600/10 blur-[120px] rounded-full pointer-events-none" />
+
+        <div className="w-full max-w-md space-y-8 z-10">
+          <div className="w-24 h-24 bg-blue-600 rounded-3xl flex items-center justify-center mx-auto shadow-2xl shadow-blue-900/30">
+            <Smartphone size={48} className="text-white" />
+          </div>
+          
+          <div className="space-y-4">
+            <h1 className="text-3xl font-black text-white tracking-tighter uppercase">
+              Uygulamayı İndir
+            </h1>
+            <p className="text-zinc-400 leading-relaxed text-sm">
+              Daha iyi bir deneyim için uygulamayı cihazınıza kurmanızı öneririz.
+              {isIOS ? " (Apple sistemlerinde uygulama indirmek için Safari menüsünden 'Ana Ekrana Ekle' seçeneğini kullanmalısınız, başka teknik bir yolu yoktur.)" : ""}
+            </p>
+          </div>
+
+          <div className="bg-zinc-900/80 border border-zinc-800 p-6 rounded-3xl space-y-4 text-left shadow-2xl">
+            {isIOS && (
+              <>
+                <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-4 rounded-xl text-sm font-medium mb-4">
+                  <strong>ÖNEMLİ:</strong> Uygulamayı Google Uygulaması, Chrome veya sosyal medyadan açtıysanız kuramazsınız! Lütfen sağ alt/üst menüden <strong>"Safari'de Aç"</strong> diyerek asıl Safari tarayıcısına geçiş yapın.
+                </div>
+                <ol className="list-decimal pl-5 space-y-3 font-medium text-zinc-300">
+                  <li>Uygulamayı asıl <span className="text-white font-bold">Safari</span> tarayıcısında açtığınıza emin olun.</li>
+                  <li>Tarayıcının alt kısmında bulunan <span className="text-blue-400 font-bold">Paylaş (Kareden çıkan ok)</span> ikonuna dokunun.</li>
+                  <li>Açılan menüyü aşağı kaydırarak <span className="text-white font-bold">"Ana Ekrana Ekle" (Add to Home Screen)</span> seçeneğine dokunun.</li>
+                  <li>Sağ üst köşedeki <span className="text-blue-400 font-bold">Ekle</span> butonuna basın.</li>
+                </ol>
+                <div className="mt-4 p-3 bg-blue-500/10 rounded-xl border border-blue-500/20 text-blue-400 text-xs font-medium text-center">
+                  Uygulamayı ana ekrana ekledikten sonra, ana ekranınızdaki ikona tıklayarak kullanmaya başlayabilirsiniz.
+                </div>
+              </>
+            )}
+            
+            {isAndroid && (
+              <>
+                {isInstallable ? (
+                  <button 
+                    onClick={handleInstallClick}
+                    className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl flex items-center justify-center gap-2 transition-all shadow-lg shadow-blue-900/20"
+                  >
+                    <Download size={20} />
+                    Hemen Yükle
+                  </button>
+                ) : (
+                  <div className="space-y-3">
+                    <div className="p-3 bg-orange-500/10 rounded-xl border border-orange-500/20 text-orange-400 text-xs font-medium">
+                      Daha önce uygulamayı yükleyip sildiyseniz, otomatik yükleme butonu geçici olarak gizlenmiş olabilir.
+                    </div>
+                    <ol className="list-decimal pl-5 space-y-3 font-medium text-zinc-300">
+                      <li>Tarayıcının sağ üst köşesindeki <span className="text-blue-400 font-bold">Üç Nokta (⋮)</span> ikonuna dokunun.</li>
+                      <li>Açılan menüden <span className="text-white font-bold">"Uygulamayı Yükle"</span> veya <span className="text-white font-bold">"Ana Ekrana Ekle"</span> seçeneğini seçin.</li>
+                      <li><span className="text-blue-400 font-bold">Yükle</span> butonuna basın.</li>
+                    </ol>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+
+          <button
+            onClick={() => setBypassInstall(true)}
+            className="w-full py-4 bg-transparent hover:bg-zinc-800/50 text-zinc-400 hover:text-white font-bold rounded-xl transition-all"
+          >
+            Tarayıcıda Devam Et
           </button>
         </div>
       </div>
@@ -557,11 +654,7 @@ const App: React.FC = () => {
                 onClick={
                   isInstallable
                     ? handleInstallClick
-                    : () => {
-                        alert(
-                          "EXE (Windows) Yükleme Rehberi: Tarayıcı adres çubuğundaki 'Yükle' ikonuna veya menüden 'Uygulamayı Yükle' seçeneğine tıklayın. Bu sayede uygulama masaüstünüze EXE olarak eklenecektir.",
-                        );
-                      }
+                    : () => setInstallGuide('windows')
                 }
                 className={`flex flex-col items-center justify-center gap-2 ${isInstallable ? "bg-blue-600/20 border-blue-500/30 font-bold" : "bg-zinc-800/50 border-zinc-700"} hover:bg-zinc-800 border py-4 rounded-3xl transition-all group`}
               >
@@ -579,11 +672,7 @@ const App: React.FC = () => {
                 onClick={
                   isInstallable
                     ? handleInstallClick
-                    : () => {
-                        alert(
-                          "APK (Android) Yükleme Rehberi: Chrome menüsünden 'Ana Ekrana Ekle' seçeneğine dokunun. Uygulama telefonunuza APK olarak yüklenecektir.",
-                        );
-                      }
+                    : () => setInstallGuide('android')
                 }
                 className={`flex flex-col items-center justify-center gap-2 ${isInstallable ? "bg-purple-600/20 border-purple-500/30 font-bold" : "bg-zinc-800/50 border-zinc-700"} hover:bg-zinc-800 border py-4 rounded-3xl transition-all group`}
               >
@@ -598,17 +687,7 @@ const App: React.FC = () => {
               </button>
 
               <button
-                onClick={() => {
-                  if (window.self !== window.top) {
-                    alert(
-                      "ÖNEMLİ: Uygulamanız şu an bir önizleme penceresinde çalışıyor.\n\niPhone'a Cihaz Uygulaması Olarak İndirmek İçin:\n1. Sağ üst köşeden (veya paylaşılan linkten) uygulamayı 'YENİ SEKMEYE' taşıyın.\n2. Safari'deyken tarayıcının alt orta kısmındaki 'Paylaş' (Kareden yukarı çıkan ok) ikonuna dokunun.\n3. Menüden 'Ana Ekrana Ekle' seçeneğini seçin.\n\nBu işlemle uygulama normal bir uygulama gibi telefonunuza inecektir.",
-                    );
-                  } else {
-                    alert(
-                      "iPhone'a Yükleme (İndirme) Rehberi:\n\n1. Safari tarayıcısında olduğunuza emin olun (Chrome veya uygulama içi tarayıcılarda çalışmaz).\n2. Ekranın alt kısmındaki 'Paylaş' butonuna (Kareden yukarı çıkan ok) dokunun.\n3. Listeyi aşağı kaydırıp 'Ana Ekrana Ekle' (Add to Home Screen) seçeneğine dokunun.\n4. Sağ üstteki 'Ekle'ye basın.\n\nUygulama başarıyla iPhone'unuza indirilecektir!",
-                    );
-                  }
-                }}
+                onClick={() => setInstallGuide('ios')}
                 className="col-span-2 flex flex-col items-center justify-center gap-2 bg-zinc-800/50 border-zinc-700 hover:bg-zinc-800 border py-4 rounded-3xl transition-all group"
               >
                 <div className="w-10 h-10 bg-zinc-700 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -626,6 +705,95 @@ const App: React.FC = () => {
             </p>
           </div>
         </motion.div>
+
+        <AnimatePresence>
+          {installGuide && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+              onClick={() => setInstallGuide(null)}
+            >
+              <motion.div
+                initial={{ scale: 0.95, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.95, opacity: 0 }}
+                onClick={(e) => e.stopPropagation()}
+                className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl relative"
+              >
+                <button
+                  onClick={() => setInstallGuide(null)}
+                  className="absolute top-4 right-4 text-zinc-400 hover:text-white bg-zinc-800 p-2 rounded-full transition-colors"
+                >
+                  <X size={20} />
+                </button>
+                
+                <div className="flex justify-center mb-6">
+                  <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/20">
+                    <Smartphone size={32} className="text-white" />
+                  </div>
+                </div>
+
+                <h3 className="text-2xl font-black text-white text-center mb-6 uppercase tracking-tight">
+                  {installGuide === 'ios' ? 'iOS Kurulum Rehberi' : installGuide === 'android' ? 'Android Kurulum Rehberi' : 'Windows Kurulum Rehberi'}
+                </h3>
+
+                <div className="space-y-4 text-zinc-300">
+                  {installGuide === 'ios' && (
+                    <>
+                      {window.self !== window.top && (
+                        <div className="bg-orange-500/10 border border-orange-500/20 text-orange-400 p-4 rounded-xl text-sm font-medium mb-4">
+                          ÖNEMLİ: Uygulama şu an önizleme penceresinde. Kurulum yapabilmek için önce sağ üstteki "Open in New Tab" ikonuna tıklayıp yeni sekmeye geçmelisiniz.
+                        </div>
+                      )}
+                      <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-4 rounded-xl text-sm font-medium mb-4">
+                        <strong>ÖNEMLİ:</strong> Uygulamayı Google Uygulaması, Chrome veya sosyal medyadan açtıysanız kuramazsınız! Lütfen sağ alt/üst menüden <strong>"Safari'de Aç"</strong> diyerek asıl Safari tarayıcısına geçiş yapın.
+                      </div>
+                      <ol className="list-decimal pl-5 space-y-3 font-medium">
+                        <li>Uygulamayı asıl <span className="text-white font-bold">Safari</span> tarayıcısında açtığınıza emin olun.</li>
+                        <li>Tarayıcının alt (veya üst) kısmında bulunan <span className="text-blue-400 font-bold">Paylaş (Kareden çıkan ok)</span> ikonuna dokunun.</li>
+                        <li>Açılan menüyü aşağı kaydırarak <span className="text-white font-bold">"Ana Ekrana Ekle" (Add to Home Screen)</span> seçeneğine dokunun.</li>
+                        <li>Sağ üst köşedeki <span className="text-blue-400 font-bold">Ekle</span> butonuna basın.</li>
+                      </ol>
+                      <p className="text-sm text-zinc-500 mt-4 text-center">Artık uygulama telefonunuzda normal bir App gibi çalışacaktır!</p>
+                    </>
+                  )}
+                  {installGuide === 'android' && (
+                    <>
+                      <div className="bg-blue-500/10 border border-blue-500/20 text-blue-400 p-4 rounded-xl text-sm font-medium mb-4">
+                        Daha önce uygulamayı yükleyip sildiyseniz, otomatik yükleme butonu geçici olarak gizlenmiş olabilir. Bu durumda aşağıdaki adımları izleyin:
+                      </div>
+                      <ol className="list-decimal pl-5 space-y-3 font-medium">
+                        <li>Uygulamayı <span className="text-white font-bold">Google Chrome</span> tarayıcısında açın.</li>
+                        <li>Tarayıcının sağ üst köşesindeki <span className="text-blue-400 font-bold">Üç Nokta (⋮)</span> ikonuna dokunun.</li>
+                        <li>Açılan menüden <span className="text-white font-bold">"Uygulamayı Yükle"</span> veya <span className="text-white font-bold">"Ana Ekrana Ekle"</span> seçeneğine dokunun.</li>
+                        <li>Ekrana gelen onay penceresinde <span className="text-blue-400 font-bold">Yükle</span> butonuna basın.</li>
+                      </ol>
+                    </>
+                  )}
+                  {installGuide === 'windows' && (
+                    <>
+                      <ol className="list-decimal pl-5 space-y-3 font-medium">
+                        <li>Uygulamayı <span className="text-white font-bold">Google Chrome</span> veya <span className="text-white font-bold">Edge</span> tarayıcısında açın.</li>
+                        <li>Tarayıcının adres çubuğunun en sağında bulunan <span className="text-blue-400 font-bold">Uygulamayı Yükle (İndirme İkonu)</span> düğmesine tıklayın.</li>
+                        <li>Veya sağ üstteki <span className="text-blue-400 font-bold">Üç Nokta (⋮)</span> menüsünden "Uygulamayı Yükle" seçeneğini seçin.</li>
+                      </ol>
+                      <p className="text-sm text-zinc-500 mt-4 text-center">Uygulama masaüstünüze bir EXE kısayolu olarak eklenecektir.</p>
+                    </>
+                  )}
+                </div>
+
+                <button
+                  onClick={() => setInstallGuide(null)}
+                  className="w-full mt-8 bg-white hover:bg-zinc-200 text-black font-bold py-4 rounded-xl transition-colors"
+                >
+                  Anladım
+                </button>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     );
   }
