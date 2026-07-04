@@ -23,7 +23,7 @@ export default defineConfig(({ mode }) => {
             theme_color: '#0a0a0a',
             background_color: '#0a0a0a',
             display: 'standalone',
-            id: 'com.dorukaliarslan.chatcnr.v2',
+            id: `com.dorukaliarslan.chatcnr.update.${Date.now()}`,
             iarc_rating_id: 'e5c6a1e3-1b2c-3d4e-5f6a-1b2c3d4e5f6a',
             prefer_related_applications: false,
             related_applications: [
