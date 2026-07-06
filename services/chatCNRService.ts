@@ -73,7 +73,7 @@ ${SYSTEM_INSTRUCTION.split('Kurallar:')[1]}`;
     let identityInstruction = "";
     if (userProfile || userName) {
       const name = userProfile?.name || userName;
-      identityInstruction += `Kullanıcının adı: ${name}. `;
+      identityInstruction += `Kullanıcının adı: ${name}. ÖNEMLİ KURAL: Sadece sohbetin en başındaki İLK mesajında adıyla hitap et (Merhaba ${name} vb.). Sonraki mesajlarında SÜREKLİ "Merhaba ${name}" diyerek cümleye BAŞLAMA, selamlaşmayı atla ve doğrudan konuşmaya/cevaba geç. `;
     }
 
     if (userProfile) {
