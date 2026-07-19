@@ -17,6 +17,17 @@ const updateSW = registerSW({
   },
   onRegisteredSW(swUrl, r) {
     console.log('SW Registered');
+
+    (window as any).triggerUpdate = () => {
+      if (window.confirm("Kritik Sistem Güncellemesi\n\nChat CNR - Professional Edition için yeni bir sürüm mevcut. Sürüm yükseltmek ve en iyi performansı almak için lütfen onaylayın.")) {
+        if (r) {
+          r.update().then(() => updateSW(true));
+        } else {
+           updateSW(true);
+        }
+      }
+    };
+
     if (r) {
       // Force update check now
       r.update();

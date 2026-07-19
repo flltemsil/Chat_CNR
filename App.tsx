@@ -2334,12 +2334,26 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                   <Users size={20} className="text-amber-400" />
                   Kullanıcı Listesi
                 </h2>
-                <button
-                  onClick={() => setIsAdminPanelOpen(false)}
-                  className={`p-2 rounded-xl transition-all ${theme === "dark" ? "text-zinc-400 hover:bg-zinc-800" : "text-zinc-500 hover:bg-zinc-100"}`}
-                >
-                  <X size={20} />
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => {
+                      if (typeof (window as any).triggerUpdate === 'function') {
+                        (window as any).triggerUpdate();
+                      } else {
+                        alert('Güncelleme servisi henüz hazır değil veya aktif değil.');
+                      }
+                    }}
+                    className="px-3 py-1.5 text-xs font-bold bg-amber-500/20 text-amber-500 rounded-lg hover:bg-amber-500/30 transition-all border border-amber-500/30"
+                  >
+                    Güncellemeyi Test Et
+                  </button>
+                  <button
+                    onClick={() => setIsAdminPanelOpen(false)}
+                    className={`p-2 rounded-xl transition-all ${theme === "dark" ? "text-zinc-400 hover:bg-zinc-800" : "text-zinc-500 hover:bg-zinc-100"}`}
+                  >
+                    <X size={20} />
+                  </button>
+                </div>
               </div>
 
               <div className="space-y-3 max-h-[400px] overflow-y-auto custom-scrollbar pr-2">
