@@ -32,6 +32,7 @@ export interface UserProfile {
   name: string;
   email: string;
   role: 'admin' | 'user';
+  isPro?: boolean;
   interests?: string[];
   bio?: string;
   phone?: string;

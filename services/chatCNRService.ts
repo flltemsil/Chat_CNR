@@ -123,7 +123,7 @@ ASLA kullanıcıyı yanıtsız bırakma veya "2026 verisi yok" diyerek kestirip 
           history,
           systemInstruction: fullSystemInstruction,
           image: currentImage,
-          model: "gemini-2.5-flash",
+          model: userProfile?.isPro ? "gemini-3.0-flash" : "gemini-2.5-flash",
           userApiKey
         })
       });
@@ -174,7 +174,10 @@ ASLA kullanıcıyı yanıtsız bırakma veya "2026 verisi yok" diyerek kestirip 
   }
 
   async textToSpeech(text: string, language: string = 'tr'): Promise<string> {
-    const userApiKey = localStorage.getItem('user_gemini_api_key:chat_cnr') || null;
+    let userApiKey: string | null = null;
+    try {
+      userApiKey = localStorage.getItem('user_gemini_api_key:chat_cnr') || null;
+    } catch {}
 
     try {
       const response = await fetch("/api/tts", {

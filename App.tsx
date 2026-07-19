@@ -46,6 +46,8 @@ import {
   Network,
   Bell,
   Share2,
+  Zap,
+  Search,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import {
@@ -367,7 +369,9 @@ const App: React.FC = () => {
           <button
             onClick={() => {
               // Clear local storage and reload
-              localStorage.clear();
+              try {
+                localStorage.clear();
+              } catch {}
               window.location.reload();
             }}
             className="px-8 py-3 bg-red-600 hover:bg-red-700 rounded-xl font-bold transition-all"
@@ -722,7 +726,11 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
   const [isRecording, setIsRecording] = useState(false);
   const [isAutoSpeak, setIsAutoSpeak] = useState(false);
   const [voiceMode, setVoiceMode] = useState<"fast" | "quality">(() => {
-    return (localStorage.getItem("chat_cnr_voice_mode") as "fast" | "quality") || "fast";
+    try {
+      return (localStorage.getItem("chat_cnr_voice_mode") as "fast" | "quality") || "fast";
+    } catch {
+      return "fast";
+    }
   });
   const [isChatMode, setIsChatMode] = useState(() => {
     try {
@@ -795,6 +803,10 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
     }
   });
   const [isLoading, setIsLoading] = useState(false);
+  const [isPayTRModalOpen, setIsPayTRModalOpen] = useState(false);
+  const [showUpgradeAnimation, setShowUpgradeAnimation] = useState(false);
+  const [showProWelcome, setShowProWelcome] = useState(false);
+  const [edgeGlow, setEdgeGlow] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [tempName, setTempName] = useState(user.name);
   const [allUsers, setAllUsers] = useState<any[]>([]);
@@ -1111,23 +1123,31 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
   };
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(sessions));
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(sessions));
+    } catch {}
   }, [sessions]);
 
   useEffect(() => {
-    localStorage.setItem("chat_cnr_chat_mode", isChatMode.toString());
+    try {
+      localStorage.setItem("chat_cnr_chat_mode", isChatMode.toString());
+    } catch {}
   }, [isChatMode]);
 
   useEffect(() => {
-    localStorage.setItem("chat_cnr_deep_mode", isDeepMode.toString());
+    try {
+      localStorage.setItem("chat_cnr_deep_mode", isDeepMode.toString());
+    } catch {}
   }, [isDeepMode]);
 
   useEffect(() => {
-    if (user) {
-      localStorage.setItem(USER_KEY, JSON.stringify(user));
-    } else {
-      localStorage.removeItem(USER_KEY);
-    }
+    try {
+      if (user) {
+        localStorage.setItem(USER_KEY, JSON.stringify(user));
+      } else {
+        localStorage.removeItem(USER_KEY);
+      }
+    } catch {}
   }, [user]);
 
   useEffect(() => {
@@ -1569,7 +1589,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                 history: combinedHistory,
                 currentBio: user.bio,
                 currentInterests: user.interests,
-                userApiKey: localStorage.getItem("CHAT_CNR_USER_API_KEY"),
+                userApiKey: (() => { try { return localStorage.getItem("CHAT_CNR_USER_API_KEY"); } catch { return null; } })(),
               }),
             });
             if (res.ok) {
@@ -1697,7 +1717,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
 
   return (
     <div
-      className={`flex h-[100dvh] overflow-hidden font-['Inter'] transition-colors duration-300 ${theme === "dark" ? "bg-[#0a0a0a] text-zinc-100" : "bg-zinc-50 text-zinc-900"}`}
+      className={`flex h-[100dvh] overflow-hidden font-['Inter'] transition-all duration-700 ${theme === "dark" ? "bg-[#0a0a0a] text-zinc-100" : "bg-zinc-50 text-zinc-900"} ${edgeGlow ? "shadow-[inset_0_0_100px_rgba(245,158,11,0.5)] border-4 border-amber-500/50 box-border" : ""}`}
     >
       {/* Sidebar */}
       <aside
@@ -1711,8 +1731,19 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
               <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center shadow-lg shadow-blue-500/20">
                 <Sparkles size={16} className="text-white" />
               </div>
-              <span className="font-bold text-[13px] uppercase tracking-[0.2em]">
-                {t.sessions}
+              <span className="font-bold text-[13px] uppercase tracking-[0.2em] flex items-center gap-1">
+                ChatCNR
+                {user?.isPro && (
+                  <motion.span
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1, backgroundPosition: ["0% 50%", "100% 50%", "0% 50%"] }}
+                    transition={{ backgroundPosition: { duration: 3, repeat: Infinity, ease: "linear" } }}
+                    style={{ backgroundSize: "200% auto" }}
+                    className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-orange-500 to-amber-400 ml-1 drop-shadow-sm font-black"
+                  >
+                    PRO
+                  </motion.span>
+                )}
               </span>
             </div>
             <button
@@ -1731,6 +1762,15 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
               <Plus size={18} />
               <span className="text-sm">{t.newChat}</span>
             </button>
+            {(!user || !user.isPro) && (
+              <button
+                onClick={() => setIsPayTRModalOpen(true)}
+                className="mt-3 w-full flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white py-2.5 px-4 rounded-xl font-bold transition-all shadow-lg shadow-orange-500/20 active:scale-[0.98]"
+              >
+                <Sparkles size={16} />
+                <span className="text-xs uppercase tracking-wider">ChatCNR Pro - 300₺</span>
+              </button>
+            )}
           </div>
 
           <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-1.5 custom-scrollbar">
@@ -2454,7 +2494,9 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                         key={lang.id}
                         onClick={() => {
                           setLanguage(lang.id as Language);
-                          localStorage.setItem("chat_cnr_lang", lang.id);
+                          try {
+                            localStorage.setItem("chat_cnr_lang", lang.id);
+                          } catch {}
                         }}
                         className={`flex items-center gap-3 p-3 rounded-xl border text-left transition-all ${
                           language === lang.id
@@ -2559,9 +2601,11 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                         if (window.confirm("RESET SYSTEM?")) {
                           try {
                             // Clear local storage
-                            localStorage.removeItem("CHAT_CNR_EXHAUSTED_KEYS");
-                            localStorage.removeItem("CHAT_CNR_KEY_INDEX");
-                            localStorage.removeItem("CHAT_CNR_LAST_USAGE_DATE");
+                            try {
+                              localStorage.removeItem("CHAT_CNR_EXHAUSTED_KEYS");
+                              localStorage.removeItem("CHAT_CNR_KEY_INDEX");
+                              localStorage.removeItem("CHAT_CNR_LAST_USAGE_DATE");
+                            } catch {}
 
                             // Delete all sessions from Firestore
                             for (const session of sessions) {
@@ -2664,7 +2708,9 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                         value={voiceMode}
                         onChange={(e) => {
                           setVoiceMode(e.target.value as "fast" | "quality");
-                          localStorage.setItem("chat_cnr_voice_mode", e.target.value);
+                          try {
+                            localStorage.setItem("chat_cnr_voice_mode", e.target.value);
+                          } catch {}
                         }}
                         className={`text-sm p-2 rounded-xl outline-none transition-all ${
                           theme === "dark"
@@ -2836,6 +2882,185 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
       )}
 
       <audio ref={audioRef} className="hidden" />
+      <AnimatePresence>
+      {isPayTRModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.9, y: 20 }}
+            className={`w-full max-w-md p-6 rounded-2xl shadow-2xl ${theme === "dark" ? "bg-zinc-900 border border-zinc-800" : "bg-white border border-zinc-200"}`}
+          >
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-bold flex items-center gap-2">
+                <Sparkles className="text-orange-500" />
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-500 to-orange-600">ChatCNR PRO</span>
+              </h3>
+              <button onClick={() => setIsPayTRModalOpen(false)} className="text-zinc-500 hover:text-zinc-700">
+                <X size={20} />
+              </button>
+            </div>
+            
+            <div className="space-y-4 mb-8">
+              <p className={`text-sm ${theme === "dark" ? "text-zinc-400" : "text-zinc-600"}`}>
+                Aylık 300₺ karşılığında ChatCNR Pro'ya geçin ve en gelişmiş <b>ChatCNR 3.0</b> modeline, öncelikli yanıt sürelerine ve yeni özelliklere anında erişin.
+              </p>
+              
+              <div className={`p-4 rounded-xl border ${theme === "dark" ? "bg-zinc-800/50 border-zinc-700" : "bg-zinc-50 border-zinc-200"} flex flex-col items-center justify-center space-y-3`}>
+                 <p className="text-xs text-center text-zinc-500 font-medium uppercase tracking-widest">PAYTR GÜVENLİ ÖDEME SİMÜLASYONU</p>
+              </div>
+            </div>
+
+            <button
+              onClick={async () => {
+                setIsLoading(true);
+                try {
+                  const { doc, setDoc } = await import("firebase/firestore");
+                  const { db } = await import("./firebase");
+                  await setDoc(doc(db, "users", user!.uid), { isPro: true }, { merge: true });
+                  setUser(prev => prev ? { ...prev, isPro: true } : prev);
+                  setIsPayTRModalOpen(false);
+                  setShowUpgradeAnimation(true);
+                  
+                  // Animation sequence
+                  setTimeout(() => {
+                    setShowUpgradeAnimation(false);
+                    setEdgeGlow(true);
+                    setShowProWelcome(true);
+                    
+                    // Turn off edge glow after a while
+                    setTimeout(() => {
+                      setEdgeGlow(false);
+                    }, 3000);
+                  }, 4500); // 4.5 seconds for the animation
+                } catch (e) {
+                  console.error(e);
+                } finally {
+                  setIsLoading(false);
+                }
+              }}
+              disabled={isLoading}
+              className="w-full py-3.5 bg-gradient-to-r from-[#00D084] to-[#00b573] hover:from-[#00b573] hover:to-[#009b62] text-white rounded-xl font-bold text-lg transition-all active:scale-[0.98] shadow-lg shadow-green-500/20 flex items-center justify-center gap-2"
+            >
+              {isLoading ? "İşleniyor..." : "PayTR ile Öde (300₺)"}
+            </button>
+          </motion.div>
+        </div>
+      )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showUpgradeAnimation && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0, transition: { duration: 1 } }}
+            className="fixed inset-0 z-[200] bg-black flex flex-col items-center justify-center overflow-hidden"
+          >
+            {/* Background effects */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.5 }}
+              animate={{ opacity: 1, scale: 2 }}
+              transition={{ duration: 4, ease: "easeOut" }}
+              className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(245,158,11,0.15),transparent_70%)]"
+            />
+            
+            <div className="relative z-10 flex items-center justify-center space-x-4">
+              <motion.h1
+                initial={{ scale: 0.8, opacity: 0, filter: "blur(10px)" }}
+                animate={{ scale: 1, opacity: 1, filter: "blur(0px)" }}
+                transition={{ duration: 1.5, ease: "easeOut" }}
+                className="text-3xl md:text-5xl font-black text-white tracking-tighter uppercase italic drop-shadow-2xl"
+              >
+                Chat_CNR
+              </motion.h1>
+              
+              <motion.div
+                initial={{ x: -100, opacity: 0, scale: 0 }}
+                animate={{ x: 0, opacity: 1, scale: 1 }}
+                transition={{ delay: 1.5, type: "spring", stiffness: 100, damping: 10 }}
+                className="relative"
+              >
+                <div className="absolute inset-0 bg-gradient-to-r from-amber-400 to-orange-600 blur-xl opacity-50" />
+                <span className="relative text-3xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-orange-500 to-amber-400 bg-[length:200%_auto] animate-[gradient_3s_linear_infinite] drop-shadow-[0_0_15px_rgba(245,158,11,0.5)]">
+                  PRO
+                </span>
+              </motion.div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showProWelcome && (
+          <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 50 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="w-full max-w-2xl max-h-[90vh] overflow-y-auto custom-scrollbar p-8 md:p-10 rounded-[2rem] shadow-2xl bg-zinc-900 border border-amber-500/30 relative"
+            >
+              {/* Decorative background glow */}
+              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-1/2 bg-amber-500/10 blur-[100px] rounded-full pointer-events-none" />
+              
+              <div className="relative z-10">
+                <div className="flex justify-center mb-6">
+                  <div className="w-20 h-20 bg-gradient-to-br from-amber-400 to-orange-600 rounded-2xl flex items-center justify-center shadow-[0_0_30px_rgba(245,158,11,0.4)]">
+                    <Sparkles className="text-white w-10 h-10" />
+                  </div>
+                </div>
+                
+                <h2 className="text-3xl md:text-4xl font-black text-center text-white mb-2 tracking-tight">
+                  ChatCNR <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-orange-500">PRO</span>'ya Hoş Geldiniz
+                </h2>
+                <p className="text-zinc-400 text-center text-lg mb-8">
+                  Yapay zeka deneyiminiz başarıyla 2.0 sürümüne yükseltildi.
+                </p>
+                
+                <div className="space-y-4 mb-8">
+                  <div className="p-4 rounded-2xl bg-zinc-800/50 border border-zinc-700/50 flex items-start gap-4">
+                    <div className="p-2 bg-amber-500/20 text-amber-500 rounded-lg shrink-0 mt-1">
+                      <Cpu size={20} />
+                    </div>
+                    <div>
+                      <h4 className="text-white font-bold mb-1">ChatCNR 3.0 Mimarisi</h4>
+                      <p className="text-sm text-zinc-400">Dünyanın en hızlı ve en gelişmiş yapay zeka modeline özel erişim. Önceki modellere göre 4x daha hızlı işlem hacmi.</p>
+                    </div>
+                  </div>
+                  
+                  <div className="p-4 rounded-2xl bg-zinc-800/50 border border-zinc-700/50 flex items-start gap-4">
+                    <div className="p-2 bg-blue-500/20 text-blue-400 rounded-lg shrink-0 mt-1">
+                      <Zap size={20} />
+                    </div>
+                    <div>
+                      <h4 className="text-white font-bold mb-1">Öncelikli İşlem Gücü</h4>
+                      <p className="text-sm text-zinc-400">Sunucu yoğunluğundan etkilenmeden, her zaman maksimum performansla öncelikli yanıt süreleri.</p>
+                    </div>
+                  </div>
+                  
+                  <div className="p-4 rounded-2xl bg-zinc-800/50 border border-zinc-700/50 flex items-start gap-4">
+                    <div className="p-2 bg-emerald-500/20 text-emerald-400 rounded-lg shrink-0 mt-1">
+                      <Search size={20} />
+                    </div>
+                    <div>
+                      <h4 className="text-white font-bold mb-1">Sınırsız Arama Kapasitesi</h4>
+                      <p className="text-sm text-zinc-400">İnternet aramalarında kota sınırı olmadan, en güncel verilere kesintisiz erişim.</p>
+                    </div>
+                  </div>
+                </div>
+                
+                <button
+                  onClick={() => setShowProWelcome(false)}
+                  className="w-full py-4 bg-white text-black hover:bg-zinc-200 rounded-xl font-bold text-lg transition-all active:scale-[0.98] shadow-lg flex items-center justify-center"
+                >
+                  Keşfetmeye Başla
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
     </div>
   );
 };

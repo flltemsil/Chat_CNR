@@ -18,8 +18,8 @@ app.get("/api/health", (req, res) => {
 
 // AI Chat Proxy Route
 app.post("/api/chat", async (req, res) => {
-  const { prompt, history, systemInstruction, image, userApiKey, googleAccessToken } = req.body;
-  const modelName = "gemini-2.5-flash"; 
+  const { prompt, history, systemInstruction, image, userApiKey, googleAccessToken, model } = req.body;
+  const modelName = model || "gemini-2.5-flash"; 
 
   const generateWithKey = async (key: string, useSearch = true) => {
     const ai = new GoogleGenAI({ apiKey: key });
