@@ -911,6 +911,29 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
   }, [isAdminPanelOpen]);
 
   useEffect(() => {
+    if (!user?.uid) return;
+    const unsubscribe = onSnapshot(doc(db, "users", user.uid), (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        setUser(prev => {
+          if (!prev) return prev;
+          const newIsPro = data.isPro || false;
+          // If something changed, return new object
+          if (prev.isPro !== newIsPro || prev.role !== data.role) {
+            return {
+              ...prev,
+              role: data.role,
+              isPro: newIsPro
+            };
+          }
+          return prev;
+        });
+      }
+    });
+    return () => unsubscribe();
+  }, [user?.uid]);
+
+  useEffect(() => {
     if (!user) return;
     const updatePresence = async () => {
       try {
@@ -1154,7 +1177,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
   useEffect(() => {
     if (user?.isPro) {
       try {
-        const welcomeKey = `pro_welcome_seen_${user.uid}`;
+        const welcomeKey = `pro_welcome_seen_v2_${user.uid}`;
         if (localStorage.getItem(welcomeKey) !== "true") {
           localStorage.setItem(welcomeKey, "true");
           // Trigger cooler animation
@@ -1786,21 +1809,25 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
               <Plus size={18} />
               <span className="text-sm">{t.newChat}</span>
             </button>
-            {user?.role === 'admin' && (
+            {(!user || !user.isPro) && user?.role === 'admin' && (
               <button
-                onClick={() => {
-                  setShowUpgradeAnimation(true);
-                  setTimeout(() => {
-                    setShowUpgradeAnimation(false);
-                    setEdgeGlow(true);
-                    setShowProWelcome(true);
-                    setTimeout(() => setEdgeGlow(false), 3000);
-                  }, 8000);
+                onClick={async () => {
+                  setIsLoading(true);
+                  try {
+                    const { doc, setDoc } = await import("firebase/firestore");
+                    const { db } = await import("./firebase");
+                    await setDoc(doc(db, "users", user!.uid), { isPro: true }, { merge: true });
+                  } catch (e) {
+                    console.error(e);
+                  } finally {
+                    setIsLoading(false);
+                  }
                 }}
-                className="mt-3 w-full flex items-center justify-center gap-2 bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-400 hover:to-indigo-500 text-white py-2.5 px-4 rounded-xl font-bold transition-all shadow-lg shadow-indigo-500/20 active:scale-[0.98]"
+                disabled={isLoading}
+                className="mt-3 w-full flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white py-2.5 px-4 rounded-xl font-bold transition-all shadow-lg shadow-orange-500/20 active:scale-[0.98]"
               >
                 <Sparkles size={16} />
-                <span className="text-xs uppercase tracking-wider">Animasyonu Test Et</span>
+                <span className="text-xs uppercase tracking-wider">{isLoading ? "İşleniyor..." : "PayTR ile Öde (300₺)"}</span>
               </button>
             )}
             {(!user || !user.isPro) && user?.role !== 'admin' && (
