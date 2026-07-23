@@ -48,6 +48,7 @@ import {
   Share2,
   Zap,
   Search,
+  Mail,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import {
@@ -1768,7 +1769,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                 className="mt-3 w-full flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white py-2.5 px-4 rounded-xl font-bold transition-all shadow-lg shadow-orange-500/20 active:scale-[0.98]"
               >
                 <Sparkles size={16} />
-                <span className="text-xs uppercase tracking-wider">ChatCNR Pro - 300₺</span>
+                <span className="text-xs uppercase tracking-wider">ChatCNR Pro'ya Yükselt</span>
               </button>
             )}
           </div>
@@ -2377,12 +2378,35 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                         <p className="text-xs text-zinc-500">{u.email}</p>
                       </div>
                       <div className="flex flex-col items-end gap-1">
-                          <div className="flex items-center gap-1.5">
+                          <div className="flex items-center gap-1.5 mb-1">
                             <span className={`w-2 h-2 rounded-full ${isUserOnline ? "bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]" : "bg-zinc-500"}`}></span>
                             <span className={`text-[10px] font-bold uppercase tracking-wider ${isUserOnline ? "text-emerald-500" : "text-zinc-500"}`}>
                               {isUserOnline ? (language === 'tr' ? 'Çevrimiçi' : 'Online') : (language === 'tr' ? 'Çevrimdışı' : 'Offline')}
                             </span>
                           </div>
+                          <button
+                            onClick={async () => {
+                              try {
+                                const { doc, setDoc } = await import("firebase/firestore");
+                                const { db } = await import("./firebase");
+                                await setDoc(doc(db, "users", u.uid), { isPro: true }, { merge: true });
+                                alert(`${u.name} kullanıcısı 1 aylığına PRO yapıldı!`);
+                                // Refresh allUsers list manually or wait for effect
+                                setAllUsers(prev => prev.map(p => p.uid === u.uid ? { ...p, isPro: true } : p));
+                              } catch (err) {
+                                console.error(err);
+                                alert("Hata oluştu.");
+                              }
+                            }}
+                            className={`px-2 py-1 text-[10px] font-bold rounded border transition-all ${
+                              u.isPro
+                                ? "bg-amber-500/10 text-amber-500 border-amber-500/30 cursor-default"
+                                : "bg-zinc-800 hover:bg-amber-500/20 text-zinc-300 hover:text-amber-400 border-zinc-700 hover:border-amber-500/30"
+                            }`}
+                            disabled={u.isPro}
+                          >
+                            {u.isPro ? "PRO AKTİF" : "PRO YAP (1 AY)"}
+                          </button>
                       </div>
                     </div>
                   )})
@@ -2916,48 +2940,40 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
             </div>
             
             <div className="space-y-4 mb-8">
-              <p className={`text-sm ${theme === "dark" ? "text-zinc-400" : "text-zinc-600"}`}>
-                Aylık 300₺ karşılığında ChatCNR Pro'ya geçin ve en gelişmiş <b>ChatCNR 3.0</b> modeline, öncelikli yanıt sürelerine ve yeni özelliklere anında erişin.
+              <p className={`text-sm ${theme === "dark" ? "text-zinc-400" : "text-zinc-600"} text-center`}>
+                ChatCNR Pro'ya geçmek, en gelişmiş modele erişmek ve öncelikli destek almak için lütfen geliştirici ile iletişime geçin.
               </p>
               
-              <div className={`p-4 rounded-xl border ${theme === "dark" ? "bg-zinc-800/50 border-zinc-700" : "bg-zinc-50 border-zinc-200"} flex flex-col items-center justify-center space-y-3`}>
-                 <p className="text-xs text-center text-zinc-500 font-medium uppercase tracking-widest">PAYTR GÜVENLİ ÖDEME SİMÜLASYONU</p>
+              <div className={`p-6 rounded-xl border ${theme === "dark" ? "bg-zinc-800/50 border-zinc-700" : "bg-zinc-50 border-zinc-200"} flex flex-col items-center justify-center space-y-4`}>
+                 <div className="w-12 h-12 bg-blue-500/10 rounded-full flex items-center justify-center">
+                   <Mail className="text-blue-500" size={24} />
+                 </div>
+                 <div className="text-center">
+                   <p className="text-xs text-zinc-500 font-medium uppercase tracking-widest mb-1">İletişim E-posta</p>
+                   <p className={`font-bold ${theme === "dark" ? "text-white" : "text-zinc-900"}`}>dorukaliarslan20@gmail.com</p>
+                 </div>
               </div>
             </div>
 
-            <button
-              onClick={async () => {
-                setIsLoading(true);
-                try {
-                  const { doc, setDoc } = await import("firebase/firestore");
-                  const { db } = await import("./firebase");
-                  await setDoc(doc(db, "users", user!.uid), { isPro: true }, { merge: true });
-                  setUser(prev => prev ? { ...prev, isPro: true } : prev);
-                  setIsPayTRModalOpen(false);
-                  setShowUpgradeAnimation(true);
-                  
-                  // Animation sequence
-                  setTimeout(() => {
-                    setShowUpgradeAnimation(false);
-                    setEdgeGlow(true);
-                    setShowProWelcome(true);
-                    
-                    // Turn off edge glow after a while
-                    setTimeout(() => {
-                      setEdgeGlow(false);
-                    }, 3000);
-                  }, 4500); // 4.5 seconds for the animation
-                } catch (e) {
-                  console.error(e);
-                } finally {
-                  setIsLoading(false);
-                }
-              }}
-              disabled={isLoading}
-              className="w-full py-3.5 bg-gradient-to-r from-[#00D084] to-[#00b573] hover:from-[#00b573] hover:to-[#009b62] text-white rounded-xl font-bold text-lg transition-all active:scale-[0.98] shadow-lg shadow-green-500/20 flex items-center justify-center gap-2"
-            >
-              {isLoading ? "İşleniyor..." : "PayTR ile Öde (300₺)"}
-            </button>
+            <div className="flex flex-col gap-3">
+              <button
+                onClick={() => {
+                  window.location.href = "mailto:dorukaliarslan20@gmail.com?subject=ChatCNR%20Pro%20Upgrade";
+                }}
+                className="w-full py-3.5 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white rounded-xl font-bold transition-all shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2"
+              >
+                E-posta Gönder
+              </button>
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText("dorukaliarslan20@gmail.com");
+                  alert("E-posta adresi kopyalandı!");
+                }}
+                className={`w-full py-3.5 rounded-xl font-bold transition-all flex items-center justify-center gap-2 ${theme === "dark" ? "bg-zinc-800 hover:bg-zinc-700 text-white" : "bg-zinc-100 hover:bg-zinc-200 text-zinc-900"}`}
+              >
+                Adresi Kopyala
+              </button>
+            </div>
           </motion.div>
         </div>
       )}
