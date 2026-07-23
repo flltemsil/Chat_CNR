@@ -1152,6 +1152,29 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
   }, [user]);
 
   useEffect(() => {
+    if (user?.isPro) {
+      try {
+        const welcomeKey = `pro_welcome_seen_${user.uid}`;
+        if (localStorage.getItem(welcomeKey) !== "true") {
+          localStorage.setItem(welcomeKey, "true");
+          // Trigger cooler animation
+          setShowUpgradeAnimation(true);
+          
+          setTimeout(() => {
+            setShowUpgradeAnimation(false);
+            setEdgeGlow(true);
+            setShowProWelcome(true);
+            
+            setTimeout(() => {
+              setEdgeGlow(false);
+            }, 3000);
+          }, 8000); // 8 seconds for the extended animation
+        }
+      } catch (e) {}
+    }
+  }, [user?.isPro, user?.uid]);
+
+  useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [activeSession?.messages, isLoading]);
 
@@ -1763,7 +1786,29 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
               <Plus size={18} />
               <span className="text-sm">{t.newChat}</span>
             </button>
-            {(!user || !user.isPro) && (
+            {(!user || !user.isPro) && user?.role === 'admin' && (
+              <button
+                onClick={async () => {
+                  setIsLoading(true);
+                  try {
+                    const { doc, setDoc } = await import("firebase/firestore");
+                    const { db } = await import("./firebase");
+                    await setDoc(doc(db, "users", user!.uid), { isPro: true }, { merge: true });
+                    // Animation is handled automatically by the new useEffect
+                  } catch (e) {
+                    console.error(e);
+                  } finally {
+                    setIsLoading(false);
+                  }
+                }}
+                disabled={isLoading}
+                className="mt-3 w-full flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white py-2.5 px-4 rounded-xl font-bold transition-all shadow-lg shadow-orange-500/20 active:scale-[0.98]"
+              >
+                <Sparkles size={16} />
+                <span className="text-xs uppercase tracking-wider">{isLoading ? "İşleniyor..." : "PayTR ile Öde (300₺)"}</span>
+              </button>
+            )}
+            {(!user || !user.isPro) && user?.role !== 'admin' && (
               <button
                 onClick={() => setIsPayTRModalOpen(true)}
                 className="mt-3 w-full flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white py-2.5 px-4 rounded-xl font-bold transition-all shadow-lg shadow-orange-500/20 active:scale-[0.98]"
@@ -2991,31 +3036,60 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
             <motion.div
               initial={{ opacity: 0, scale: 0.5 }}
               animate={{ opacity: 1, scale: 2 }}
-              transition={{ duration: 4, ease: "easeOut" }}
-              className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(245,158,11,0.15),transparent_70%)]"
+              transition={{ duration: 8, ease: "easeOut" }}
+              className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(245,158,11,0.2),transparent_70%)]"
             />
             
-            <div className="relative z-10 flex items-center justify-center space-x-4">
-              <motion.h1
-                initial={{ scale: 0.8, opacity: 0, filter: "blur(10px)" }}
-                animate={{ scale: 1, opacity: 1, filter: "blur(0px)" }}
-                transition={{ duration: 1.5, ease: "easeOut" }}
-                className="text-3xl md:text-5xl font-black text-white tracking-tighter uppercase italic drop-shadow-2xl"
-              >
-                Chat_CNR
-              </motion.h1>
-              
-              <motion.div
-                initial={{ x: -100, opacity: 0, scale: 0 }}
-                animate={{ x: 0, opacity: 1, scale: 1 }}
-                transition={{ delay: 1.5, type: "spring", stiffness: 100, damping: 10 }}
-                className="relative"
-              >
-                <div className="absolute inset-0 bg-gradient-to-r from-amber-400 to-orange-600 blur-xl opacity-50" />
-                <span className="relative text-3xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-orange-500 to-amber-400 bg-[length:200%_auto] animate-[gradient_3s_linear_infinite] drop-shadow-[0_0_15px_rgba(245,158,11,0.5)]">
-                  PRO
-                </span>
-              </motion.div>
+            <div className="relative z-10 flex flex-col items-center justify-center space-y-12">
+               <div className="flex items-center space-x-4">
+                <motion.h1
+                  initial={{ scale: 0.8, opacity: 0, filter: "blur(10px)" }}
+                  animate={{ scale: 1, opacity: 1, filter: "blur(0px)" }}
+                  transition={{ duration: 1.5, ease: "easeOut" }}
+                  className="text-4xl md:text-6xl font-black text-white tracking-tighter uppercase italic drop-shadow-2xl"
+                >
+                  Chat_CNR
+                </motion.h1>
+                
+                <motion.div
+                  initial={{ x: -100, opacity: 0, scale: 0 }}
+                  animate={{ x: 0, opacity: 1, scale: 1 }}
+                  transition={{ delay: 1.5, type: "spring", stiffness: 100, damping: 10 }}
+                  className="relative"
+                >
+                  <div className="absolute inset-0 bg-gradient-to-r from-amber-400 to-orange-600 blur-xl opacity-50" />
+                  <span className="relative text-4xl md:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-orange-500 to-amber-400 bg-[length:200%_auto] animate-[gradient_3s_linear_infinite] drop-shadow-[0_0_15px_rgba(245,158,11,0.5)]">
+                    PRO
+                  </span>
+                </motion.div>
+               </div>
+               
+               <div className="flex flex-col items-center space-y-6 text-center">
+                 <motion.p
+                   initial={{ opacity: 0, y: 20 }}
+                   animate={{ opacity: 1, y: 0 }}
+                   transition={{ delay: 2.5, duration: 1 }}
+                   className="text-xl md:text-2xl text-zinc-400 font-medium tracking-[0.2em] uppercase"
+                 >
+                   Sistem Yükseltiliyor...
+                 </motion.p>
+                 <motion.p
+                   initial={{ opacity: 0, y: 20 }}
+                   animate={{ opacity: 1, y: 0 }}
+                   transition={{ delay: 4, duration: 1 }}
+                   className="text-2xl md:text-3xl text-amber-500 font-bold tracking-[0.1em] uppercase"
+                 >
+                   Yapay Zeka Mimarisi 3.0 Aktif
+                 </motion.p>
+                 <motion.p
+                   initial={{ opacity: 0, scale: 0.9 }}
+                   animate={{ opacity: 1, scale: 1 }}
+                   transition={{ delay: 5.5, duration: 1.5 }}
+                   className="text-4xl md:text-5xl text-white font-black tracking-widest uppercase drop-shadow-[0_0_15px_rgba(255,255,255,0.6)]"
+                 >
+                   Sınırlar Kaldırıldı
+                 </motion.p>
+               </div>
             </div>
           </motion.div>
         )}
