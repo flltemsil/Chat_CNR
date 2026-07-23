@@ -804,8 +804,8 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
     }
   });
   const [isLoading, setIsLoading] = useState(false);
-  const [isPayTRModalOpen, setIsPayTRModalOpen] = useState(false);
   const [showUpgradeAnimation, setShowUpgradeAnimation] = useState(false);
+  const initialProStatus = useRef<boolean | null>(null);
   const [showProWelcome, setShowProWelcome] = useState(false);
   const [edgeGlow, setEdgeGlow] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -1175,9 +1175,16 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
   }, [user]);
 
   useEffect(() => {
-    if (user?.isPro) {
+    if (user && initialProStatus.current === null) {
+      initialProStatus.current = user.isPro || false;
+    }
+  }, [user]);
+
+  useEffect(() => {
+    // Only play the animation if they were PRO on initial load of this session
+    if (initialProStatus.current === true && user?.isPro) {
       try {
-        const welcomeKey = `pro_welcome_seen_v2_${user.uid}`;
+        const welcomeKey = `pro_welcome_seen_v3_${user.uid}`;
         if (localStorage.getItem(welcomeKey) !== "true") {
           localStorage.setItem(welcomeKey, "true");
           // Trigger cooler animation
@@ -1774,7 +1781,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
           <div
             className={`px-6 py-6 border-b flex items-center justify-between ${theme === "dark" ? "border-zinc-800/50" : "border-zinc-100"}`}
           >
-            <div className="flex items-center gap-3">
+
               <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center shadow-lg shadow-blue-500/20">
                 <Sparkles size={16} className="text-white" />
               </div>
@@ -1809,37 +1816,9 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
               <Plus size={18} />
               <span className="text-sm">{t.newChat}</span>
             </button>
-            {(!user || !user.isPro) && user?.role === 'admin' && (
-              <button
-                onClick={async () => {
-                  setIsLoading(true);
-                  try {
-                    const { doc, setDoc } = await import("firebase/firestore");
-                    const { db } = await import("./firebase");
-                    await setDoc(doc(db, "users", user!.uid), { isPro: true }, { merge: true });
-                  } catch (e) {
-                    console.error(e);
-                  } finally {
-                    setIsLoading(false);
-                  }
-                }}
-                disabled={isLoading}
-                className="mt-3 w-full flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white py-2.5 px-4 rounded-xl font-bold transition-all shadow-lg shadow-orange-500/20 active:scale-[0.98]"
-              >
-                <Sparkles size={16} />
-                <span className="text-xs uppercase tracking-wider">{isLoading ? "İşleniyor..." : "PayTR ile Öde (300₺)"}</span>
-              </button>
-            )}
-            {(!user || !user.isPro) && user?.role !== 'admin' && (
-              <button
-                onClick={() => setIsPayTRModalOpen(true)}
-                className="mt-3 w-full flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white py-2.5 px-4 rounded-xl font-bold transition-all shadow-lg shadow-orange-500/20 active:scale-[0.98]"
-              >
-                <Sparkles size={16} />
-                <span className="text-xs uppercase tracking-wider">ChatCNR Pro'ya Yükselt</span>
-              </button>
-            )}
           </div>
+
+          <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-1.5 custom-scrollbar">
 
           <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-1.5 custom-scrollbar">
             <AnimatePresence mode="popLayout">
@@ -2989,64 +2968,6 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
       )}
 
       <audio ref={audioRef} className="hidden" />
-      <AnimatePresence>
-      {isPayTRModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.9, y: 20 }}
-            className={`w-full max-w-md p-6 rounded-2xl shadow-2xl ${theme === "dark" ? "bg-zinc-900 border border-zinc-800" : "bg-white border border-zinc-200"}`}
-          >
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-xl font-bold flex items-center gap-2">
-                <Sparkles className="text-orange-500" />
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-500 to-orange-600">ChatCNR PRO</span>
-              </h3>
-              <button onClick={() => setIsPayTRModalOpen(false)} className="text-zinc-500 hover:text-zinc-700">
-                <X size={20} />
-              </button>
-            </div>
-            
-            <div className="space-y-4 mb-8">
-              <p className={`text-sm ${theme === "dark" ? "text-zinc-400" : "text-zinc-600"} text-center`}>
-                ChatCNR Pro'ya (Aylık 300₺) geçmek, en gelişmiş modele erişmek ve öncelikli destek almak için lütfen aşağıdaki e-posta adresinden iletişime geçerek Havale/EFT bilgilerinizi alınız.
-              </p>
-              
-              <div className={`p-6 rounded-xl border ${theme === "dark" ? "bg-zinc-800/50 border-zinc-700" : "bg-zinc-50 border-zinc-200"} flex flex-col items-center justify-center space-y-4`}>
-                 <div className="w-12 h-12 bg-blue-500/10 rounded-full flex items-center justify-center">
-                   <Mail className="text-blue-500" size={24} />
-                 </div>
-                 <div className="text-center">
-                   <p className="text-xs text-zinc-500 font-medium uppercase tracking-widest mb-1">İletişim E-posta</p>
-                   <p className={`font-bold ${theme === "dark" ? "text-white" : "text-zinc-900"}`}>dorukaliarslan20@gmail.com</p>
-                 </div>
-              </div>
-            </div>
-
-            <div className="flex flex-col gap-3">
-              <button
-                onClick={() => {
-                  window.location.href = "mailto:dorukaliarslan20@gmail.com?subject=ChatCNR%20Pro%20Upgrade";
-                }}
-                className="w-full py-3.5 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white rounded-xl font-bold transition-all shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2"
-              >
-                E-posta Gönder
-              </button>
-              <button
-                onClick={() => {
-                  navigator.clipboard.writeText("dorukaliarslan20@gmail.com");
-                  alert("E-posta adresi kopyalandı!");
-                }}
-                className={`w-full py-3.5 rounded-xl font-bold transition-all flex items-center justify-center gap-2 ${theme === "dark" ? "bg-zinc-800 hover:bg-zinc-700 text-white" : "bg-zinc-100 hover:bg-zinc-200 text-zinc-900"}`}
-              >
-                Adresi Kopyala
-              </button>
-            </div>
-          </motion.div>
-        </div>
-      )}
-      </AnimatePresence>
 
       <AnimatePresence>
         {showUpgradeAnimation && (
