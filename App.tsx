@@ -1805,7 +1805,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                 className="mt-3 w-full flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white py-2.5 px-4 rounded-xl font-bold transition-all shadow-lg shadow-orange-500/20 active:scale-[0.98]"
               >
                 <Sparkles size={16} />
-                <span className="text-xs uppercase tracking-wider">{isLoading ? "İşleniyor..." : "PayTR ile Öde (300₺)"}</span>
+                <span className="text-xs uppercase tracking-wider">{isLoading ? "İşleniyor..." : "Pro'yu Aktif Et (Admin)"}</span>
               </button>
             )}
             {(!user || !user.isPro) && user?.role !== 'admin' && (
@@ -2986,7 +2986,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
             
             <div className="space-y-4 mb-8">
               <p className={`text-sm ${theme === "dark" ? "text-zinc-400" : "text-zinc-600"} text-center`}>
-                ChatCNR Pro'ya geçmek, en gelişmiş modele erişmek ve öncelikli destek almak için lütfen geliştirici ile iletişime geçin.
+                ChatCNR Pro'ya (Aylık 300₺) geçmek, en gelişmiş modele erişmek ve öncelikli destek almak için lütfen aşağıdaki e-posta adresinden iletişime geçerek Havale/EFT bilgilerinizi alınız.
               </p>
               
               <div className={`p-6 rounded-xl border ${theme === "dark" ? "bg-zinc-800/50 border-zinc-700" : "bg-zinc-50 border-zinc-200"} flex flex-col items-center justify-center space-y-4`}>
