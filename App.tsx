@@ -1995,13 +1995,15 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
             </div>
 
             <div className="flex items-center gap-1.5 relative z-50">
-              <button
-                onClick={() => setIsAdminPanelOpen(true)}
-                className={`p-2 rounded-lg transition-all border ${theme === "dark" ? "bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-white" : "bg-white border-zinc-200 text-zinc-500 hover:text-zinc-900"}`}
-                title={t.userList || "Kişiler"}
-              >
-                <Users size={16} />
-              </button>
+              {user?.role === 'admin' && (
+                <button
+                  onClick={() => setIsAdminPanelOpen(true)}
+                  className={`p-2 rounded-lg transition-all border ${theme === "dark" ? "bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-white" : "bg-white border-zinc-200 text-zinc-500 hover:text-zinc-900"}`}
+                  title={t.userList || "Kişiler"}
+                >
+                  <Users size={16} />
+                </button>
+              )}
               
               <button
                 onClick={async () => {
@@ -2392,7 +2394,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
         )}
 
         {/* Admin Panel Modal */}
-        {isAdminPanelOpen && (
+        {isAdminPanelOpen && user?.role === 'admin' && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-300">
             <div
               className={`w-full max-w-md border rounded-3xl p-6 shadow-2xl ${theme === "dark" ? "bg-[#121212] border-zinc-800 text-white" : "bg-white border-zinc-200 text-zinc-900"}`}
