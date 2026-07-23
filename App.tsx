@@ -1786,26 +1786,21 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
               <Plus size={18} />
               <span className="text-sm">{t.newChat}</span>
             </button>
-            {(!user || !user.isPro) && user?.role === 'admin' && (
+            {user?.role === 'admin' && (
               <button
-                onClick={async () => {
-                  setIsLoading(true);
-                  try {
-                    const { doc, setDoc } = await import("firebase/firestore");
-                    const { db } = await import("./firebase");
-                    await setDoc(doc(db, "users", user!.uid), { isPro: true }, { merge: true });
-                    // Animation is handled automatically by the new useEffect
-                  } catch (e) {
-                    console.error(e);
-                  } finally {
-                    setIsLoading(false);
-                  }
+                onClick={() => {
+                  setShowUpgradeAnimation(true);
+                  setTimeout(() => {
+                    setShowUpgradeAnimation(false);
+                    setEdgeGlow(true);
+                    setShowProWelcome(true);
+                    setTimeout(() => setEdgeGlow(false), 3000);
+                  }, 8000);
                 }}
-                disabled={isLoading}
-                className="mt-3 w-full flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white py-2.5 px-4 rounded-xl font-bold transition-all shadow-lg shadow-orange-500/20 active:scale-[0.98]"
+                className="mt-3 w-full flex items-center justify-center gap-2 bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-400 hover:to-indigo-500 text-white py-2.5 px-4 rounded-xl font-bold transition-all shadow-lg shadow-indigo-500/20 active:scale-[0.98]"
               >
                 <Sparkles size={16} />
-                <span className="text-xs uppercase tracking-wider">{isLoading ? "İşleniyor..." : "Pro'yu Aktif Et (Admin)"}</span>
+                <span className="text-xs uppercase tracking-wider">Animasyonu Test Et</span>
               </button>
             )}
             {(!user || !user.isPro) && user?.role !== 'admin' && (
