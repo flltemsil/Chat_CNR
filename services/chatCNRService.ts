@@ -101,7 +101,7 @@ ${SYSTEM_INSTRUCTION.split('Kurallar:')[1]}`;
 
     let proInstruction = "";
     if (userProfile?.isPro) {
-      proInstruction = `\n\n[SİSTEM BİLDİRİMİ: CHAT_CNR 3.0 PRO MİMARİSİ AKTİF]\nSen şu anda standart sürümden çok daha zeki, çok daha kapsamlı ve katbekat üstün olan "Chat_CNR 3.0 Pro" mimarisiyle çalışıyorsun. Kullanıcı, bu üstün zekaya erişmek için Pro sürümü satın aldı. Yanıtlarını verirken bu üstünlüğü yansıtmalısın: daha derinlemesine analizler yap, daha profesyonel ve ileri düzey kelimeler seç, konuları çok boyutlu ele al. Sıradan bir yapay zeka olmadığını, olağanüstü zeki ve elit bir asistan olduğunu hissettir. Gerektiğinde karmaşık teorilere, teknik detaylara ve felsefi derinliklere in.\n`;
+      proInstruction = `\n\n[SİSTEM BİLDİRİMİ: CHAT_CNR PRO MİMARİSİ AKTİF]\nSen şu anda standart sürümden çok daha zeki, çok daha kapsamlı ve katbekat üstün olan "Chat_CNR Pro" mimarisiyle çalışıyorsun. Kullanıcı, bu üstün zekaya erişmek için Pro sürümü satın aldı. Yanıtlarını verirken bu üstünlüğü yansıtmalısın: daha derinlemesine analizler yap, daha profesyonel ve ileri düzey kelimeler seç, konuları çok boyutlu ele al. Sıradan bir yapay zeka olmadığını, olağanüstü zeki ve elit bir asistan olduğunu hissettir. Gerektiğinde karmaşık teorilere, teknik detaylara ve felsefi derinliklere in.\n`;
     }
 
     const fullSystemInstruction = `[GÜNCEL ZAMAN: ${dateStr} ${timeStr}]\n\n${baseInstruction}\n\n${identityInstruction}${proInstruction}BİLGİ KAYNAĞI ÖNCELİĞİ:
@@ -128,7 +128,7 @@ ASLA kullanıcıyı yanıtsız bırakma veya "2026 verisi yok" diyerek kestirip 
           history,
           systemInstruction: fullSystemInstruction,
           image: currentImage,
-          model: userProfile?.isPro ? "gemini-3.0-flash" : "gemini-2.5-flash",
+          model: "gemini-2.5-flash", // We use the same model but with a much smarter system prompt for PRO
           userApiKey
         })
       });

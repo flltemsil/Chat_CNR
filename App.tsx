@@ -3101,7 +3101,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                    transition={{ delay: 4, duration: 1 }}
                    className="text-2xl md:text-3xl text-amber-500 font-bold tracking-[0.1em] uppercase"
                  >
-                   Yapay Zeka Mimarisi 3.0 Aktif
+                   Gelişmiş Yapay Zeka Aktif
                  </motion.p>
                  <motion.p
                    initial={{ opacity: 0, scale: 0.9 }}
