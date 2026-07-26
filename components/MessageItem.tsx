@@ -79,7 +79,7 @@ const MessageItem: React.FC<MessageItemProps> = React.memo(({ message, themeColo
         
         {/* Content */}
         <div className={`flex flex-col max-w-full min-w-0 ${isUser ? 'items-end' : 'items-start'}`}>
-          <div className={`px-6 py-5 rounded-[1.5rem] text-[15px] leading-[1.6] transition-all duration-500 ease-[0.23, 1, 0.32, 1] group relative max-w-full overflow-x-auto custom-scrollbar ${
+          <div className={`px-5 py-4 rounded-[1.5rem] text-[15px] leading-[1.6] transition-all duration-500 ease-[0.23, 1, 0.32, 1] group relative max-w-full overflow-x-auto custom-scrollbar ${
             isUser 
               ? `${themeClasses.bg} text-white rounded-tr-none border border-white/10 shadow-[0_10px_30px_rgba(37,99,235,0.15)]` 
               : `${isDark ? 'bg-[#111111]/80 backdrop-blur-sm text-zinc-100 border-zinc-800/60 shadow-[0_8px_30px_rgba(0,0,0,0.2)]' : 'bg-white text-zinc-900 border-zinc-200 shadow-sm'} border rounded-tl-none`

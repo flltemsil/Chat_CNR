@@ -333,7 +333,7 @@ const App: React.FC = () => {
 
   if (isAuthLoading) {
     return (
-      <div className="min-h-screen bg-[#1E1E2E] flex items-center justify-center">
+      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
         <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
       </div>
     );
@@ -341,7 +341,7 @@ const App: React.FC = () => {
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center h-screen bg-[#1E1E2E] text-white p-6 text-center">
+      <div className="flex flex-col items-center justify-center h-screen bg-[#0a0a0a] text-white p-6 text-center">
         <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mb-6">
           <X size={32} className="text-red-500" />
         </div>
@@ -386,7 +386,7 @@ const App: React.FC = () => {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-[#1E1E2E] flex flex-col items-center justify-center p-4 font-['Inter'] relative overflow-y-auto custom-scrollbar">
+      <div className="min-h-screen bg-[#0a0a0a] flex flex-col items-center justify-center p-4 font-['Inter'] relative overflow-y-auto custom-scrollbar">
         {/* Background Decorative Elements */}
         <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-600/10 blur-[120px] rounded-full pointer-events-none" />
         <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-purple-600/10 blur-[120px] rounded-full pointer-events-none" />
@@ -552,7 +552,7 @@ const App: React.FC = () => {
                 <div className="w-full border-t border-zinc-800"></div>
               </div>
               <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-[#1E1E2E] px-4 text-zinc-600 font-bold tracking-widest leading-none">
+                <span className="bg-[#0a0a0a] px-4 text-zinc-600 font-bold tracking-widest leading-none">
                   Uygulama Olarak İndir
                 </span>
               </div>
@@ -1771,11 +1771,11 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
 
   return (
     <div
-      className={`flex h-[100dvh] overflow-hidden font-['Inter'] transition-all duration-700 ${theme === "dark" ? "bg-[#1E1E2E] text-zinc-100" : "bg-zinc-50 text-zinc-900"} ${edgeGlow ? "shadow-[inset_0_0_100px_rgba(245,158,11,0.5)] border-4 border-amber-500/50 box-border" : ""}`}
+      className={`flex h-[100dvh] overflow-hidden font-['Inter'] transition-all duration-700 ${theme === "dark" ? "bg-[#0a0a0a] text-zinc-100" : "bg-zinc-50 text-zinc-900"} ${edgeGlow ? "shadow-[inset_0_0_100px_rgba(245,158,11,0.5)] border-4 border-amber-500/50 box-border" : ""}`}
     >
       {/* Sidebar */}
       <aside
-        className={`fixed inset-y-0 left-0 z-[60] w-72 border-r transition-all duration-500 ease-[0.23, 1, 0.32, 1] lg:relative lg:translate-x-0 ${isSidebarOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full"} ${theme === "dark" ? "bg-[#0B0F17] border-zinc-800/80 shadow-[10px_0_40px_rgba(0,0,0,0.4)]" : "bg-white border-zinc-200"}`}
+        className={`fixed inset-y-0 left-0 z-[60] w-72 border-r transition-all duration-500 ease-[0.23, 1, 0.32, 1] lg:relative lg:translate-x-0 ${isSidebarOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full"} ${theme === "dark" ? "bg-[#050505] border-zinc-800/80 shadow-[10px_0_40px_rgba(0,0,0,0.4)]" : "bg-white border-zinc-200"}`}
       >
         <div className="flex flex-col h-full overflow-hidden">
           <div
@@ -1877,7 +1877,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
 
           {/* User Profile Section */}
           <div
-            className={`p-4 border-t ${theme === "dark" ? "border-zinc-800/50 bg-[#080B12]" : "border-zinc-100 bg-zinc-50/50"}`}
+            className={`p-4 border-t ${theme === "dark" ? "border-zinc-800/50 bg-[#070707]" : "border-zinc-100 bg-zinc-50/50"}`}
           >
             <div className="flex gap-2">
               <button
@@ -1942,7 +1942,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
 
           {/* Header */}
           <header
-            className={`h-16 border-b backdrop-blur-md flex items-center justify-between px-4 md:px-6 sticky top-0 z-50 ${theme === "dark" ? "border-zinc-800/50 bg-[#1E1E2E]/70" : "border-zinc-200/50 bg-white/70"}`}
+            className={`h-16 border-b backdrop-blur-md flex items-center justify-between px-4 md:px-6 sticky top-0 z-50 ${theme === "dark" ? "border-zinc-800/50 bg-[#0a0a0a]/70" : "border-zinc-200/50 bg-white/70"}`}
           >
             <div className="flex items-center gap-3 md:gap-4 overflow-hidden">
               <button
@@ -2027,7 +2027,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
           <main
             className={`flex-1 overflow-y-auto custom-scrollbar relative z-10 px-4 md:px-8 py-8 space-y-8 bg-transparent`}
           >
-            <div className="max-w-3xl mx-auto w-full">
+            <div className="max-w-4xl mx-auto w-full">
               {activeSession ? (
                 <>
                   {activeSession.messages &&
@@ -2178,9 +2178,9 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
 
           {/* Footer */}
           <footer
-            className={`px-4 py-4 md:p-6 pb-[calc(env(safe-area-inset-bottom,0)+24px)] border-t transition-colors duration-500 ${theme === "dark" ? "bg-[#0B0F17]/95 backdrop-blur-2xl border-zinc-800/40 shadow-[0_-20px_50px_rgba(0,0,0,0.5)]" : "bg-white border-zinc-100"}`}
+            className={`px-4 py-4 md:p-6 pb-[calc(env(safe-area-inset-bottom,0)+16px)] border-t transition-colors duration-500 ${theme === "dark" ? "bg-[#050505]/95 backdrop-blur-2xl border-zinc-800/40 shadow-[0_-20px_50px_rgba(0,0,0,0.5)]" : "bg-white border-zinc-100"}`}
           >
-            <div className="max-w-3xl mx-auto">
+            <div className="max-w-4xl mx-auto">
               {selectedImage && (
                 <motion.div
                   initial={{ opacity: 0, scale: 0.9, y: 10 }}
@@ -2205,7 +2205,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                 <div
                   className={`flex-1 border-2 rounded-3xl p-2 md:p-3 flex flex-col transition-all duration-500 shadow-inner relative overflow-hidden group ${
                     theme === "dark"
-                      ? "bg-[#1E1E2E] border-zinc-800/80 focus-within:border-blue-600/30 focus-within:shadow-[0_0_60px_rgba(37,99,235,0.05)]"
+                      ? "bg-[#0a0a0a] border-zinc-800/80 focus-within:border-blue-600/30 focus-within:shadow-[0_0_60px_rgba(37,99,235,0.05)]"
                       : "bg-zinc-50 border-zinc-200 focus-within:border-blue-500/20"
                   }`}
                 >
