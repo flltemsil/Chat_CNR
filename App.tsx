@@ -1781,7 +1781,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
           <div
             className={`px-6 py-6 border-b flex items-center justify-between ${theme === "dark" ? "border-zinc-800/50" : "border-zinc-100"}`}
           >
-
+            <div className="flex items-center gap-3">
               <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center shadow-lg shadow-blue-500/20">
                 <Sparkles size={16} className="text-white" />
               </div>
@@ -1819,8 +1819,6 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
           </div>
 
           <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-1.5 custom-scrollbar">
-
-          <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-1.5 custom-scrollbar">
             <AnimatePresence mode="popLayout">
               {sessions
                 .filter((s) => s && s.id)
@@ -1828,6 +1826,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                   <motion.div
                     key={session.id}
                     initial={{ opacity: 0, x: -10 }}
+
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, scale: 0.95 }}
                     transition={{

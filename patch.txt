@@ -1,0 +1,7 @@
+          <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-1.5 custom-scrollbar">
+            <AnimatePresence mode="popLayout">
+              {sessions
+                .filter((s) => s && s.id)
+                .map((session, idx) => (
+                  <motion.div
+                    key={session.id}
