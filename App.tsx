@@ -2434,8 +2434,6 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                           <button
                             onClick={async () => {
                               try {
-                                const { doc, setDoc } = await import("firebase/firestore");
-                                const { db } = await import("./firebase");
                                 await setDoc(doc(db, "users", u.uid), { isPro: true }, { merge: true });
                                 alert(`${u.name} kullanıcısı 1 aylığına PRO yapıldı!`);
                                 // Refresh allUsers list manually or wait for effect
