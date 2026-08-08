@@ -240,11 +240,23 @@ const App: React.FC = () => {
   };
 
   const handleInstallClick = async () => {
-    if (!installPrompt) return;
-    installPrompt.prompt();
-    const { outcome } = await installPrompt.userChoice;
-    if (outcome === "accepted") {
-      setIsInstallable(false);
+    if (window.self !== window.top) {
+      alert("Kurulum yapabilmek için lütfen AI Studio sağ üst menüsünden 'Open in New Tab' butonuna tıklayarak uygulamayı yeni sekmede açın.");
+      return;
+    }
+    if (!installPrompt) {
+      setInstallGuide('android');
+      return;
+    }
+    try {
+      installPrompt.prompt();
+      const { outcome } = await installPrompt.userChoice;
+      if (outcome === "accepted") {
+        setIsInstallable(false);
+      }
+    } catch (e) {
+      console.error("Install prompt error:", e);
+      setInstallGuide('android');
     }
   };
 
@@ -667,6 +679,11 @@ const App: React.FC = () => {
                   )}
                   {installGuide === 'android' && (
                     <>
+                      {window.self !== window.top && (
+                        <div className="bg-orange-500/10 border border-orange-500/20 text-orange-400 p-4 rounded-xl text-sm font-medium mb-4">
+                          ÖNEMLİ: Uygulama şu an önizleme penceresinde. Kurulum yapabilmek için önce sağ üstteki "Open in New Tab" ikonuna tıklayıp yeni sekmeye geçmelisiniz.
+                        </div>
+                      )}
                       <ol className="list-decimal pl-5 space-y-3 font-medium">
                         <li>Uygulamayı <span className="text-white font-bold">Google Chrome</span> tarayıcısında açın.</li>
                         <li>Tarayıcının sağ üst köşesindeki <span className="text-blue-400 font-bold">Üç Nokta (⋮)</span> ikonuna dokunun.</li>
@@ -677,6 +694,11 @@ const App: React.FC = () => {
                   )}
                   {installGuide === 'windows' && (
                     <>
+                      {window.self !== window.top && (
+                        <div className="bg-orange-500/10 border border-orange-500/20 text-orange-400 p-4 rounded-xl text-sm font-medium mb-4">
+                          ÖNEMLİ: Uygulama şu an önizleme penceresinde. Kurulum yapabilmek için önce sağ üstteki "Open in New Tab" ikonuna tıklayıp yeni sekmeye geçmelisiniz.
+                        </div>
+                      )}
                       <ol className="list-decimal pl-5 space-y-3 font-medium">
                         <li>Uygulamayı <span className="text-white font-bold">Google Chrome</span> veya <span className="text-white font-bold">Edge</span> tarayıcısında açın.</li>
                         <li>Tarayıcının adres çubuğunun en sağında bulunan <span className="text-blue-400 font-bold">Uygulamayı Yükle (İndirme İkonu)</span> düğmesine tıklayın.</li>
@@ -821,12 +843,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
     sources: any[];
   } | null>(null);
 
-  const [currentTime, setCurrentTime] = useState(new Date());
 
-  useEffect(() => {
-    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
-    return () => clearInterval(timer);
-  }, []);
 
   useEffect(() => {
     if (!user) return;
