@@ -484,9 +484,7 @@ const App: React.FC = () => {
                   setLoginError(null);
 
                   if (window.self !== window.top) {
-                    alert(
-                      "Google Girişi AI Studio önizlemesinde (iframe) çalışmayabilir. Lütfen sağ üstten 'Open in New Tab' iconuna tıklayın.",
-                    );
+                    setLoginError("ÖNEMLİ: AI Studio önizlemesinde (iframe) giriş sorunları yaşanabilir. Sağ üstteki 'Open in New Tab' iconuna tıklayıp yeni sekmede açmanız şiddetle önerilir.");
                   }
 
                   setIsLoginLoading(true);
@@ -500,6 +498,8 @@ const App: React.FC = () => {
                       );
                     } else if (err.code === "auth/popup-closed-by-user") {
                       setLoginError("Giriş penceresi kapatıldı.");
+                    } else if (err.code === "auth/popup-blocked") {
+                      setLoginError("Tarayıcınız giriş penceresini (popup) engelledi. Lütfen adres çubuğundaki popup engelleyici uyarıya tıklayıp izin verin veya 'Mobil Giriş' butonunu kullanın.");
                     } else {
                       setLoginError(
                         `Giriş başarısız: ${err.message || "Bilinmeyen hata"}. Lütfen uygulamayı yeni sekmede açın.`,
@@ -535,9 +535,7 @@ const App: React.FC = () => {
                   setLoginError(null);
 
                   if (window.self !== window.top) {
-                    alert(
-                      "Mobil Giriş (Redirect) AI Studio önizlemesinde çalışmaz. Lütfen sağ üstten 'Open in New Tab' iconuna tıklayın.",
-                    );
+                    setLoginError("Mobil Giriş (Redirect) AI Studio önizlemesinde çalışmaz. Lütfen sağ üstten 'Open in New Tab' iconuna tıklayarak yeni sekmede açın.");
                     return;
                   }
 
