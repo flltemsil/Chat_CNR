@@ -415,12 +415,12 @@ const App: React.FC = () => {
               <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center shadow-2xl shadow-blue-900/30">
                 <Cpu size={32} className="text-white" />
               </div>
-              <div className="flex items-baseline gap-3">
-                <h1 className="text-4xl font-black text-white tracking-tighter uppercase italic">
+              <div className="flex flex-col md:flex-row md:items-baseline gap-2 md:gap-3">
+                <h1 className="text-5xl font-black text-white tracking-tighter uppercase">
                   Chat_CNR
                 </h1>
-                <span className="text-sm font-bold text-blue-400 border border-blue-400/30 bg-blue-400/10 px-2 py-0.5 rounded-md uppercase tracking-wider">
-                  1.0 Edition
+                <span className="text-xs font-bold text-blue-400 border border-blue-400/30 bg-blue-400/10 px-3 py-1 rounded-full uppercase tracking-widest shadow-[0_0_15px_rgba(96,165,250,0.3)]">
+                  Turkey's Strongest
                 </span>
               </div>
             </div>
@@ -1825,6 +1825,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
 
           <div className="p-6">
             <button
+              id="new-chat-btn"
               onClick={createNewSession}
               className="w-full flex items-center justify-center gap-3 bg-blue-600 hover:bg-blue-500 text-white py-3 px-4 rounded-xl font-bold transition-all shadow-xl shadow-blue-500/10 active:scale-[0.98]"
             >
@@ -1997,29 +1998,32 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                   <Users size={16} />
                 </button>
               )}
-              
-              <button
-                onClick={async () => {
-                  if (activeSession) {
+              {activeSession && (
+                <button
+                  onClick={async () => {
                     try {
-                      // Add to shared_sessions
-                      await setDoc(doc(db, "shared_sessions", activeSession.id), {
-                        ...activeSession,
-                        sharedBy: user.uid,
-                        sharedAt: serverTimestamp()
-                      });
                       const shareUrl = `${window.location.origin}/?shareId=${activeSession.id}`;
                       setShareDialogUrl(shareUrl);
                     } catch (err: any) {
                       alert("Paylaşım başarısız oldu: " + err.message);
                     }
-                  }
-                }}
-                className={`p-2 rounded-lg transition-all border ${theme === "dark" ? "bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-indigo-400" : "bg-white border-zinc-200 text-zinc-500 hover:text-indigo-600"}`}
-                title="Paylaş"
-              >
-                <Share2 size={16} />
-              </button>
+                  }}
+                  className={`p-2 rounded-lg transition-all border ${theme === "dark" ? "bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-indigo-400" : "bg-white border-zinc-200 text-zinc-500 hover:text-indigo-600"}`}
+                  title="Paylaş"
+                >
+                  <Share2 size={16} />
+                </button>
+              )}
+              
+              {activeSession && (
+                <button
+                  onClick={() => setActiveSessionId(null)}
+                  className={`p-2 rounded-lg transition-all border ${theme === "dark" ? "bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-white" : "bg-white border-zinc-200 text-zinc-500 hover:text-zinc-900"}`}
+                  title="Ana Ekran / Arka Plana At"
+                >
+                  <Monitor size={16} />
+                </button>
+              )}
 
               <button
                 onClick={() => setIsAutoSpeak(!isAutoSpeak)}
@@ -2048,58 +2052,70 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                   {activeSession.messages &&
                     activeSession.messages.length === 0 && (
                       <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
                         className="h-[60vh] flex flex-col items-center justify-center text-center p-8"
                       >
-                        <div className="w-20 h-20 bg-blue-600/10 rounded-[2rem] flex items-center justify-center mb-6 shadow-[0_0_40px_rgba(37,99,235,0.1)] border border-blue-500/20">
-                          <Sparkles size={40} className="text-blue-500" />
-                        </div>
-                        <h2 className={`text-2xl font-bold mb-3 tracking-tight ${theme === "dark" ? "text-white" : "text-zinc-900"}`}>
-                          {t.systemReady}
+                        <motion.div 
+                          initial={{ rotate: -180, opacity: 0 }}
+                          animate={{ rotate: 0, opacity: 1 }}
+                          transition={{ type: "spring", duration: 1.5 }}
+                          className="w-24 h-24 bg-gradient-to-tr from-blue-600/20 to-indigo-600/20 rounded-[2rem] flex items-center justify-center mb-8 shadow-[0_0_50px_rgba(37,99,235,0.2)] border border-blue-500/30"
+                        >
+                          <Brain size={44} className="text-blue-500 animate-pulse" />
+                        </motion.div>
+                        <h2 className={`text-3xl font-black mb-4 tracking-tighter uppercase ${theme === "dark" ? "text-white" : "text-zinc-900"}`}>
+                          Bağlantı Kuruldu
                         </h2>
-                        <p className="text-zinc-500 max-w-sm text-sm leading-relaxed">
-                          {t.systemWelcome}
-                        </p>
+                        <div className="flex flex-col items-center gap-2 mb-12">
+                          <div className="flex items-center gap-2 text-xs font-mono text-emerald-500 bg-emerald-500/10 px-3 py-1.5 rounded-full border border-emerald-500/20">
+                            <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
+                            SİSTEM AKTİF VE HAZIR
+                          </div>
+                        </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-12 w-full max-w-md">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full max-w-2xl">
                           {[
                             {
-                              icon: <Cpu size={14} />,
-                              label: t.codeAnalysis,
-                              desc: t.expertLogic,
+                              icon: <Cpu size={16} />,
+                              label: "Derin Analiz",
+                              desc: "Karmaşık problemleri saniyeler içinde çözer",
                             },
                             {
-                              icon: <Mic size={14} />,
-                              label: t.voiceResponse,
-                              desc: t.ultraRealistic,
+                              icon: <Zap size={16} />,
+                              label: "Hızlı Yanıt",
+                              desc: "Düşük gecikmeli gerçek zamanlı iletişim",
                             },
                             {
-                              icon: <Shield size={14} />,
-                              label: t.secureProcess,
-                              desc: t.encrypted,
+                              icon: <Network size={16} />,
+                              label: "Kapsamlı Veri",
+                              desc: "Milyarlarca parametre ile desteklenen bilgi ağı",
                             },
                           ].map((item, i) => (
-                            <div
+                            <motion.div
                               key={i}
-                              className={`p-4 rounded-2xl border text-left transition-all hover:scale-[1.02] cursor-pointer ${theme === "dark" ? "bg-zinc-900/40 border-zinc-800 hover:border-zinc-700" : "bg-white border-zinc-200"}`}
+                              initial={{ opacity: 0, y: 20 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ delay: 0.2 + (i * 0.1) }}
+                              className={`p-5 rounded-3xl border text-left transition-all duration-300 hover:scale-105 hover:-translate-y-1 cursor-default ${theme === "dark" ? "bg-zinc-900/50 border-zinc-800 hover:border-zinc-700 hover:shadow-[0_10px_30px_rgba(0,0,0,0.5)]" : "bg-white border-zinc-200 hover:shadow-xl"}`}
                             >
-                              <div className="text-blue-500 mb-2">
+                              <div className="w-8 h-8 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-500 mb-4">
                                 {item.icon}
                               </div>
-                              <div className="font-bold text-[12px]">
+                              <div className={`font-bold text-sm uppercase tracking-wide mb-1 ${theme === "dark" ? "text-zinc-200" : "text-zinc-800"}`}>
                                 {item.label}
                               </div>
-                              <div className="text-[10px] text-zinc-500">
+                              <div className={`text-[11px] leading-relaxed ${theme === "dark" ? "text-zinc-500" : "text-zinc-500"}`}>
                                 {item.desc}
                               </div>
-                            </div>
+                            </motion.div>
                           ))}
                         </div>
                       </motion.div>
                     )}
                   <div className="space-y-2">
-                    {activeSession.messages &&
+                    <AnimatePresence mode="popLayout">
+                      {activeSession.messages &&
                       activeSession.messages.map((msg, idx) => (
                         <MessageItem
                           key={msg.id}
@@ -2109,6 +2125,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                           language={language}
                         />
                       ))}
+                    </AnimatePresence>
                   </div>
                   {streamingMessage && (
                     <MessageItem
@@ -2128,18 +2145,79 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                   )}
                 </>
               ) : (
-                <div className="h-[70vh] flex flex-col items-center justify-center text-center p-8">
-                  <div className={`w-24 h-24 rounded-[2.5rem] flex items-center justify-center mb-8 border shadow-2xl relative group overflow-hidden ${theme === "dark" ? "bg-zinc-900 border-zinc-800" : "bg-white border-zinc-200"}`}>
-                    <div className="absolute inset-0 bg-blue-600 opacity-0 group-hover:opacity-10 transition-opacity" />
-                    <MessageSquare size={44} className={theme === "dark" ? "text-zinc-700" : "text-zinc-300"} />
-                  </div>
-                  <h3 className={`text-2xl font-bold mb-3 tracking-tight uppercase ${theme === "dark" ? "text-white" : "text-zinc-900"}`}>
-                    {t.waitingConnection}
-                  </h3>
-                  <p className="text-zinc-500 max-w-xs text-sm">
-                    {t.waitingConnectionDesc}
-                  </p>
-                </div>
+                <motion.div 
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="min-h-[70vh] flex flex-col items-center justify-center p-4 md:p-8 w-full"
+                >
+                  <motion.div 
+                    initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+                    className={`w-full max-w-4xl rounded-[2.5rem] p-8 md:p-12 relative overflow-hidden border shadow-2xl ${theme === "dark" ? "bg-zinc-900/50 border-zinc-800/50" : "bg-white/50 border-zinc-200/50"}`}
+                  >
+                    <div className="absolute top-0 left-0 w-full h-full overflow-hidden z-0 opacity-20 pointer-events-none">
+                      <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-blue-500 rounded-full mix-blend-screen filter blur-[100px] animate-pulse"></div>
+                      <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-emerald-500 rounded-full mix-blend-screen filter blur-[100px] animate-pulse" style={{ animationDelay: '2s' }}></div>
+                    </div>
+
+                    <div className="relative z-10 flex flex-col items-center text-center">
+                      <motion.div 
+                        initial={{ rotate: -180, opacity: 0 }}
+                        animate={{ rotate: 0, opacity: 1 }}
+                        transition={{ duration: 1, type: "spring" }}
+                        className="w-24 h-24 rounded-3xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center mb-8 shadow-[0_0_60px_rgba(37,99,235,0.4)]"
+                      >
+                        <Brain size={44} className="text-white" />
+                      </motion.div>
+                      
+                      <h2 className={`text-4xl md:text-5xl font-black mb-4 tracking-tighter uppercase bg-clip-text text-transparent bg-gradient-to-r ${theme === "dark" ? "from-white to-zinc-500" : "from-zinc-900 to-zinc-500"}`}>
+                        Chat_CNR CORE
+                      </h2>
+                      <p className={`text-lg md:text-xl max-w-2xl font-medium tracking-tight mb-12 ${theme === "dark" ? "text-blue-400" : "text-blue-600"}`}>
+                        TÜRKİYE'NİN EN GÜÇLÜ YAPAY ZEKASI
+                      </p>
+
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full">
+                        {[
+                          { icon: <Zap size={20} />, label: "İşlem Gücü", value: "Sınır Tanımaz" },
+                          { icon: <Network size={20} />, label: "Ağ Gecikmesi", value: "< 12ms" },
+                          { icon: <Shield size={20} />, label: "Güvenlik", value: "Kuantum Düzeyi" }
+                        ].map((stat, idx) => (
+                          <motion.div 
+                            key={idx}
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.2 + (idx * 0.1) }}
+                            className={`flex flex-col items-center justify-center p-6 rounded-2xl border backdrop-blur-sm transition-all hover:scale-105 cursor-default ${theme === "dark" ? "bg-zinc-950/50 border-zinc-800" : "bg-white/80 border-zinc-200"}`}
+                          >
+                            <div className="text-blue-500 mb-3">
+                              {stat.icon}
+                            </div>
+                            <div className={`text-sm font-semibold tracking-wider uppercase mb-1 ${theme === "dark" ? "text-zinc-400" : "text-zinc-500"}`}>
+                              {stat.label}
+                            </div>
+                            <div className={`text-xl font-bold tracking-tight ${theme === "dark" ? "text-white" : "text-zinc-900"}`}>
+                              {stat.value}
+                            </div>
+                          </motion.div>
+                        ))}
+                      </div>
+                      
+                      <div className="mt-12">
+                        <button 
+                          onClick={() => {
+                            const newBtn = document.getElementById('new-chat-btn');
+                            if(newBtn) newBtn.click();
+                          }}
+                          className="px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-full font-bold tracking-widest uppercase text-sm shadow-[0_0_30px_rgba(37,99,235,0.3)] transition-all hover:scale-105 active:scale-95"
+                        >
+                          Sistemi Başlat
+                        </button>
+                      </div>
+                    </div>
+                  </motion.div>
+                </motion.div>
               )}
               {isLoading && (
                 <div className="flex gap-4 animate-pulse px-2">

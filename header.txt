@@ -1,0 +1,76 @@
+            <div className="flex items-center gap-1.5 relative z-50">
+              {user?.role === 'admin' && (
+                <button
+                  onClick={() => setIsAdminPanelOpen(true)}
+                  className={`p-2 rounded-lg transition-all border ${theme === "dark" ? "bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-white" : "bg-white border-zinc-200 text-zinc-500 hover:text-zinc-900"}`}
+                  title={t.userList || "Kişiler"}
+                >
+                  <Users size={16} />
+                </button>
+                      const shareUrl = `${window.location.origin}/?shareId=${activeSession.id}`;
+                      setShareDialogUrl(shareUrl);
+                    } catch (err: any) {
+                      alert("Paylaşım başarısız oldu: " + err.message);
+                    }
+                  }
+                }}
+                className={`p-2 rounded-lg transition-all border ${theme === "dark" ? "bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-indigo-400" : "bg-white border-zinc-200 text-zinc-500 hover:text-indigo-600"}`}
+                title="Paylaş"
+              >
+                <Share2 size={16} />
+              </button>
+              
+              {activeSession && (
+                <button
+                  onClick={() => setActiveSessionId(null)}
+                  className={`p-2 rounded-lg transition-all border ${theme === "dark" ? "bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-white" : "bg-white border-zinc-200 text-zinc-500 hover:text-zinc-900"}`}
+                  title="Ana Ekran / Arka Plana At"
+                >
+                  <Cpu size={16} />
+                </button>
+              )}
+
+              <button
+                onClick={() => setIsAutoSpeak(!isAutoSpeak)}
+                className={`p-2 rounded-lg transition-all border ${isAutoSpeak ? "bg-blue-600 border-blue-500 text-white" : theme === "dark" ? "bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-white" : "bg-white border-zinc-200 text-zinc-500 hover:text-zinc-900"}`}
+                title={isAutoSpeak ? t.voiceResponseOn : t.voiceResponseOff}
+              >
+                {isAutoSpeak ? <Volume2 size={16} /> : <VolumeX size={16} />}
+              </button>
+              <button
+                onClick={() => setIsSettingsOpen(true)}
+                className={`p-2 rounded-lg transition-all border ${theme === "dark" ? "bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-white" : "bg-white border-zinc-200 text-zinc-500 hover:text-zinc-900"}`}
+                title={t.settings}
+              >
+                <Settings size={16} />
+              </button>
+            </div>
+          </header>
+
+          {/* Messages Area */}
+          <main
+            className={`flex-1 overflow-y-auto custom-scrollbar relative z-10 px-4 md:px-8 py-8 space-y-8 bg-transparent`}
+          >
+            <div className="max-w-4xl mx-auto w-full">
+              {activeSession ? (t-zinc-500 hover:text-zinc-900"}`}
+                title={t.settings}
+              >
+                <Settings size={16} />
+              </button>
+            </div>
+          </header>
+
+          {/* Messages Area */}
+          <main
+            className={`flex-1 overflow-y-auto custom-scrollbar relative z-10 px-4 md:px-8 py-8 space-y-8 bg-transparent`}
+          >
+            <div className="max-w-4xl mx-auto w-full">
+              {activeSession ? (
+                <>
+                  {activeSession.messages &&
+                    activeSession.messages.length === 0 && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="h-[60vh] flex flex-col items-center justify-center text-center p-8"
+                      >

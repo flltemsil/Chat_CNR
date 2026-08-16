@@ -8,7 +8,7 @@ const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 console.log("Firebase Auth initialized");
 export const db = initializeFirestore(app, {
-  experimentalForceLongPolling: true
+  experimentalAutoDetectLongPolling: true
 }, firebaseConfig.firestoreDatabaseId);
 export const googleProvider = new GoogleAuthProvider();
 
