@@ -42,7 +42,7 @@ import {
   Microscope,
   Sun,
   Moon,
-  Monitor,
+  Monitor, AlertTriangle,
   Network,
   Bell,
   Share2,
@@ -416,17 +416,17 @@ const App: React.FC = () => {
                 <Cpu size={32} className="text-white" />
               </div>
               <div className="flex flex-col md:flex-row md:items-baseline gap-2 md:gap-3">
-                <h1 className="text-5xl font-black text-white tracking-tighter uppercase">
+                <h1 className="text-4xl font-black text-white tracking-tighter uppercase italic">
                   Chat_CNR
                 </h1>
-                <span className="text-xs font-bold text-blue-400 border border-blue-400/30 bg-blue-400/10 px-3 py-1 rounded-full uppercase tracking-widest shadow-[0_0_15px_rgba(96,165,250,0.3)]">
-                  Turkey's Strongest
+                <span className="text-[10px] font-bold text-blue-400 border border-blue-400/30 bg-blue-400/10 px-2 py-0.5 rounded-md uppercase tracking-wider shadow-[0_0_15px_rgba(96,165,250,0.3)]">
+                  TURKEY'S STRONGEST
                 </span>
               </div>
             </div>
 
             <div className="space-y-4">
-              <h2 className="text-5xl md:text-6xl font-black text-white leading-[1.1] tracking-tight">
+              <h2 className="text-4xl md:text-5xl font-black text-white leading-[1.1] tracking-tight">
                 Yapay Zekanın{" "}
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-400">
                   Yeni Nesli
@@ -1407,7 +1407,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
     overrideInput?: string,
   ) => {
     if (e) e.preventDefault();
-    if (!activeSession || !activeSession.messages) return;
+    
     if (!checkLimit("messages")) return;
     const text = overrideInput || input;
     if (!text.trim() && !selectedImage) return;
@@ -1421,11 +1421,44 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
       timestamp: new Date(),
     };
 
-    const updatedMessages = [...(activeSession?.messages || []), userMsg];
+    
+    let targetSessionId = activeSessionId;
+    let currentSessions = sessions;
+
+    if (!activeSession) {
+      targetSessionId = Date.now().toString();
+      const newSessionInfo = {
+        id: targetSessionId,
+        userId: user ? user.uid : "anonymous",
+        title: text.trim().substring(0, 30) || "Yeni Sohbet",
+        createdAt: Timestamp.now(),
+        updatedAt: Timestamp.now(),
+      };
+      
+      const newLocalSession = {
+        id: targetSessionId,
+        title: newSessionInfo.title,
+        updatedAt: new Date(),
+        messages: [],
+      };
+      
+      currentSessions = [newLocalSession, ...sessions];
+      setSessions(currentSessions);
+      setActiveSessionId(targetSessionId);
+      
+      try {
+        setDoc(doc(db, "sessions", targetSessionId), newSessionInfo);
+      } catch (err) {}
+    }
+
+    const activeLocalSession = currentSessions.find((s) => s.id === targetSessionId);
+    if (!activeLocalSession) return;
+
+    const updatedMessages = [...(activeLocalSession.messages || []), userMsg];
 
     setSessions((prev) =>
       prev.map((s) =>
-        s.id === activeSessionId
+        s.id === targetSessionId
           ? {
               ...s,
               messages: updatedMessages,
@@ -2015,15 +2048,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                 </button>
               )}
               
-              {activeSession && (
-                <button
-                  onClick={() => setActiveSessionId(null)}
-                  className={`p-2 rounded-lg transition-all border ${theme === "dark" ? "bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-white" : "bg-white border-zinc-200 text-zinc-500 hover:text-zinc-900"}`}
-                  title="Ana Ekran / Arka Plana At"
-                >
-                  <Monitor size={16} />
-                </button>
-              )}
+              
 
               <button
                 onClick={() => setIsAutoSpeak(!isAutoSpeak)}
@@ -2047,104 +2072,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
             className={`flex-1 overflow-y-auto custom-scrollbar relative z-10 px-4 md:px-8 py-8 space-y-8 bg-transparent`}
           >
             <div className="max-w-4xl mx-auto w-full">
-              {activeSession ? (
-                <>
-                  {activeSession.messages &&
-                    activeSession.messages.length === 0 && (
-                      <motion.div
-                        initial={{ opacity: 0, scale: 0.95 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        className="h-[60vh] flex flex-col items-center justify-center text-center p-8"
-                      >
-                        <motion.div 
-                          initial={{ rotate: -180, opacity: 0 }}
-                          animate={{ rotate: 0, opacity: 1 }}
-                          transition={{ type: "spring", duration: 1.5 }}
-                          className="w-24 h-24 bg-gradient-to-tr from-blue-600/20 to-indigo-600/20 rounded-[2rem] flex items-center justify-center mb-8 shadow-[0_0_50px_rgba(37,99,235,0.2)] border border-blue-500/30"
-                        >
-                          <Brain size={44} className="text-blue-500 animate-pulse" />
-                        </motion.div>
-                        <h2 className={`text-3xl font-black mb-4 tracking-tighter uppercase ${theme === "dark" ? "text-white" : "text-zinc-900"}`}>
-                          Bağlantı Kuruldu
-                        </h2>
-                        <div className="flex flex-col items-center gap-2 mb-12">
-                          <div className="flex items-center gap-2 text-xs font-mono text-emerald-500 bg-emerald-500/10 px-3 py-1.5 rounded-full border border-emerald-500/20">
-                            <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
-                            SİSTEM AKTİF VE HAZIR
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full max-w-2xl">
-                          {[
-                            {
-                              icon: <Cpu size={16} />,
-                              label: "Derin Analiz",
-                              desc: "Karmaşık problemleri saniyeler içinde çözer",
-                            },
-                            {
-                              icon: <Zap size={16} />,
-                              label: "Hızlı Yanıt",
-                              desc: "Düşük gecikmeli gerçek zamanlı iletişim",
-                            },
-                            {
-                              icon: <Network size={16} />,
-                              label: "Kapsamlı Veri",
-                              desc: "Milyarlarca parametre ile desteklenen bilgi ağı",
-                            },
-                          ].map((item, i) => (
-                            <motion.div
-                              key={i}
-                              initial={{ opacity: 0, y: 20 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              transition={{ delay: 0.2 + (i * 0.1) }}
-                              className={`p-5 rounded-3xl border text-left transition-all duration-300 hover:scale-105 hover:-translate-y-1 cursor-default ${theme === "dark" ? "bg-zinc-900/50 border-zinc-800 hover:border-zinc-700 hover:shadow-[0_10px_30px_rgba(0,0,0,0.5)]" : "bg-white border-zinc-200 hover:shadow-xl"}`}
-                            >
-                              <div className="w-8 h-8 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-500 mb-4">
-                                {item.icon}
-                              </div>
-                              <div className={`font-bold text-sm uppercase tracking-wide mb-1 ${theme === "dark" ? "text-zinc-200" : "text-zinc-800"}`}>
-                                {item.label}
-                              </div>
-                              <div className={`text-[11px] leading-relaxed ${theme === "dark" ? "text-zinc-500" : "text-zinc-500"}`}>
-                                {item.desc}
-                              </div>
-                            </motion.div>
-                          ))}
-                        </div>
-                      </motion.div>
-                    )}
-                  <div className="space-y-2">
-                    <AnimatePresence mode="popLayout">
-                      {activeSession.messages &&
-                      activeSession.messages.map((msg, idx) => (
-                        <MessageItem
-                          key={msg.id}
-                          message={msg}
-                          themeColor="blue"
-                          appearance={theme}
-                          language={language}
-                        />
-                      ))}
-                    </AnimatePresence>
-                  </div>
-                  {streamingMessage && (
-                    <MessageItem
-                      key={streamingMessage.id}
-                      message={{
-                        id: streamingMessage.id,
-                        role: "model",
-                        text: streamingMessage.text,
-                        sources: streamingMessage.sources,
-                        timestamp: new Date(),
-                      }}
-                      themeColor="blue"
-                      appearance={theme}
-                      isStreaming={true}
-                      language={language}
-                    />
-                  )}
-                </>
-              ) : (
+              {(!activeSession || (activeSession.messages && activeSession.messages.length === 0)) && (
                 <motion.div 
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
@@ -2160,21 +2088,20 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                       <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-blue-500 rounded-full mix-blend-screen filter blur-[100px] animate-pulse"></div>
                       <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-emerald-500 rounded-full mix-blend-screen filter blur-[100px] animate-pulse" style={{ animationDelay: '2s' }}></div>
                     </div>
-
                     <div className="relative z-10 flex flex-col items-center text-center">
                       <motion.div 
                         initial={{ rotate: -180, opacity: 0 }}
                         animate={{ rotate: 0, opacity: 1 }}
                         transition={{ duration: 1, type: "spring" }}
-                        className="w-24 h-24 rounded-3xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center mb-8 shadow-[0_0_60px_rgba(37,99,235,0.4)]"
+                        className="w-20 h-20 rounded-3xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center mb-6 shadow-[0_0_60px_rgba(37,99,235,0.4)]"
                       >
-                        <Brain size={44} className="text-white" />
+                        <Brain size={36} className="text-white" />
                       </motion.div>
                       
-                      <h2 className={`text-4xl md:text-5xl font-black mb-4 tracking-tighter uppercase bg-clip-text text-transparent bg-gradient-to-r ${theme === "dark" ? "from-white to-zinc-500" : "from-zinc-900 to-zinc-500"}`}>
+                      <h2 className={`text-3xl md:text-4xl font-black mb-3 tracking-tighter uppercase bg-clip-text text-transparent bg-gradient-to-r ${theme === "dark" ? "from-white to-zinc-500" : "from-zinc-900 to-zinc-500"}`}>
                         Chat_CNR CORE
                       </h2>
-                      <p className={`text-lg md:text-xl max-w-2xl font-medium tracking-tight mb-12 ${theme === "dark" ? "text-blue-400" : "text-blue-600"}`}>
+                      <p className={`text-sm md:text-base max-w-xl font-medium tracking-wide mb-10 ${theme === "dark" ? "text-blue-400" : "text-blue-600"}`}>
                         TÜRKİYE'NİN EN GÜÇLÜ YAPAY ZEKASI
                       </p>
 
@@ -2204,49 +2131,61 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                         ))}
                       </div>
                       
-                      <div className="mt-12">
-                        <button 
-                          onClick={() => {
-                            const newBtn = document.getElementById('new-chat-btn');
-                            if(newBtn) newBtn.click();
-                          }}
-                          className="px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-full font-bold tracking-widest uppercase text-sm shadow-[0_0_30px_rgba(37,99,235,0.3)] transition-all hover:scale-105 active:scale-95"
-                        >
-                          Sistemi Başlat
-                        </button>
+                      <div className="mt-8 flex items-center gap-3">
+                        <div className="px-5 py-2.5 bg-blue-600 text-white font-bold rounded-xl shadow-[0_0_20px_rgba(37,99,235,0.3)] text-xs uppercase tracking-widest flex items-center gap-2">
+                          <div className="w-2 h-2 rounded-full bg-white animate-pulse"></div>
+                          Sistem Aktif
+                        </div>
+                        <div className="text-xs font-medium text-zinc-500 uppercase tracking-wider">
+                          Sohbete başlamak için aşağıya yazın
+                        </div>
                       </div>
                     </div>
                   </motion.div>
                 </motion.div>
               )}
-              {isLoading && (
-                <div className="flex gap-4 animate-pulse px-2">
-                  <div
-                    className={`w-9 h-9 rounded-xl flex-shrink-0 ${theme === "dark" ? "bg-zinc-900 border border-zinc-800" : "bg-zinc-200"}`}
-                  />
-                  <div className="space-y-3 flex-1 pt-2">
-                    <div
-                      className={`h-3 rounded-full w-1/4 ${theme === "dark" ? "bg-zinc-900" : "bg-zinc-200"}`}
-                    />
-                    <div
-                      className={`h-3 rounded-full w-3/4 ${theme === "dark" ? "bg-zinc-900" : "bg-zinc-200"}`}
-                    />
-                    <div
-                      className={`h-3 rounded-full w-1/2 ${theme === "dark" ? "bg-zinc-800" : "bg-zinc-100"}`}
-                    />
-                  </div>
+
+              {activeSession && activeSession.messages && activeSession.messages.length > 0 && (
+                <div className="space-y-2">
+                  <AnimatePresence mode="popLayout">
+                    {activeSession.messages.map((msg, idx) => (
+                      <MessageItem
+                        key={msg.id}
+                        message={msg}
+                        themeColor="blue"
+                        appearance={theme}
+                        language={language}
+                      />
+                    ))}
+                  </AnimatePresence>
                 </div>
               )}
+
+              {streamingMessage && (
+                <MessageItem
+                  key={streamingMessage.id}
+                  message={{
+                    id: streamingMessage.id,
+                    role: "model",
+                    text: streamingMessage.text,
+                    sources: streamingMessage.sources,
+                    timestamp: new Date(),
+                  }}
+                  themeColor="blue"
+                  appearance={theme}
+                  isStreaming={true}
+                  language={language}
+                />
+              )}
+
               {error && (
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="bg-red-500/5 border border-red-500/20 text-red-400 p-6 rounded-[2rem] text-sm flex flex-col gap-4 shadow-xl"
+                  className={`mt-6 p-4 rounded-2xl flex flex-col items-center gap-4 border ${theme === "dark" ? "bg-red-500/5 border-red-500/20 text-red-400" : "bg-red-50 border-red-200 text-red-600"}`}
                 >
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 bg-red-500/20 rounded-full flex items-center justify-center">
-                      <X size={20} />
-                    </div>
+                  <div className="flex items-center gap-3 text-sm font-medium w-full">
+                    <AlertTriangle size={20} className="shrink-0" />
                     <div className="flex-1">
                       <p className="font-bold uppercase tracking-widest text-[10px] mb-1">
                         {t.errorNotification}
@@ -2305,7 +2244,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                   <div className="flex items-end gap-2 px-1">
                     <textarea
                       value={input}
-                      disabled={!activeSession}
+                      
                       onChange={(e) => setInput(e.target.value)}
                       placeholder={
                         activeSession ? t.inputPlaceholder : t.noSession
@@ -2328,7 +2267,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                     <div className="flex items-center gap-1">
                       <button
                         type="button"
-                        disabled={!activeSession}
+                        
                         onClick={() => setIsDeepMode(!isDeepMode)}
                         className={`p-2 rounded-xl transition-all disabled:opacity-30 flex items-center gap-2 group relative ${
                           isDeepMode
@@ -2346,7 +2285,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                       </button>
                       <button
                         type="button"
-                        disabled={!activeSession}
+                        
                         onClick={() => setIsCameraOpen(true)}
                         className={`p-2 rounded-xl transition-all disabled:opacity-30 ${theme === "dark" ? "text-zinc-500 hover:text-white hover:bg-zinc-800/50" : "text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100"}`}
                         title="Fotoğraf Çek"
@@ -2355,7 +2294,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                       </button>
                       <button
                         type="button"
-                        disabled={!activeSession}
+                        
                         onClick={() => fileInputRef.current?.click()}
                         className={`p-2 rounded-xl transition-all disabled:opacity-30 ${theme === "dark" ? "text-zinc-500 hover:text-white hover:bg-zinc-800/50" : "text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100"}`}
                         title="Görsel Yükle"
@@ -2374,7 +2313,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                     <div className="flex items-center gap-1">
                       <button
                         type="button"
-                        disabled={!activeSession}
+                        
                         onClick={toggleRecording}
                         className={`p-2 rounded-xl transition-all disabled:opacity-30 ${
                           isRecording
