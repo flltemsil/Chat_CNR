@@ -28,6 +28,7 @@ export interface ChatSession {
 }
 
 export interface UserProfile {
+  photoUrl?: string;
   uid: string;
   name: string;
   email: string;

@@ -49,7 +49,10 @@ import {
   Zap,
   Search,
   Mail,
-} from "lucide-react";
+  Compass,
+  Lightbulb,
+  PenTool,
+  Code, Activity} from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import {
   auth,
@@ -345,7 +348,7 @@ const App: React.FC = () => {
 
   if (isAuthLoading) {
     return (
-      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
+      <div className="min-h-screen bg-[#131314] flex items-center justify-center">
         <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
       </div>
     );
@@ -353,7 +356,7 @@ const App: React.FC = () => {
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center h-screen bg-[#0a0a0a] text-white p-6 text-center">
+      <div className="flex flex-col items-center justify-center h-screen bg-[#131314] text-white p-6 text-center">
         <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mb-6">
           <X size={32} className="text-red-500" />
         </div>
@@ -398,7 +401,7 @@ const App: React.FC = () => {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-[#0a0a0a] flex flex-col items-center justify-center p-4 font-['Inter'] relative overflow-y-auto custom-scrollbar">
+      <div className="min-h-screen bg-[#131314] flex flex-col items-center justify-center p-4 font-['Inter'] relative overflow-y-auto custom-scrollbar">
         {/* Background Decorative Elements */}
         <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-600/10 blur-[120px] rounded-full pointer-events-none" />
         <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-purple-600/10 blur-[120px] rounded-full pointer-events-none" />
@@ -500,6 +503,8 @@ const App: React.FC = () => {
                       setLoginError("Giriş penceresi kapatıldı.");
                     } else if (err.code === "auth/popup-blocked") {
                       setLoginError("Tarayıcınız giriş penceresini (popup) engelledi. Lütfen adres çubuğundaki popup engelleyici uyarıya tıklayıp izin verin veya 'Mobil Giriş' butonunu kullanın.");
+                    } else if (err.code === "auth/network-request-failed") {
+                      setLoginError("Bağlantı hatası veya güvenlik kısıtlaması (Iframe kaynaklı olabilir). Lütfen sağ üstteki 'Open in New Tab' simgesine tıklayarak uygulamayı YENİ SEKMEDE açıp tekrar deneyin.");
                     } else {
                       setLoginError(
                         `Giriş başarısız: ${err.message || "Bilinmeyen hata"}. Lütfen uygulamayı yeni sekmede açın.`,
@@ -562,7 +567,7 @@ const App: React.FC = () => {
                 <div className="w-full border-t border-zinc-800"></div>
               </div>
               <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-[#0a0a0a] px-4 text-zinc-600 font-bold tracking-widest leading-none">
+                <span className="bg-[#131314] px-4 text-zinc-600 font-bold tracking-widest leading-none">
                   Uygulama Olarak İndir
                 </span>
               </div>
@@ -761,6 +766,16 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
     }
   });
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  
+  // NEW FEATURES STATES
+  const [selectedModel, setSelectedModel] = useState<"gemini-1.5-flash" | "gemini-1.5-pro">("gemini-1.5-flash");
+  const [isModelDropdownOpen, setIsModelDropdownOpen] = useState(false);
+  const [isSearchActive, setIsSearchActive] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [imageFilter, setImageFilter] = useState(false);
+  const [isActivityOpen, setIsActivityOpen] = useState(false);
+  const [isLibraryOpen, setIsLibraryOpen] = useState(false);
+
   const [themeMode, setThemeMode] = useState<"auto" | "light" | "dark">(() => {
     try {
       return (
@@ -1540,10 +1555,10 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
       let finalGrounded = false;
       let finalImageUrl: string | undefined = undefined;
 
-      const stream = chatCNRService.sendMessageStream(
+            const stream = chatCNRService.sendMessageStream(
         userMsg.text,
         activeSession?.messages || [],
-        userMsg.imageUrl,
+        selectedImage,
         user.name,
         user.email,
         isChatMode,
@@ -1551,6 +1566,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
         user,
         language,
         isDeepMode,
+        'gemini-2.5-flash'
       );
 
       // Show streaming message locally only
@@ -1819,58 +1835,109 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
 
   return (
     <div
-      className={`flex h-[100dvh] overflow-hidden font-['Inter'] transition-all duration-700 ${theme === "dark" ? "bg-[#0a0a0a] text-zinc-100" : "bg-zinc-50 text-zinc-900"} ${edgeGlow ? "shadow-[inset_0_0_100px_rgba(245,158,11,0.5)] border-4 border-amber-500/50 box-border" : ""}`}
+      className={`flex h-[100dvh] overflow-hidden font-['Inter'] transition-all duration-700 ${theme === "dark" ? "bg-[#131314] text-zinc-100" : "bg-zinc-50 text-zinc-900"} `}
     >
       {/* Sidebar */}
-      <aside
-        className={`fixed inset-y-0 left-0 z-[60] w-72 border-r transition-all duration-500 ease-[0.23, 1, 0.32, 1] lg:relative lg:translate-x-0 ${isSidebarOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full"} ${theme === "dark" ? "bg-[#050505] border-zinc-800/80 shadow-[10px_0_40px_rgba(0,0,0,0.4)]" : "bg-white border-zinc-200"}`}
-      >
+      <aside className={`fixed inset-y-0 left-0 z-[60] w-[280px] transition-all duration-500 ease-[0.23, 1, 0.32, 1] lg:relative lg:translate-x-0 ${isSidebarOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full"} ${theme === "dark" ? "bg-[#1e1f20]" : "bg-[#f0f4f9]"}`}>
         <div className="flex flex-col h-full overflow-hidden">
-          <div
-            className={`px-6 py-6 border-b flex items-center justify-between ${theme === "dark" ? "border-zinc-800/50" : "border-zinc-100"}`}
-          >
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center shadow-lg shadow-blue-500/20">
-                <Sparkles size={16} className="text-white" />
-              </div>
-              <span className="font-bold text-[13px] uppercase tracking-[0.2em] flex items-center gap-1">
-                ChatCNR
-                {user?.isPro && (
-                  <motion.span
-                    initial={{ opacity: 0, scale: 0.8 }}
-                    animate={{ opacity: 1, scale: 1, backgroundPosition: ["0% 50%", "100% 50%", "0% 50%"] }}
-                    transition={{ backgroundPosition: { duration: 3, repeat: Infinity, ease: "linear" } }}
-                    style={{ backgroundSize: "200% auto" }}
-                    className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-orange-500 to-amber-400 ml-1 drop-shadow-sm font-black"
-                  >
-                    PRO
-                  </motion.span>
-                )}
-              </span>
+          <div className={`px-4 py-4 flex items-center justify-between`}>
+            <div className="flex items-center gap-2 px-2">
+              <Sparkles size={22} className={theme === "dark" ? "text-blue-400" : "text-blue-600"} />
+              <span className={`text-[16px] font-medium ${theme === "dark" ? "text-zinc-200" : "text-zinc-800"}`}>Chat_CNR</span>
             </div>
             <button
               onClick={() => setIsSidebarOpen(false)}
-              className={`lg:hidden p-2 rounded-lg transition-colors ${theme === "dark" ? "text-zinc-500 hover:bg-zinc-800 hover:text-white" : "text-zinc-500 hover:bg-zinc-100"}`}
+              className={`p-2 rounded-full transition-colors ${theme === "dark" ? "text-zinc-400 hover:bg-[#2a2b2f]" : "text-zinc-600 hover:bg-[#e1e5ea]"}`}
             >
-              <X size={18} />
+              <Menu size={20} />
             </button>
           </div>
 
-          <div className="p-6">
+          <div className="pt-2">
             <button
               id="new-chat-btn"
               onClick={createNewSession}
-              className="w-full flex items-center justify-center gap-3 bg-blue-600 hover:bg-blue-500 text-white py-3 px-4 rounded-xl font-bold transition-all shadow-xl shadow-blue-500/10 active:scale-[0.98]"
+              className={`w-[140px] flex items-center gap-3 py-2 px-4 rounded-full font-medium transition-all ${theme === "dark" ? "bg-[#131314] hover:bg-[#333537] text-zinc-300" : "bg-white hover:bg-zinc-100 text-zinc-700"} mx-2 mb-4`}
             >
-              <Plus size={18} />
-              <span className="text-sm">{t.newChat}</span>
+              <Plus size={18} className="opacity-70" />
+              <span className="text-[14px]">Yeni sohbet</span>
             </button>
           </div>
 
-          <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-1.5 custom-scrollbar">
+          <div className="flex-1 overflow-y-auto px-2 pb-4 custom-scrollbar">
+            
+            {/* Top static links matching image */}
+            <div className="mb-4 space-y-[2px]">
+              <div className="w-full">
+                {isSearchActive ? (
+                  <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full ${theme === "dark" ? "bg-[#333537]" : "bg-[#e1e5ea]"}`}>
+                    <Search size={16} className="opacity-50" />
+                    <input 
+                      autoFocus
+                      type="text" 
+                      placeholder="Ara..." 
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="bg-transparent border-none outline-none text-[13px] w-full"
+                    />
+                    <button onClick={() => { setIsSearchActive(false); setSearchQuery(""); }}><X size={14} className="opacity-50 hover:opacity-100"/></button>
+                  </div>
+                ) : (
+                  <button onClick={() => setIsSearchActive(true)} className={`w-full flex items-center gap-3 py-2 px-3 rounded-full text-[14px] transition-colors ${theme === "dark" ? "text-zinc-300 hover:bg-[#333537]" : "text-zinc-700 hover:bg-[#e1e5ea]"}`}>
+                    <Search size={18} className="opacity-70" />
+                    Sohbetlerde arama yapın
+                  </button>
+                )}
+              </div>
+              <button onClick={() => setImageFilter(!imageFilter)} className={`w-full flex items-center gap-3 py-2 px-3 rounded-full text-[14px] transition-colors ${imageFilter ? (theme === "dark" ? "bg-blue-900/30 text-blue-400" : "bg-blue-50 text-blue-600") : (theme === "dark" ? "text-zinc-300 hover:bg-[#333537]" : "text-zinc-700 hover:bg-[#e1e5ea]")}`}>
+                <ImageIcon size={18} className="opacity-70" />
+                Resimler {imageFilter && <span className="ml-auto text-[10px] bg-blue-500/20 px-1.5 rounded-full">Filtre Aktif</span>}
+              </button>
+              <button onClick={() => setIsLibraryOpen(true)} className={`w-full flex items-center gap-3 py-2 px-3 rounded-full text-[14px] transition-colors ${theme === "dark" ? "text-zinc-300 hover:bg-[#333537]" : "text-zinc-700 hover:bg-[#e1e5ea]"}`}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="opacity-70"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
+                Kitaplık
+              </button>
+            </div>
+
+            {/* Note books section */}
+            <div className="mb-4">
+               <div className={`px-4 text-[12px] font-medium mb-1 ${theme === "dark" ? "text-zinc-400" : "text-zinc-500"}`}>Not defterleri</div>
+               <button onClick={async () => {
+                 try {
+                  // Create a mock new session for notebook
+                  const newId = Date.now().toString();
+                  const newSession = {
+                    id: newId,
+                    userId: user.uid,
+                    title: "📓 Not Defteri",
+                    messages: [],
+                    createdAt: new Date(),
+                    updatedAt: new Date(),
+                  };
+                  setSessions([newSession, ...sessions]);
+                  setActiveSessionId(newId);
+                  if (window.innerWidth < 1024) setIsSidebarOpen(false);
+                 } catch (e) {
+                  console.error(e);
+                 }
+               }} className={`w-full flex items-center gap-3 py-2 px-3 rounded-full text-[14px] transition-colors ${theme === "dark" ? "text-zinc-300 hover:bg-[#333537]" : "text-zinc-700 hover:bg-[#e1e5ea]"}`}>
+                <Plus size={18} className="opacity-70" />
+                Yeni not defteri
+              </button>
+            </div>
+
+            {/* Sessions Header */}
+            <div className={`px-4 flex items-center gap-1 text-[12px] font-medium mb-1 ${theme === "dark" ? "text-zinc-400" : "text-zinc-500"}`}>
+               Son Kullanılanlar 
+               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+            </div>
+            
+            <div className="space-y-[2px]">
             <AnimatePresence mode="popLayout">
               {sessions
                 .filter((s) => s && s.id)
+                .filter((s) => !searchQuery || (s.title && s.title.toLowerCase().includes(searchQuery.toLowerCase())))
+                .filter((s) => !imageFilter || (s.messages && s.messages.some(m => !!m.imageUrl)))
                 .map((session, idx) => (
                   <motion.div
                     key={session.id}
@@ -1887,95 +1954,68 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                       setActiveSessionId(session.id);
                       if (window.innerWidth < 1024) setIsSidebarOpen(false);
                     }}
-                    className={`group relative flex items-center gap-3 p-3.5 rounded-xl cursor-pointer transition-all duration-300 border ${
-                      activeSessionId === session.id
-                        ? theme === "dark"
-                          ? "bg-zinc-800/50 border-zinc-700 text-white shadow-inner"
-                          : "bg-zinc-100 border-zinc-200 text-zinc-900 shadow-inner"
-                        : theme === "dark"
-                          ? "border-transparent hover:bg-zinc-900/50 hover:border-zinc-800 text-zinc-500 hover:text-zinc-300"
-                          : "border-transparent hover:bg-zinc-50 hover:border-zinc-200 text-zinc-600"
-                    }`}
-                  >
-                    <div
-                      className={`p-1.5 rounded-lg flex-shrink-0 transition-colors ${activeSessionId === session.id ? "text-blue-500" : theme === "dark" ? "text-zinc-600 group-hover:text-zinc-400" : "text-zinc-400 group-hover:text-zinc-500"}`}
-                    >
-                      <MessageSquare size={14} />
-                    </div>
-                    <span className="flex-1 text-[13px] font-medium truncate pr-6 tracking-tight">
+                    className={`group relative flex items-center justify-between py-2 px-3 min-h-[36px] rounded-full cursor-pointer transition-colors ${activeSessionId === session.id ? (theme === "dark" ? "bg-[#333537] text-zinc-200" : "bg-[#d3e3fd] text-[#041e49]") : (theme === "dark" ? "text-zinc-300 hover:bg-[#333537]" : "text-zinc-700 hover:bg-[#e1e5ea]")}`}>
+                    <span className="flex-1 text-[13px] font-medium truncate pr-4 tracking-normal">
                       {session.title}
                     </span>
+                    <div className={`opacity-0 group-hover:opacity-100 transition-opacity mr-6 ${theme === "dark" ? "text-zinc-400" : "text-zinc-500"}`}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 17v5"/><path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 0-1-1 2 2 0 0 0-4 0a1 1 0 0 0-1 1v3.76z"/></svg>
+                    </div>
 
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
                         setDeletingSessionId(session.id);
                       }}
-                      className={`absolute right-2 p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-all ${
+                      className={`absolute right-1 p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-all ${
                         theme === "dark"
-                          ? "hover:bg-red-500/20 text-zinc-600 hover:text-red-500"
-                          : "hover:bg-red-50 text-zinc-400 hover:text-red-500"
+                          ? "hover:bg-zinc-600 text-zinc-400 hover:text-red-400"
+                          : "hover:bg-zinc-300 text-zinc-500 hover:text-red-500"
                       }`}
+                      title="Sil"
                     >
-                      <Trash2 size={12} />
+                      <Trash2 size={14} />
                     </button>
                   </motion.div>
                 ))}
-            </AnimatePresence>
-          </div>
-
-          {/* User Profile Section */}
-          <div
-            className={`p-4 border-t ${theme === "dark" ? "border-zinc-800/50 bg-[#070707]" : "border-zinc-100 bg-zinc-50/50"}`}
-          >
-            <div className="flex gap-2">
-              <button
-                onClick={() => setIsProfileOpen(true)}
-                className={`flex-1 flex items-center gap-3 p-3 text-left rounded-xl border transition-all ${theme === "dark" ? "bg-zinc-900/50 border-zinc-800 hover:border-blue-500/50 hover:bg-blue-500/5" : "bg-white border-zinc-200 hover:border-blue-500/50 hover:bg-blue-50"}`}
-              >
-                <div
-                  className={`w-9 h-9 rounded-lg flex items-center justify-center transition-all ${theme === "dark" ? "bg-zinc-800 text-blue-400 group-hover:text-blue-300" : "bg-zinc-100 text-blue-600"}`}
-                >
-                  {user.email === OWNER_EMAIL ? (
-                    <Shield size={18} />
-                  ) : (
-                    <User size={18} />
-                  )}
-                </div>
-                <div className="flex-1 overflow-hidden">
-                  <p className="text-[13px] font-bold truncate tracking-tight">
-                    {user.name}
-                  </p>
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={`text-[8px] px-1.5 py-0.5 rounded-md font-black uppercase tracking-widest ${
-                        user.email === OWNER_EMAIL
-                          ? "bg-amber-500/10 text-amber-500 border border-amber-500/20"
-                          : "bg-zinc-500/10 text-zinc-500 border border-zinc-500/20"
-                      }`}
-                    >
-                      {user.email === OWNER_EMAIL
-                        ? "SİSTEM SORUMLUSU"
-                        : "STANDART"}
-                    </span>
-                  </div>
-                </div>
-              </button>
-              <button
-                onClick={() => {
-                  alert(language === 'tr' ? 'Gösterilecek yeni bildirim yok.' : 'No new notifications.');
-                }}
-                className={`w-12 flex items-center justify-center rounded-xl border transition-all ${theme === "dark" ? "bg-zinc-900/50 border-zinc-800 hover:text-white" : "bg-white border-zinc-200 hover:bg-zinc-50"} text-zinc-500`}
-                title={language === 'tr' ? 'Bildirimler' : 'Notifications'}
-              >
-                <Bell size={18} />
+                        </AnimatePresence>
+            </div>
+            </div>
+            
+            <div className="mt-2 mb-2">
+               <button onClick={() => setIsActivityOpen(true)} className={`w-full flex items-center gap-3 py-2 px-3 rounded-full text-[14px] transition-colors ${theme === "dark" ? "text-zinc-300 hover:bg-[#333537]" : "text-zinc-700 hover:bg-[#e1e5ea]"}`}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="opacity-70"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                Etkinlik
               </button>
             </div>
+          
+          {/* User Profile Section */}
+          <div className={`px-2 pb-4`}>
+            <button
+                onClick={() => setIsProfileOpen(true)}
+                className={`w-full flex items-center justify-between py-2 px-3 rounded-full transition-all ${theme === "dark" ? "hover:bg-[#333537]" : "hover:bg-[#e1e5ea]"}`}
+              >
+                <div className="flex items-center gap-3">
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center overflow-hidden ${theme === "dark" ? "bg-blue-900/30 text-blue-400" : "bg-blue-100 text-blue-600"}`}>
+                      {user?.photoUrl ? <img src={user.photoUrl} alt="User" className="w-full h-full object-cover" /> : <User size={16} />}
+                    </div>
+                    <p className={`text-[14px] font-medium truncate ${theme === "dark" ? "text-zinc-200" : "text-zinc-800"}`}>
+                      {user?.name || "Kullanıcı"}
+                    </p>
+                </div>
+                <Settings size={18} className={`${theme === "dark" ? "text-zinc-400" : "text-zinc-500"}`} />
+            </button>
           </div>
         </div>
       </aside>
       {/* Main Content Split Container */}
-      <div className={`flex-1 flex min-w-0 relative overflow-hidden ${theme === "dark" ? "bg-[#030303]" : "bg-zinc-50"}`}>
+      <div className={`flex-1 flex min-w-0 relative overflow-hidden ${theme === "dark" ? "bg-[#000000]" : "bg-white"}`}>
+        
+        {theme === "dark" && (
+          <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden flex items-center justify-center">
+             <div className="w-[100vw] h-[100vw] max-w-[1200px] max-h-[1200px] bg-[radial-gradient(circle,_rgba(24,30,60,0.8)_0%,_rgba(0,0,0,0)_60%)] rounded-full blur-[100px] opacity-70"></div>
+          </div>
+        )}
         
         {/* Chat Area */}
         <div
@@ -1990,34 +2030,19 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
           )}
 
           {/* Header */}
-          <header
-            className={`h-16 border-b backdrop-blur-md flex items-center justify-between px-4 md:px-6 sticky top-0 z-50 ${theme === "dark" ? "border-zinc-800/50 bg-[#0a0a0a]/70" : "border-zinc-200/50 bg-white/70"}`}
-          >
+          <header className={`h-16 flex items-center justify-between px-4 sticky top-0 z-50 ${theme === "dark" ? "bg-transparent" : "bg-white"}`}>
             <div className="flex items-center gap-3 md:gap-4 overflow-hidden">
               <button
                 onClick={() => setIsSidebarOpen(true)}
-                className={`lg:hidden p-2 -ml-2 rounded-lg transition-all flex-shrink-0 ${theme === "dark" ? "text-zinc-400 hover:bg-zinc-800" : "text-zinc-500 hover:bg-zinc-100"}`}
+                className={`lg:hidden p-2 rounded-full transition-all flex-shrink-0 ${theme === "dark" ? "text-zinc-400 hover:bg-[#2a2b2f]" : "text-zinc-500 hover:bg-[#e1e5ea]"}`}
               >
-                <Menu size={18} />
+                <Menu size={20} />
               </button>
-              <div className="flex items-center gap-3 overflow-hidden">
-                <div className="hidden sm:flex w-8 h-8 bg-blue-600 rounded-lg items-center justify-center shadow-lg shadow-blue-500/10 flex-shrink-0">
-                  <MessageSquare size={16} className="text-white" />
-                </div>
-                <div className="flex flex-col min-w-0">
-                  <h1 className="font-bold text-[13px] tracking-tight truncate uppercase">
-                    {activeSession?.title ||
-                      (sessions.length > 0 ? "Loading..." : t.newChat)}
-                  </h1>
-                  <div className="flex items-center gap-2">
-                    <div className="w-1 h-1 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.6)]"></div>
-                    <span
-                      className={`text-[9px] uppercase tracking-[0.15em] font-black ${theme === "dark" ? "text-emerald-500/80" : "text-emerald-600"}`}
-                    >
-                      {t.online}
-                    </span>
-                  </div>
-                </div>
+              <div className="flex items-center gap-2">
+                <h1 className={`text-[20px] md:text-[22px] font-medium tracking-tight flex items-center gap-2 ${theme === "dark" ? "text-zinc-200" : "text-[#444746]"}`}>
+                  <span className="text-[#d96570]"><Sparkles size={24} fill="currentColor" /></span>
+                  Chat_CNR
+                </h1>
               </div>
             </div>
 
@@ -2025,7 +2050,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
               {user?.role === 'admin' && (
                 <button
                   onClick={() => setIsAdminPanelOpen(true)}
-                  className={`p-2 rounded-lg transition-all border ${theme === "dark" ? "bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-white" : "bg-white border-zinc-200 text-zinc-500 hover:text-zinc-900"}`}
+                  className={`p-2 rounded-full transition-colors ${theme === "dark" ? "text-zinc-400 hover:bg-[#2a2b2f] hover:text-zinc-200" : "text-zinc-600 hover:bg-[#e1e5ea] hover:text-zinc-900"}`}
                   title={t.userList || "Kişiler"}
                 >
                   <Users size={16} />
@@ -2041,7 +2066,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                       alert("Paylaşım başarısız oldu: " + err.message);
                     }
                   }}
-                  className={`p-2 rounded-lg transition-all border ${theme === "dark" ? "bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-indigo-400" : "bg-white border-zinc-200 text-zinc-500 hover:text-indigo-600"}`}
+                  className={`p-2 rounded-full transition-colors ${theme === "dark" ? "text-zinc-400 hover:bg-[#2a2b2f] hover:text-indigo-400" : "text-zinc-600 hover:bg-[#e1e5ea] hover:text-indigo-600"}`}
                   title="Paylaş"
                 >
                   <Share2 size={16} />
@@ -2052,14 +2077,14 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
 
               <button
                 onClick={() => setIsAutoSpeak(!isAutoSpeak)}
-                className={`p-2 rounded-lg transition-all border ${isAutoSpeak ? "bg-blue-600 border-blue-500 text-white" : theme === "dark" ? "bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-white" : "bg-white border-zinc-200 text-zinc-500 hover:text-zinc-900"}`}
+                className={`p-2 rounded-full transition-colors ${isAutoSpeak ? "bg-[#d3e3fd] text-[#041e49]" : theme === "dark" ? "text-zinc-400 hover:bg-[#2a2b2f] hover:text-zinc-200" : "text-zinc-600 hover:bg-[#e1e5ea] hover:text-zinc-900"}`}
                 title={isAutoSpeak ? t.voiceResponseOn : t.voiceResponseOff}
               >
                 {isAutoSpeak ? <Volume2 size={16} /> : <VolumeX size={16} />}
               </button>
               <button
                 onClick={() => setIsSettingsOpen(true)}
-                className={`p-2 rounded-lg transition-all border ${theme === "dark" ? "bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-white" : "bg-white border-zinc-200 text-zinc-500 hover:text-zinc-900"}`}
+                className={`p-2 rounded-full transition-colors ${theme === "dark" ? "text-zinc-400 hover:bg-[#2a2b2f] hover:text-zinc-200" : "text-zinc-600 hover:bg-[#e1e5ea] hover:text-zinc-900"}`}
                 title={t.settings}
               >
                 <Settings size={16} />
@@ -2068,80 +2093,30 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
           </header>
 
           {/* Messages Area */}
-          <main
-            className={`flex-1 overflow-y-auto custom-scrollbar relative z-10 px-4 md:px-8 py-8 space-y-8 bg-transparent`}
-          >
+          <main className={`overflow-y-auto custom-scrollbar relative z-10 px-4 md:px-8 ${(!activeSession || (activeSession.messages && activeSession.messages.length === 0)) ? "flex-1 flex flex-col justify-end pb-8" : "flex-1 py-8 space-y-8"} bg-transparent`}>
             <div className="max-w-4xl mx-auto w-full">
               {(!activeSession || (activeSession.messages && activeSession.messages.length === 0)) && (
-                <motion.div 
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="min-h-[70vh] flex flex-col items-center justify-center p-4 md:p-8 w-full"
-                >
-                  <motion.div 
-                    initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                    transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-                    className={`w-full max-w-4xl rounded-[2.5rem] p-8 md:p-12 relative overflow-hidden border shadow-2xl ${theme === "dark" ? "bg-zinc-900/50 border-zinc-800/50" : "bg-white/50 border-zinc-200/50"}`}
-                  >
-                    <div className="absolute top-0 left-0 w-full h-full overflow-hidden z-0 opacity-20 pointer-events-none">
-                      <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-blue-500 rounded-full mix-blend-screen filter blur-[100px] animate-pulse"></div>
-                      <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-emerald-500 rounded-full mix-blend-screen filter blur-[100px] animate-pulse" style={{ animationDelay: '2s' }}></div>
-                    </div>
-                    <div className="relative z-10 flex flex-col items-center text-center">
-                      <motion.div 
-                        initial={{ rotate: -180, opacity: 0 }}
-                        animate={{ rotate: 0, opacity: 1 }}
-                        transition={{ duration: 1, type: "spring" }}
-                        className="w-20 h-20 rounded-3xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center mb-6 shadow-[0_0_60px_rgba(37,99,235,0.4)]"
-                      >
-                        <Brain size={36} className="text-white" />
-                      </motion.div>
-                      
-                      <h2 className={`text-3xl md:text-4xl font-black mb-3 tracking-tighter uppercase bg-clip-text text-transparent bg-gradient-to-r ${theme === "dark" ? "from-white to-zinc-500" : "from-zinc-900 to-zinc-500"}`}>
-                        Chat_CNR CORE
-                      </h2>
-                      <p className={`text-sm md:text-base max-w-xl font-medium tracking-wide mb-10 ${theme === "dark" ? "text-blue-400" : "text-blue-600"}`}>
-                        TÜRKİYE'NİN EN GÜÇLÜ YAPAY ZEKASI
-                      </p>
-
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full">
-                        {[
-                          { icon: <Zap size={20} />, label: "İşlem Gücü", value: "Sınır Tanımaz" },
-                          { icon: <Network size={20} />, label: "Ağ Gecikmesi", value: "< 12ms" },
-                          { icon: <Shield size={20} />, label: "Güvenlik", value: "Kuantum Düzeyi" }
-                        ].map((stat, idx) => (
-                          <motion.div 
-                            key={idx}
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: 0.2 + (idx * 0.1) }}
-                            className={`flex flex-col items-center justify-center p-6 rounded-2xl border backdrop-blur-sm transition-all hover:scale-105 cursor-default ${theme === "dark" ? "bg-zinc-950/50 border-zinc-800" : "bg-white/80 border-zinc-200"}`}
-                          >
-                            <div className="text-blue-500 mb-3">
-                              {stat.icon}
-                            </div>
-                            <div className={`text-sm font-semibold tracking-wider uppercase mb-1 ${theme === "dark" ? "text-zinc-400" : "text-zinc-500"}`}>
-                              {stat.label}
-                            </div>
-                            <div className={`text-xl font-bold tracking-tight ${theme === "dark" ? "text-white" : "text-zinc-900"}`}>
-                              {stat.value}
-                            </div>
-                          </motion.div>
-                        ))}
-                      </div>
-                      
-                      <div className="mt-8 flex items-center gap-3">
-                        <div className="px-5 py-2.5 bg-blue-600 text-white font-bold rounded-xl shadow-[0_0_20px_rgba(37,99,235,0.3)] text-xs uppercase tracking-widest flex items-center gap-2">
-                          <div className="w-2 h-2 rounded-full bg-white animate-pulse"></div>
-                          Sistem Aktif
-                        </div>
-                        <div className="text-xs font-medium text-zinc-500 uppercase tracking-wider">
-                          Sohbete başlamak için aşağıya yazın
-                        </div>
-                      </div>
-                    </div>
-                  </motion.div>
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col justify-center min-h-[50vh] w-full max-w-4xl mx-auto pb-4">
+                  <div className="flex flex-col mb-12 md:mb-16 self-start w-full px-4">
+                    <motion.h1 
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.5 }}
+                      className="text-4xl md:text-5xl lg:text-[56px] font-medium tracking-tight mb-2"
+                    >
+                      <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#4285f4] via-[#9b72cb] to-[#d96570]">
+                        Merhaba{user?.name ? `, ${user.name.split(' ')[0]}` : ''}
+                      </span>
+                    </motion.h1>
+                    <motion.h2 
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.5, delay: 0.1 }}
+                      className={`text-4xl md:text-5xl lg:text-[56px] font-medium tracking-tight ${theme === "dark" ? "text-[#444746]" : "text-[#c4c7c5]"}`}
+                    >
+                      Nereden başlayalım?
+                    </motion.h2>
+                  </div>
                 </motion.div>
               )}
 
@@ -2209,9 +2184,8 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
           </main>
 
           {/* Footer */}
-          <footer
-            className={`px-4 py-4 md:p-6 pb-[calc(env(safe-area-inset-bottom,0)+16px)] border-t transition-colors duration-500 ${theme === "dark" ? "bg-[#050505]/95 backdrop-blur-2xl border-zinc-800/40 shadow-[0_-20px_50px_rgba(0,0,0,0.5)]" : "bg-white border-zinc-100"}`}
-          >
+          <footer className={`px-4 md:px-8 transition-colors duration-500 ${(!activeSession || (activeSession.messages && activeSession.messages.length === 0)) ? "pb-[20vh] border-transparent" : "py-4 md:py-6 pb-[calc(env(safe-area-inset-bottom,0)+16px)] border-t"} ${theme === "dark" ? ((!activeSession || (activeSession.messages && activeSession.messages.length === 0)) ? "bg-transparent border-transparent" : "bg-[#131314] border-zinc-800/40") : "bg-white border-zinc-100"}`}>
+
             <div className="max-w-4xl mx-auto">
               {selectedImage && (
                 <motion.div
@@ -2237,7 +2211,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                 <div
                   className={`flex-1 border-2 rounded-3xl p-2 md:p-3 flex flex-col transition-all duration-500 shadow-inner relative overflow-hidden group ${
                     theme === "dark"
-                      ? "bg-[#0a0a0a] border-zinc-800/80 focus-within:border-blue-600/30 focus-within:shadow-[0_0_60px_rgba(37,99,235,0.05)]"
+                      ? "bg-[#131314] border-zinc-800/80 focus-within:border-blue-600/30 focus-within:shadow-[0_0_60px_rgba(37,99,235,0.05)]"
                       : "bg-zinc-50 border-zinc-200 focus-within:border-blue-500/20"
                   }`}
                 >
@@ -2267,39 +2241,11 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                     <div className="flex items-center gap-1">
                       <button
                         type="button"
-                        
-                        onClick={() => setIsDeepMode(!isDeepMode)}
-                        className={`p-2 rounded-xl transition-all disabled:opacity-30 flex items-center gap-2 group relative ${
-                          isDeepMode
-                            ? "bg-purple-600/10 text-purple-500 shadow-lg shadow-purple-500/10"
-                            : theme === "dark"
-                              ? "text-zinc-500 hover:text-white hover:bg-zinc-800/50"
-                              : "text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100"
-                        }`}
-                        title={t.deepMode}
-                      >
-                        <Brain
-                          size={18}
-                          className={isDeepMode ? "animate-pulse" : ""}
-                        />
-                      </button>
-                      <button
-                        type="button"
-                        
-                        onClick={() => setIsCameraOpen(true)}
-                        className={`p-2 rounded-xl transition-all disabled:opacity-30 ${theme === "dark" ? "text-zinc-500 hover:text-white hover:bg-zinc-800/50" : "text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100"}`}
-                        title="Fotoğraf Çek"
-                      >
-                        <Camera size={18} />
-                      </button>
-                      <button
-                        type="button"
-                        
                         onClick={() => fileInputRef.current?.click()}
-                        className={`p-2 rounded-xl transition-all disabled:opacity-30 ${theme === "dark" ? "text-zinc-500 hover:text-white hover:bg-zinc-800/50" : "text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100"}`}
-                        title="Görsel Yükle"
+                        className={`w-9 h-9 rounded-full flex items-center justify-center transition-all ${theme === "dark" ? "text-zinc-400 hover:bg-[#333537] hover:text-zinc-200" : "text-zinc-500 hover:bg-[#e1e5ea] hover:text-zinc-800"}`}
+                        title="Dosya veya Görsel Ekle"
                       >
-                        <ImageIcon size={18} />
+                        <Plus size={22} strokeWidth={1.5} />
                       </button>
                       <input
                         type="file"
@@ -2308,22 +2254,69 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                         accept="image/*"
                         className="hidden"
                       />
-                    </div>
-
-                    <div className="flex items-center gap-1">
                       <button
                         type="button"
+                        onClick={() => setIsCameraOpen(true)}
+                        className={`w-9 h-9 rounded-full flex items-center justify-center transition-all ${theme === "dark" ? "text-zinc-400 hover:bg-[#333537] hover:text-zinc-200" : "text-zinc-500 hover:bg-[#e1e5ea] hover:text-zinc-800"}`}
+                        title="Kamera ile Fotoğraf Çek"
+                      >
+                        <Camera size={20} strokeWidth={1.5} />
+                      </button>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="relative">
+                        <div 
+                          onClick={() => setIsModelDropdownOpen(!isModelDropdownOpen)}
+                          className={`px-3 py-1.5 rounded-full flex items-center gap-1 cursor-pointer transition-colors ${theme === "dark" ? "hover:bg-[#333537]" : "hover:bg-[#e1e5ea]"}`}
+                        >
+                          <span className={`text-[13px] font-medium ${theme === "dark" ? "text-zinc-300" : "text-zinc-700"}`}>
+                            {selectedModel === "gemini-1.5-pro" ? "Pro" : "Flash"}
+                          </span>
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`opacity-70 transition-transform ${isModelDropdownOpen ? "rotate-180" : ""}`}><path d="m6 9 6 6 6-6"/></svg>
+                        </div>
                         
+                        {isModelDropdownOpen && (
+                          <div className={`absolute bottom-full mb-2 left-0 w-48 rounded-2xl shadow-xl border overflow-hidden ${theme === "dark" ? "bg-[#1e1f20] border-zinc-700/50" : "bg-white border-zinc-200"}`}>
+                            <div className="p-1">
+                              <button 
+                                type="button"
+                                onClick={() => { setSelectedModel("gemini-1.5-flash"); setIsModelDropdownOpen(false); }}
+                                className={`w-full text-left px-3 py-2 rounded-xl text-sm transition-colors flex flex-col ${selectedModel === "gemini-1.5-flash" ? (theme === "dark" ? "bg-[#333537] text-blue-400" : "bg-blue-50 text-blue-600") : (theme === "dark" ? "text-zinc-300 hover:bg-[#333537]" : "text-zinc-700 hover:bg-zinc-100")}`}
+                              >
+                                <span className="font-semibold">Flash</span>
+                                <span className="text-[11px] opacity-70">Hızlı ve günlük görevler için</span>
+                              </button>
+                              <button 
+                                type="button"
+                                onClick={() => { 
+                                  if(user?.isPro || user?.role === 'admin') { 
+                                    setSelectedModel("gemini-1.5-pro"); 
+                                  } else { 
+                                    alert("Pro modeline erişim için Chat_CNR Pro kullanıcısı olmalısınız."); 
+                                  } 
+                                  setIsModelDropdownOpen(false); 
+                                }}
+                                className={`w-full text-left px-3 py-2 rounded-xl text-sm transition-colors flex flex-col mt-1 ${selectedModel === "gemini-1.5-pro" ? (theme === "dark" ? "bg-[#333537] text-blue-400" : "bg-blue-50 text-blue-600") : (theme === "dark" ? "text-zinc-300 hover:bg-[#333537]" : "text-zinc-700 hover:bg-zinc-100")}`}
+                              >
+                                <span className="font-semibold flex items-center gap-1">Pro {!user?.isPro && user?.role !== 'admin' && <span className="text-[9px] px-1 bg-amber-500/20 text-amber-600 rounded">KİLİTLİ</span>}</span>
+                                <span className="text-[11px] opacity-70">En gelişmiş model, karmaşık görevler</span>
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                      <button
+                        type="button"
                         onClick={toggleRecording}
-                        className={`p-2 rounded-xl transition-all disabled:opacity-30 ${
+                        className={`w-9 h-9 rounded-full flex items-center justify-center transition-all disabled:opacity-30 ${
                           isRecording
-                            ? "bg-red-500/10 text-red-500 shadow-[0_0_20px_rgba(239,68,68,0.3)] animate-pulse"
+                            ? "bg-red-500/10 text-red-500 animate-pulse"
                             : theme === "dark"
-                              ? "text-zinc-500 hover:text-white hover:bg-zinc-800/50"
-                              : "text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100"
+                              ? "text-zinc-400 hover:bg-[#333537] hover:text-zinc-200"
+                              : "text-zinc-500 hover:bg-[#e1e5ea] hover:text-zinc-800"
                         }`}
                       >
-                        {isRecording ? <Mic size={18} /> : <MicOff size={18} />}
+                        {isRecording ? <Mic size={20} strokeWidth={1.5} /> : <Mic size={20} strokeWidth={1.5} />}
                       </button>
                       <button
                         type="submit"
@@ -2332,15 +2325,13 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                           (!input.trim() && !selectedImage) ||
                           isLoading
                         }
-                        className={`p-2 rounded-xl md:p-2.5 transition-all shadow-xl active:scale-95 disabled:opacity-30 ${
+                        className={`w-10 h-10 rounded-full flex items-center justify-center transition-all disabled:opacity-30 disabled:scale-100 active:scale-95 ${
                           input.trim() || selectedImage
-                            ? "bg-blue-600 text-white shadow-blue-500/40 hover:bg-blue-500 translate-y-0 active:translate-y-0.5"
-                            : theme === "dark"
-                              ? "bg-zinc-800 text-zinc-600"
-                              : "bg-zinc-200 text-zinc-400"
+                            ? (theme === "dark" ? "bg-white text-zinc-900" : "bg-[#1a73e8] text-white")
+                            : "bg-transparent text-zinc-500"
                         }`}
                       >
-                        <Send size={18} />
+                        <Send size={18} strokeWidth={2} className={(input.trim() || selectedImage) ? "ml-0.5" : ""} />
                       </button>
                     </div>
                   </div>
@@ -2350,6 +2341,57 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
             </div>
           </footer>
         </div>
+
+        
+        {/* Activity Modal */}
+        {isActivityOpen && (
+          <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+            <div className={`w-full max-w-md border rounded-3xl p-6 shadow-2xl ${theme === "dark" ? "bg-[#1e1f20] border-zinc-700/50 text-white" : "bg-white border-zinc-200 text-zinc-900"}`}>
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-bold flex items-center gap-2"><Activity size={20} className="text-blue-500" /> Etkinlik Özeti</h2>
+                <button onClick={() => setIsActivityOpen(false)} className={`p-2 rounded-full ${theme === "dark" ? "hover:bg-zinc-800" : "hover:bg-zinc-100"}`}><X size={18} /></button>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4 mb-6">
+                <div className={`p-4 rounded-2xl ${theme === "dark" ? "bg-[#131314]" : "bg-zinc-50"} flex flex-col items-center justify-center`}>
+                   <div className="text-3xl font-bold text-blue-500">{sessions.length}</div>
+                   <div className="text-sm opacity-70 mt-1">Sohbet</div>
+                </div>
+                <div className={`p-4 rounded-2xl ${theme === "dark" ? "bg-[#131314]" : "bg-zinc-50"} flex flex-col items-center justify-center`}>
+                   <div className="text-3xl font-bold text-purple-500">
+                     {sessions.reduce((acc, curr) => acc + (curr.messages?.length || 0), 0)}
+                   </div>
+                   <div className="text-sm opacity-70 mt-1">Toplam Mesaj</div>
+                </div>
+              </div>
+              
+              <div className={`text-sm p-4 rounded-xl ${theme === "dark" ? "bg-zinc-800/50" : "bg-blue-50 text-blue-800"}`}>
+                <p>Chat_CNR deneyiminiz {user?.isPro ? "PRO" : "Standart"} seviyesinde devam ediyor. Günlük etkileşimleriniz gizlilik ve hız odaklı işlenmektedir.</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Library Modal */}
+        {isLibraryOpen && (
+          <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+            <div className={`w-full max-w-2xl h-[70vh] border rounded-3xl p-6 shadow-2xl flex flex-col ${theme === "dark" ? "bg-[#1e1f20] border-zinc-700/50 text-white" : "bg-white border-zinc-200 text-zinc-900"}`}>
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-bold flex items-center gap-2">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-purple-500"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg> 
+                  Kitaplık
+                </h2>
+                <button onClick={() => setIsLibraryOpen(false)} className={`p-2 rounded-full ${theme === "dark" ? "hover:bg-zinc-800" : "hover:bg-zinc-100"}`}><X size={18} /></button>
+              </div>
+              
+              <div className={`flex-1 flex flex-col items-center justify-center text-center p-8 rounded-2xl ${theme === "dark" ? "bg-[#131314]" : "bg-zinc-50"}`}>
+                 <Sparkles size={48} className="text-zinc-500 mb-4 opacity-50" />
+                 <h3 className="text-lg font-medium mb-2">Kitaplığınız Yakında Burada!</h3>
+                 <p className="text-sm opacity-70 max-w-sm">Favori sohbetlerinizi, koleksiyonlarınızı ve özel komut istemlerinizi tek bir yerde toplayabileceğiniz kitaplık modülü yakında aktif olacak.</p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Delete Confirmation Modal */}
         {deletingSessionId && (
