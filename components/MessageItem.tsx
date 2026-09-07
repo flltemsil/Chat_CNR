@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Message, ThemeColor, AppearanceMode, Language } from '../types';
-import { Search, User, Cpu, Volume2, Download, ExternalLink, Brain } from 'lucide-react';
+import { Search, User, Cpu, Volume2, Download, ExternalLink, Brain, ThumbsUp, ThumbsDown, RefreshCcw } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { translations } from '../translations';
 
@@ -14,9 +14,10 @@ interface MessageItemProps {
   isStreaming?: boolean;
   onSpeak?: (text: string) => void;
   language?: Language;
+  onFeedback?: (messageId: string, feedback: 'useful' | 'wrong' | 'improve') => void;
 }
 
-const MessageItem: React.FC<MessageItemProps> = React.memo(({ message, themeColor, appearance, isStreaming, onSpeak, language = 'tr' }) => {
+const MessageItem: React.FC<MessageItemProps> = React.memo(({ message, themeColor, appearance, isStreaming, onSpeak, language = 'tr', onFeedback }) => {
   const t = translations[language] || translations.tr;
   const isUser = message.role === 'user';
   const isDark = appearance === 'dark';
@@ -184,6 +185,32 @@ const MessageItem: React.FC<MessageItemProps> = React.memo(({ message, themeColo
                 <div className="w-1 h-1 bg-current rounded-full group-hover/btn:animate-ping" />
                 <span className="text-[9px] font-black uppercase tracking-widest">Audio</span>
               </button>
+            )}
+            
+            {!isUser && onFeedback && (
+              <div className="flex items-center gap-1.5 ml-auto">
+                <button 
+                  onClick={() => onFeedback(message.id, 'useful')}
+                  className={`p-1.5 rounded-lg transition-all ${message.feedback === 'useful' ? 'text-emerald-500 bg-emerald-500/10' : 'hover:bg-zinc-800 hover:text-emerald-400'}`}
+                  title="Faydalı"
+                >
+                  <ThumbsUp size={14} />
+                </button>
+                <button 
+                  onClick={() => onFeedback(message.id, 'wrong')}
+                  className={`p-1.5 rounded-lg transition-all ${message.feedback === 'wrong' ? 'text-rose-500 bg-rose-500/10' : 'hover:bg-zinc-800 hover:text-rose-400'}`}
+                  title="Yanlış"
+                >
+                  <ThumbsDown size={14} />
+                </button>
+                <button 
+                  onClick={() => onFeedback(message.id, 'improve')}
+                  className={`p-1.5 rounded-lg transition-all ${message.feedback === 'improve' ? 'text-amber-500 bg-amber-500/10' : 'hover:bg-zinc-800 hover:text-amber-400'}`}
+                  title="İyileştirilebilir"
+                >
+                  <RefreshCcw size={14} />
+                </button>
+              </div>
             )}
           </div>
         </div>

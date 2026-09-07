@@ -18,6 +18,7 @@ export interface Message {
   videoUrl?: string;
   isDeep?: boolean;
   grounded?: boolean;
+  feedback?: 'useful' | 'wrong' | 'improve';
 }
 
 export interface ChatSession {

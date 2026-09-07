@@ -15,7 +15,9 @@ export default defineConfig(({ mode }) => {
       plugins: [
         react(),
         VitePWA({
-          registerType: 'prompt',
+          registerType: 'autoUpdate',
+          injectRegister: 'script',
+          registerType: 'autoUpdate',
           manifest: {
             name: 'Chat CNR Bilgi Merkezi',
             short_name: 'Chat CNR',
@@ -36,19 +38,19 @@ export default defineConfig(({ mode }) => {
             lang: 'tr-TR',
             icons: [
               {
-                src: 'https://cdn-icons-png.flaticon.com/512/1698/1698535.png',
+                src: '/icon-512.png',
                 sizes: '192x192',
                 type: 'image/png',
                 purpose: 'any'
               },
               {
-                src: 'https://cdn-icons-png.flaticon.com/512/1698/1698535.png',
+                src: '/icon-512.png',
                 sizes: '512x512',
                 type: 'image/png',
                 purpose: 'any'
               },
               {
-                src: 'https://cdn-icons-png.flaticon.com/512/1698/1698535.png',
+                src: '/icon-512.png',
                 sizes: '512x512',
                 type: 'image/png',
                 purpose: 'maskable'
@@ -56,14 +58,14 @@ export default defineConfig(({ mode }) => {
             ],
             screenshots: [
               {
-                src: 'https://images.unsplash.com/photo-1677442136019-21780ecad995?auto=format&fit=crop&q=80&w=1920&h=1080',
+                src: '/screenshot-wide.jpg',
                 sizes: '1920x1080',
                 type: 'image/jpeg',
                 form_factor: 'wide',
                 label: 'Professional AI Interface'
               },
               {
-                src: 'https://images.unsplash.com/photo-1675271591211-126ad94e495d?auto=format&fit=crop&q=80&w=750&h=1334',
+                src: '/screenshot-narrow.jpg',
                 sizes: '750x1334',
                 type: 'image/jpeg',
                 form_factor: 'narrow',
@@ -74,7 +76,7 @@ export default defineConfig(({ mode }) => {
               {
                 name: 'Yeni Sohbet',
                 url: '/?new=true',
-                icons: [{ src: 'https://cdn-icons-png.flaticon.com/512/1698/1698535.png', sizes: '192x192' }]
+                icons: [{ src: '/icon-512.png', sizes: '192x192' }]
               }
             ],
             categories: ["productivity", "utilities", "education"],

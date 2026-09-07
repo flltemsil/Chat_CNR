@@ -52,7 +52,7 @@ import {
   Compass,
   Lightbulb,
   PenTool,
-  Code, Activity} from "lucide-react";
+  Code, Activity, Globe} from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import {
   auth,
@@ -423,7 +423,7 @@ const App: React.FC = () => {
                   Chat_CNR
                 </h1>
                 <span className="text-[10px] font-bold text-blue-400 border border-blue-400/30 bg-blue-400/10 px-2 py-0.5 rounded-md uppercase tracking-wider shadow-[0_0_15px_rgba(96,165,250,0.3)]">
-                  TURKEY'S STRONGEST
+                  ADVANCED AI
                 </span>
               </div>
             </div>
@@ -821,7 +821,17 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
 
   const [language, setLanguage] = useState<Language>(() => {
     try {
-      return (localStorage.getItem("chat_cnr_lang") as Language) || "tr";
+      const saved = localStorage.getItem("chat_cnr_lang") as Language;
+      if (saved) return saved;
+      // Auto-detect browser language if not saved
+      if (typeof navigator !== 'undefined' && navigator.language) {
+        const browserLang = navigator.language.split('-')[0].toLowerCase();
+        const supported: Language[] = ["tr", "en", "de", "es", "fr", "it", "ru"];
+        if (supported.includes(browserLang as Language)) {
+          return browserLang as Language;
+        }
+      }
+      return "tr";
     } catch (e) {
       return "tr";
     }
@@ -1417,6 +1427,39 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
 
   const lastSentMessageRef = useRef<string>("");
 
+  const handleFeedback = async (messageId: string, feedback: 'useful' | 'wrong' | 'improve') => {
+    if (!activeSessionId || !user) return;
+    
+    // Optimistic UI update
+    setSessions(prev => 
+      prev.map(s => 
+        s.id === activeSessionId 
+          ? {
+              ...s,
+              messages: s.messages.map(m => 
+                m.id === messageId ? { ...m, feedback } : m
+              )
+            }
+          : s
+      )
+    );
+
+    try {
+      const sessionRef = doc(db, "users", user.uid, "sessions", activeSessionId);
+      const sessionDoc = await getDoc(sessionRef);
+      if (sessionDoc.exists()) {
+        const data = sessionDoc.data();
+        const updatedMessages = (data.messages || []).map((m: any) => 
+          m.id === messageId ? { ...m, feedback } : m
+        );
+        await setDoc(sessionRef, { messages: updatedMessages }, { merge: true });
+      }
+    } catch (error) {
+      console.error("Geri bildirim kaydedilemedi:", error);
+      // If needed, we could revert the optimistic update here
+    }
+  };
+
   const handleSend = async (
     e?: React.FormEvent | null,
     overrideInput?: string,
@@ -1838,172 +1881,142 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
       className={`flex h-[100dvh] overflow-hidden font-['Inter'] transition-all duration-700 ${theme === "dark" ? "bg-[#131314] text-zinc-100" : "bg-zinc-50 text-zinc-900"} `}
     >
       {/* Sidebar */}
-      <aside className={`fixed inset-y-0 left-0 z-[60] w-[280px] transition-all duration-500 ease-[0.23, 1, 0.32, 1] lg:relative lg:translate-x-0 ${isSidebarOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full"} ${theme === "dark" ? "bg-[#1e1f20]" : "bg-[#f0f4f9]"}`}>
+      <aside className={`fixed inset-y-0 left-0 z-[60] w-[280px] transition-all duration-500 ease-[0.23, 1, 0.32, 1] lg:relative lg:translate-x-0 ${isSidebarOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full"} ${theme === "dark" ? "bg-[#050505] border-r border-zinc-800/50" : "bg-[#f8f9fa] border-r border-zinc-200"}`}>
         <div className="flex flex-col h-full overflow-hidden">
-          <div className={`px-4 py-4 flex items-center justify-between`}>
-            <div className="flex items-center gap-2 px-2">
-              <Sparkles size={22} className={theme === "dark" ? "text-blue-400" : "text-blue-600"} />
-              <span className={`text-[16px] font-medium ${theme === "dark" ? "text-zinc-200" : "text-zinc-800"}`}>Chat_CNR</span>
+          <div className={`px-6 py-6 border-b flex items-center justify-between ${theme === "dark" ? "border-zinc-800/50" : "border-zinc-200"}`}>
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
+                <Brain size={18} className="text-white" />
+              </div>
+              <h1 className={`font-bold text-lg tracking-tight ${theme === "dark" ? "text-white" : "text-zinc-900"}`}>Chat_CNR</h1>
             </div>
             <button
               onClick={() => setIsSidebarOpen(false)}
-              className={`p-2 rounded-full transition-colors ${theme === "dark" ? "text-zinc-400 hover:bg-[#2a2b2f]" : "text-zinc-600 hover:bg-[#e1e5ea]"}`}
+              className={`p-2 rounded-lg transition-colors lg:hidden ${theme === "dark" ? "hover:bg-zinc-800 text-zinc-400" : "hover:bg-zinc-200 text-zinc-600"}`}
             >
               <Menu size={20} />
             </button>
           </div>
 
-          <div className="pt-2">
+          <div className="p-4 border-b border-transparent">
             <button
               id="new-chat-btn"
               onClick={createNewSession}
-              className={`w-[140px] flex items-center gap-3 py-2 px-4 rounded-full font-medium transition-all ${theme === "dark" ? "bg-[#131314] hover:bg-[#333537] text-zinc-300" : "bg-white hover:bg-zinc-100 text-zinc-700"} mx-2 mb-4`}
+              className="w-full flex items-center justify-center gap-3 bg-blue-600 hover:bg-blue-500 text-white py-3 px-4 rounded-xl font-bold transition-all shadow-xl shadow-blue-500/10 active:scale-[0.98]"
             >
-              <Plus size={18} className="opacity-70" />
-              <span className="text-[14px]">Yeni sohbet</span>
+              <Plus size={18} />
+              <span className="text-sm">Yeni sohbet</span>
             </button>
           </div>
 
-          <div className="flex-1 overflow-y-auto px-2 pb-4 custom-scrollbar">
+          <div className="flex-1 overflow-y-auto px-4 py-2 custom-scrollbar space-y-6">
             
-            {/* Top static links matching image */}
-            <div className="mb-4 space-y-[2px]">
-              <div className="w-full">
-                {isSearchActive ? (
-                  <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full ${theme === "dark" ? "bg-[#333537]" : "bg-[#e1e5ea]"}`}>
-                    <Search size={16} className="opacity-50" />
-                    <input 
-                      autoFocus
-                      type="text" 
-                      placeholder="Ara..." 
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="bg-transparent border-none outline-none text-[13px] w-full"
-                    />
-                    <button onClick={() => { setIsSearchActive(false); setSearchQuery(""); }}><X size={14} className="opacity-50 hover:opacity-100"/></button>
-                  </div>
-                ) : (
-                  <button onClick={() => setIsSearchActive(true)} className={`w-full flex items-center gap-3 py-2 px-3 rounded-full text-[14px] transition-colors ${theme === "dark" ? "text-zinc-300 hover:bg-[#333537]" : "text-zinc-700 hover:bg-[#e1e5ea]"}`}>
-                    <Search size={18} className="opacity-70" />
-                    Sohbetlerde arama yapın
-                  </button>
-                )}
+            <div className="space-y-1">
+              <div className={`text-xs font-bold uppercase tracking-wider mb-3 px-2 ${theme === "dark" ? "text-zinc-500" : "text-zinc-400"}`}>
+                Keşfet
               </div>
-              <button onClick={() => setImageFilter(!imageFilter)} className={`w-full flex items-center gap-3 py-2 px-3 rounded-full text-[14px] transition-colors ${imageFilter ? (theme === "dark" ? "bg-blue-900/30 text-blue-400" : "bg-blue-50 text-blue-600") : (theme === "dark" ? "text-zinc-300 hover:bg-[#333537]" : "text-zinc-700 hover:bg-[#e1e5ea]")}`}>
-                <ImageIcon size={18} className="opacity-70" />
-                Resimler {imageFilter && <span className="ml-auto text-[10px] bg-blue-500/20 px-1.5 rounded-full">Filtre Aktif</span>}
-              </button>
-              <button onClick={() => setIsLibraryOpen(true)} className={`w-full flex items-center gap-3 py-2 px-3 rounded-full text-[14px] transition-colors ${theme === "dark" ? "text-zinc-300 hover:bg-[#333537]" : "text-zinc-700 hover:bg-[#e1e5ea]"}`}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="opacity-70"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
-                Kitaplık
-              </button>
-            </div>
-
-            {/* Note books section */}
-            <div className="mb-4">
-               <div className={`px-4 text-[12px] font-medium mb-1 ${theme === "dark" ? "text-zinc-400" : "text-zinc-500"}`}>Not defterleri</div>
-               <button onClick={async () => {
-                 try {
-                  // Create a mock new session for notebook
-                  const newId = Date.now().toString();
-                  const newSession = {
-                    id: newId,
-                    userId: user.uid,
-                    title: "📓 Not Defteri",
-                    messages: [],
-                    createdAt: new Date(),
-                    updatedAt: new Date(),
-                  };
-                  setSessions([newSession, ...sessions]);
-                  setActiveSessionId(newId);
-                  if (window.innerWidth < 1024) setIsSidebarOpen(false);
-                 } catch (e) {
-                  console.error(e);
-                 }
-               }} className={`w-full flex items-center gap-3 py-2 px-3 rounded-full text-[14px] transition-colors ${theme === "dark" ? "text-zinc-300 hover:bg-[#333537]" : "text-zinc-700 hover:bg-[#e1e5ea]"}`}>
-                <Plus size={18} className="opacity-70" />
-                Yeni not defteri
+              {isSearchActive ? (
+                <div className={`flex items-center gap-2 px-3 py-2 rounded-xl border ${theme === "dark" ? "bg-zinc-900/50 border-zinc-800" : "bg-white border-zinc-200"}`}>
+                  <Search size={16} className="opacity-50" />
+                  <input 
+                    autoFocus
+                    type="text" 
+                    placeholder="Ara..." 
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="bg-transparent border-none outline-none text-[13px] w-full"
+                  />
+                  <button onClick={() => { setIsSearchActive(false); setSearchQuery(""); }}><X size={14} className="opacity-50 hover:opacity-100"/></button>
+                </div>
+              ) : (
+                <button onClick={() => setIsSearchActive(true)} className={`w-full flex items-center gap-3 py-2.5 px-3 rounded-xl text-[13px] font-medium transition-colors border border-transparent ${theme === "dark" ? "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/50 hover:border-zinc-800" : "text-zinc-600 hover:text-zinc-900 hover:bg-white hover:border-zinc-200 hover:shadow-sm"}`}>
+                  <Search size={16} className="opacity-70" />
+                  Sohbetlerde arama yapın
+                </button>
+              )}
+              <button onClick={() => setImageFilter(!imageFilter)} className={`w-full flex items-center gap-3 py-2.5 px-3 rounded-xl text-[13px] font-medium transition-colors border ${imageFilter ? (theme === "dark" ? "bg-blue-900/20 text-blue-400 border-blue-900/50" : "bg-blue-50 text-blue-600 border-blue-100") : (theme === "dark" ? "border-transparent text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/50 hover:border-zinc-800" : "border-transparent text-zinc-600 hover:text-zinc-900 hover:bg-white hover:border-zinc-200 hover:shadow-sm")}`}>
+                <ImageIcon size={16} className="opacity-70" />
+                Resimler {imageFilter && <span className="ml-auto text-[9px] bg-blue-500/20 px-2 py-0.5 rounded-full">Filtre Aktif</span>}
               </button>
             </div>
 
-            {/* Sessions Header */}
-            <div className={`px-4 flex items-center gap-1 text-[12px] font-medium mb-1 ${theme === "dark" ? "text-zinc-400" : "text-zinc-500"}`}>
-               Son Kullanılanlar 
-               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+            <div className="space-y-1">
+              <div className={`text-xs font-bold uppercase tracking-wider mb-3 px-2 flex items-center justify-between ${theme === "dark" ? "text-zinc-500" : "text-zinc-400"}`}>
+                Sohbetler
+                <span className="bg-blue-500/10 text-blue-500 px-2 py-0.5 rounded-md text-[10px]">{sessions.filter(s => s && s.id).length}</span>
+              </div>
+              <div className="space-y-2">
+                <AnimatePresence mode="popLayout">
+                  {sessions
+                    .filter((s) => s && s.id)
+                    .filter((s) => !searchQuery || (s.title && s.title.toLowerCase().includes(searchQuery.toLowerCase())))
+                    .filter((s) => !imageFilter || (s.messages && s.messages.some(m => !!m.imageUrl)))
+                    .map((session, idx) => (
+                      <motion.div
+                        key={session.id}
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, scale: 0.95 }}
+                        transition={{ delay: idx * 0.03, duration: 0.4 }}
+                        onClick={() => {
+                          setActiveSessionId(session.id);
+                          if (window.innerWidth < 1024) setIsSidebarOpen(false);
+                        }}
+                        className={`group relative flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all duration-300 border ${
+                          activeSessionId === session.id
+                            ? theme === "dark"
+                              ? "bg-zinc-800/50 border-zinc-700 text-white shadow-inner"
+                              : "bg-blue-50 border-blue-200 text-blue-900 shadow-inner"
+                            : theme === "dark"
+                              ? "border-transparent hover:bg-zinc-900/50 hover:border-zinc-800 text-zinc-500 hover:text-zinc-300"
+                              : "border-transparent hover:bg-white hover:border-zinc-200 text-zinc-600 hover:shadow-sm"
+                        }`}
+                      >
+                        <MessageSquare size={16} className={`flex-shrink-0 ${activeSessionId === session.id ? "text-blue-500" : "opacity-50"}`} />
+                        <span className="flex-1 text-[13px] font-medium truncate pr-6 tracking-tight">
+                          {session.title}
+                        </span>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDeletingSessionId(session.id);
+                          }}
+                          className={`absolute right-2 p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-all ${
+                            theme === "dark"
+                              ? "hover:bg-red-500/20 text-zinc-400 hover:text-red-500"
+                              : "hover:bg-red-50 text-zinc-400 hover:text-red-500"
+                          }`}
+                          title="Sil"
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      </motion.div>
+                    ))}
+                </AnimatePresence>
+              </div>
             </div>
-            
-            <div className="space-y-[2px]">
-            <AnimatePresence mode="popLayout">
-              {sessions
-                .filter((s) => s && s.id)
-                .filter((s) => !searchQuery || (s.title && s.title.toLowerCase().includes(searchQuery.toLowerCase())))
-                .filter((s) => !imageFilter || (s.messages && s.messages.some(m => !!m.imageUrl)))
-                .map((session, idx) => (
-                  <motion.div
-                    key={session.id}
-                    initial={{ opacity: 0, x: -10 }}
-
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, scale: 0.95 }}
-                    transition={{
-                      delay: idx * 0.03,
-                      duration: 0.4,
-                      ease: [0.23, 1, 0.32, 1],
-                    }}
-                    onClick={() => {
-                      setActiveSessionId(session.id);
-                      if (window.innerWidth < 1024) setIsSidebarOpen(false);
-                    }}
-                    className={`group relative flex items-center justify-between py-2 px-3 min-h-[36px] rounded-full cursor-pointer transition-colors ${activeSessionId === session.id ? (theme === "dark" ? "bg-[#333537] text-zinc-200" : "bg-[#d3e3fd] text-[#041e49]") : (theme === "dark" ? "text-zinc-300 hover:bg-[#333537]" : "text-zinc-700 hover:bg-[#e1e5ea]")}`}>
-                    <span className="flex-1 text-[13px] font-medium truncate pr-4 tracking-normal">
-                      {session.title}
-                    </span>
-                    <div className={`opacity-0 group-hover:opacity-100 transition-opacity mr-6 ${theme === "dark" ? "text-zinc-400" : "text-zinc-500"}`}>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 17v5"/><path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 0-1-1 2 2 0 0 0-4 0a1 1 0 0 0-1 1v3.76z"/></svg>
-                    </div>
-
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setDeletingSessionId(session.id);
-                      }}
-                      className={`absolute right-1 p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-all ${
-                        theme === "dark"
-                          ? "hover:bg-zinc-600 text-zinc-400 hover:text-red-400"
-                          : "hover:bg-zinc-300 text-zinc-500 hover:text-red-500"
-                      }`}
-                      title="Sil"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  </motion.div>
-                ))}
-                        </AnimatePresence>
-            </div>
-            </div>
-            
-            <div className="mt-2 mb-2">
-               <button onClick={() => setIsActivityOpen(true)} className={`w-full flex items-center gap-3 py-2 px-3 rounded-full text-[14px] transition-colors ${theme === "dark" ? "text-zinc-300 hover:bg-[#333537]" : "text-zinc-700 hover:bg-[#e1e5ea]"}`}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="opacity-70"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
-                Etkinlik
-              </button>
-            </div>
+          </div>
           
           {/* User Profile Section */}
-          <div className={`px-2 pb-4`}>
+          <div className={`p-4 border-t ${theme === "dark" ? "border-zinc-800/50 bg-[#070707]" : "border-zinc-200 bg-zinc-50/50"}`}>
             <button
-                onClick={() => setIsProfileOpen(true)}
-                className={`w-full flex items-center justify-between py-2 px-3 rounded-full transition-all ${theme === "dark" ? "hover:bg-[#333537]" : "hover:bg-[#e1e5ea]"}`}
-              >
-                <div className="flex items-center gap-3">
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center overflow-hidden ${theme === "dark" ? "bg-blue-900/30 text-blue-400" : "bg-blue-100 text-blue-600"}`}>
-                      {user?.photoUrl ? <img src={user.photoUrl} alt="User" className="w-full h-full object-cover" /> : <User size={16} />}
-                    </div>
-                    <p className={`text-[14px] font-medium truncate ${theme === "dark" ? "text-zinc-200" : "text-zinc-800"}`}>
-                      {user?.name || "Kullanıcı"}
-                    </p>
+              onClick={() => setIsProfileOpen(true)}
+              className={`w-full flex items-center justify-between p-3 rounded-xl transition-all ${theme === "dark" ? "hover:bg-zinc-900/50 border border-transparent hover:border-zinc-800" : "hover:bg-white border border-transparent hover:border-zinc-200 hover:shadow-sm"}`}
+            >
+              <div className="flex items-center gap-3">
+                <div className={`w-9 h-9 rounded-full flex items-center justify-center overflow-hidden shadow-sm border ${theme === "dark" ? "bg-zinc-800 border-zinc-700 text-zinc-400" : "bg-white border-zinc-200 text-zinc-600"}`}>
+                  {user?.photoUrl ? <img src={user.photoUrl} alt="User" className="w-full h-full object-cover" /> : <User size={16} />}
                 </div>
-                <Settings size={18} className={`${theme === "dark" ? "text-zinc-400" : "text-zinc-500"}`} />
+                <div className="flex flex-col items-start">
+                  <p className={`text-sm font-bold truncate max-w-[120px] ${theme === "dark" ? "text-zinc-200" : "text-zinc-800"}`}>
+                    {user?.name || "Kullanıcı"}
+                  </p>
+                  <p className={`text-[10px] font-medium uppercase tracking-wider ${theme === "dark" ? "text-zinc-500" : "text-zinc-500"}`}>
+                    Ayarlar
+                  </p>
+                </div>
+              </div>
+              <Settings size={16} className={`${theme === "dark" ? "text-zinc-500" : "text-zinc-400"}`} />
             </button>
           </div>
         </div>
@@ -2066,7 +2079,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                       alert("Paylaşım başarısız oldu: " + err.message);
                     }
                   }}
-                  className={`p-2 rounded-full transition-colors ${theme === "dark" ? "text-zinc-400 hover:bg-[#2a2b2f] hover:text-indigo-400" : "text-zinc-600 hover:bg-[#e1e5ea] hover:text-indigo-600"}`}
+                  className={`p-2 rounded-full transition-colors ${theme === "dark" ? "text-zinc-400 hover:bg-[#2a2b2f] hover:text-blue-400" : "text-zinc-600 hover:bg-[#e1e5ea] hover:text-blue-600"}`}
                   title="Paylaş"
                 >
                   <Share2 size={16} />
@@ -2130,6 +2143,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                         themeColor="blue"
                         appearance={theme}
                         language={language}
+                        onFeedback={handleFeedback}
                       />
                     ))}
                   </AnimatePresence>
@@ -2622,7 +2636,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                       }}
                       className="w-full flex items-center justify-center gap-2 py-3 bg-zinc-800 hover:bg-zinc-700 text-white rounded-xl text-sm font-bold transition-all border border-zinc-700"
                     >
-                      <Heart size={16} className="text-rose-500" />
+                      <Heart size={16} className="text-blue-500" />
                       {t.secureProfileSettings}
                     </button>
                   </div>
