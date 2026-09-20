@@ -19,9 +19,30 @@
         "lastLogin": { "type": "string", "format": "date-time", "description": "Last login timestamp" },
         "updatedAt": { "type": "string", "format": "date-time", "description": "Last update timestamp" },
         "isPro": { "type": "boolean", "description": "Whether user has active Pro access" },
-        "proExpiresAt": { "type": "string", "format": "date-time", "description": "Pro subscription expiration timestamp" }
+        "proExpiresAt": { "type": "string", "format": "date-time", "description": "Pro subscription expiration timestamp" },
+        "dailyVisits": { "type": "object", "description": "Map of date strings to visit counts e.g. {'2026-09-20': 4}" },
+        "todayVisits": { "type": "integer", "description": "Visits recorded today" },
+        "lastVisitDate": { "type": "string", "description": "Date string of last visit" },
+        "totalVisits": { "type": "integer", "description": "Total visits across all days" },
+        "notificationsEnabled": { "type": "boolean", "description": "Whether push notifications are enabled" },
+        "lastMonthlyNotification": { "type": "string", "format": "date-time", "description": "Timestamp of last monthly notification received" }
       },
       "required": ["uid", "name", "email", "role"]
+    },
+    "AppNotification": {
+      "title": "AppNotification",
+      "description": "System and broadcast notifications for users",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "message": { "type": "string" },
+        "type": { "type": "string", "enum": ["monthly", "announcement", "system"] },
+        "targetUid": { "type": "string", "description": "Target UID or 'all' for broadcast" },
+        "senderEmail": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "title", "message", "type", "createdAt"]
     },
     "ChatSession": {
       "title": "ChatSession",
@@ -76,6 +97,10 @@
     "/users/{userId}/sessions/{sessionId}/messages/{messageId}": {
       "schema": "Message",
       "description": "Messages within a session"
+    },
+    "/broadcast_notifications/{notificationId}": {
+      "schema": "AppNotification",
+      "description": "Monthly and system broadcast notifications"
     }
   }
 }

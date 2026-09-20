@@ -32,8 +32,16 @@ export const profileService = {
           interests: data.interests || [],
           bio: data.bio || '',
           phone: data.phone || '',
-          lastLogin: data.lastLogin?.toDate(),
-          updatedAt: data.updatedAt?.toDate()
+          lastLogin: data.lastLogin?.toDate ? data.lastLogin.toDate() : (data.lastLogin ? new Date(data.lastLogin) : undefined),
+          updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate() : (data.updatedAt ? new Date(data.updatedAt) : undefined),
+          isOnline: data.isOnline,
+          lastActive: data.lastActive?.toDate ? data.lastActive.toDate() : (data.lastActive ? new Date(data.lastActive) : undefined),
+          dailyVisits: data.dailyVisits || {},
+          todayVisits: data.todayVisits || 0,
+          lastVisitDate: data.lastVisitDate || '',
+          totalVisits: data.totalVisits || 0,
+          notificationsEnabled: data.notificationsEnabled || false,
+          lastMonthlyNotification: data.lastMonthlyNotification?.toDate ? data.lastMonthlyNotification.toDate() : (data.lastMonthlyNotification ? new Date(data.lastMonthlyNotification) : undefined)
         };
       }
       return null;
@@ -57,6 +65,7 @@ export const profileService = {
   },
 
   async createUserProfile(uid: string, email: string, name: string, role: 'admin' | 'user' = 'user'): Promise<UserProfile> {
+    const todayStr = new Date().toISOString().split("T")[0];
     const newProfile: UserProfile = {
       uid,
       email,
@@ -67,14 +76,21 @@ export const profileService = {
       bio: '',
       phone: '',
       lastLogin: new Date(),
-      updatedAt: new Date()
+      updatedAt: new Date(),
+      dailyVisits: { [todayStr]: 1 },
+      todayVisits: 1,
+      lastVisitDate: todayStr,
+      totalVisits: 1,
+      notificationsEnabled: false
     };
 
     try {
       await setDoc(doc(db, 'users', uid), {
         ...newProfile,
         lastLogin: serverTimestamp(),
-        updatedAt: serverTimestamp()
+        updatedAt: serverTimestamp(),
+        lastActive: serverTimestamp(),
+        isOnline: true
       });
       return newProfile;
     } catch (error) {

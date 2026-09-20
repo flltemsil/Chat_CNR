@@ -43,6 +43,23 @@ export interface UserProfile {
   updatedAt?: Date;
   isOnline?: boolean;
   lastActive?: Date;
+  dailyVisits?: Record<string, number>;
+  todayVisits?: number;
+  lastVisitDate?: string;
+  totalVisits?: number;
+  notificationsEnabled?: boolean;
+  lastMonthlyNotification?: any;
+}
+
+export interface AppNotification {
+  id: string;
+  title: string;
+  message: string;
+  type: 'monthly' | 'announcement' | 'system';
+  targetUid?: string;
+  senderEmail?: string;
+  createdAt: any;
+  read?: boolean;
 }
 
 export type ThemeColor = 'blue' | 'indigo' | 'rose' | 'emerald' | 'amber' | 'violet';

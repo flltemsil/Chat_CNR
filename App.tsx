@@ -11,7 +11,12 @@ import { translations } from "./translations";
 import MessageItem from "./components/MessageItem";
 import ProfileModal from "./components/ProfileModal";
 import { CameraModal } from "./components/CameraModal";
+import { UserDetailModal } from "./components/UserDetailModal";
+import { BroadcastNotificationModal } from "./components/BroadcastNotificationModal";
+import { NotificationCenterModal } from "./components/NotificationCenterModal";
 import { profileService } from "./services/profileService";
+import { notificationService } from "./services/notificationService";
+import { AppNotification } from "./types";
 import {
   Menu,
   Plus,
@@ -49,6 +54,8 @@ import {
   Zap,
   Search,
   Mail,
+  Crown,
+  Radio,
   Compass,
   Lightbulb,
   PenTool,
@@ -751,6 +758,15 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
   const [dailyUsage, setDailyUsage] = useState({ messages: 0, images: 0 });
   const [isRecording, setIsRecording] = useState(false);
   const [isAutoSpeak, setIsAutoSpeak] = useState(false);
+  const [isHeyCnrActive, setIsHeyCnrActive] = useState(() => {
+    try {
+      return localStorage.getItem("chat_cnr_hey_cnr") === "true";
+    } catch {
+      return false;
+    }
+  });
+  const [heyCnrStatus, setHeyCnrStatus] = useState<"idle" | "listening" | "detected" | "waiting_query">("idle");
+  const [heyCnrPromptText, setHeyCnrPromptText] = useState("");
   const [voiceMode, setVoiceMode] = useState<"fast" | "quality">(() => {
     try {
       return (localStorage.getItem("chat_cnr_voice_mode") as "fast" | "quality") || "fast";
@@ -857,6 +873,11 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
   const [tempName, setTempName] = useState(user.name);
   const [allUsers, setAllUsers] = useState<any[]>([]);
   const [isAdminPanelOpen, setIsAdminPanelOpen] = useState(false);
+  const [selectedUserForDetail, setSelectedUserForDetail] = useState<any | null>(null);
+  const [isUserDetailOpen, setIsUserDetailOpen] = useState(false);
+  const [isBroadcastModalOpen, setIsBroadcastModalOpen] = useState(false);
+  const [isNotificationCenterOpen, setIsNotificationCenterOpen] = useState(false);
+  const [broadcastNotifications, setBroadcastNotifications] = useState<AppNotification[]>([]);
   const [deletingSessionId, setDeletingSessionId] = useState<string | null>(
     null,
   );
@@ -960,7 +981,13 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
               ...data,
               uid: docSnap.id,
               isPro,
-              proExpiresAt
+              proExpiresAt,
+              dailyVisits: data.dailyVisits || {},
+              todayVisits: data.todayVisits || 0,
+              lastVisitDate: data.lastVisitDate || '',
+              totalVisits: data.totalVisits || 0,
+              lastActive: data.lastActive,
+              lastLogin: data.lastLogin
             };
           });
           setAllUsers(users);
@@ -1029,6 +1056,77 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
     const interval = setInterval(updatePresence, 120000); // 2 minutes
     return () => clearInterval(interval);
   }, [user]);
+
+  // Track daily visit count for the active user
+  const visitRecordedRef = useRef(false);
+  useEffect(() => {
+    if (!user?.uid || visitRecordedRef.current) return;
+    visitRecordedRef.current = true;
+
+    const recordDailyVisit = async () => {
+      try {
+        const todayStr = new Date().toISOString().split("T")[0];
+        await updateDoc(doc(db, "users", user.uid), {
+          [`dailyVisits.${todayStr}`]: increment(1),
+          lastVisitDate: todayStr,
+          totalVisits: increment(1),
+          isOnline: true,
+          lastActive: serverTimestamp(),
+        });
+      } catch (err) {
+        console.warn("Daily visit counter notice:", err);
+      }
+    };
+
+    recordDailyVisit();
+  }, [user?.uid]);
+
+  // Monthly notification check and real-time broadcast subscription
+  useEffect(() => {
+    if (!user?.uid) return;
+
+    // Check if 30 days have passed for the monthly notification
+    notificationService.checkAndTriggerMonthlyNotification(user).catch(console.warn);
+
+    // Subscribe to broadcast announcements
+    const unsubscribe = notificationService.subscribeToBroadcasts((notifs) => {
+      setBroadcastNotifications(notifs);
+    });
+
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, [user?.uid]);
+
+  // Handle PRO toggle for a specific user from list or detail modal
+  const handleToggleProForUser = async (targetUser: any) => {
+    try {
+      if (targetUser.isPro) {
+        await setDoc(doc(db, "users", targetUser.uid), { isPro: false, proExpiresAt: null }, { merge: true });
+        alert(`${targetUser.name} kullanıcısının PRO üyeliği kapatıldı!`);
+        const updated = { ...targetUser, isPro: false, proExpiresAt: null };
+        setAllUsers((prev) => prev.map((p) => (p.uid === targetUser.uid ? updated : p)));
+        setSelectedUserForDetail((prev: any) => (prev && prev.uid === targetUser.uid ? updated : prev));
+        if (targetUser.uid === user.uid) {
+          setUser((prev: any) => (prev ? { ...prev, isPro: false, proExpiresAt: null } : prev));
+        }
+      } else {
+        const expiryDate = new Date();
+        expiryDate.setDate(expiryDate.getDate() + 30);
+        await setDoc(doc(db, "users", targetUser.uid), { isPro: true, proExpiresAt: expiryDate }, { merge: true });
+        alert(`${targetUser.name} kullanıcısı 1 aylığına PRO yapıldı! (30 gün sonra otomatik olarak kapanacaktır)`);
+        const updated = { ...targetUser, isPro: true, proExpiresAt: expiryDate };
+        setAllUsers((prev) => prev.map((p) => (p.uid === targetUser.uid ? updated : p)));
+        setSelectedUserForDetail((prev: any) => (prev && prev.uid === targetUser.uid ? updated : prev));
+        if (targetUser.uid === user.uid) {
+          setUser((prev: any) => (prev ? { ...prev, isPro: true, proExpiresAt: expiryDate } : prev));
+        }
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Hata oluştu.");
+    }
+  };
 
   const activeSession = useMemo(() => {
     if (!activeSessionId) return null;
@@ -1427,10 +1525,81 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
     }
   };
 
+  const heyCnrRecognitionRef = useRef<any>(null);
+  const isHeyCnrActiveRef = useRef(isHeyCnrActive);
+  isHeyCnrActiveRef.current = isHeyCnrActive;
+  const isRecordingRef = useRef(isRecording);
+  isRecordingRef.current = isRecording;
+  const isLoadingRef = useRef(isLoading);
+  isLoadingRef.current = isLoading;
+  const heyCnrRestartTimerRef = useRef<any>(null);
+  const waitingForFollowUpQueryRef = useRef(false);
+
+  // Play assistant audio chime via Web Audio API
+  const playHeyCnrChime = () => {
+    try {
+      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      const now = ctx.currentTime;
+
+      // Tone 1: 587.33 Hz (D5)
+      const osc1 = ctx.createOscillator();
+      const gain1 = ctx.createGain();
+      osc1.type = "sine";
+      osc1.frequency.setValueAtTime(587.33, now);
+      gain1.gain.setValueAtTime(0.18, now);
+      gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
+      osc1.connect(gain1);
+      gain1.connect(ctx.destination);
+      osc1.start(now);
+      osc1.stop(now + 0.16);
+
+      // Tone 2: 880 Hz (A5)
+      const osc2 = ctx.createOscillator();
+      const gain2 = ctx.createGain();
+      osc2.type = "sine";
+      osc2.frequency.setValueAtTime(880, now + 0.12);
+      gain2.gain.setValueAtTime(0.22, now + 0.12);
+      gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.38);
+      osc2.connect(gain2);
+      gain2.connect(ctx.destination);
+      osc2.start(now + 0.12);
+      osc2.stop(now + 0.38);
+    } catch (e) {
+      console.error("Hey CNR chime error:", e);
+    }
+  };
+
+  const toggleHeyCnr = () => {
+    const next = !isHeyCnrActive;
+    setIsHeyCnrActive(next);
+    try {
+      localStorage.setItem("chat_cnr_hey_cnr", String(next));
+    } catch {}
+    if (next) {
+      playHeyCnrChime();
+    } else {
+      if (heyCnrRecognitionRef.current) {
+        try {
+          heyCnrRecognitionRef.current.abort();
+        } catch {}
+      }
+      setHeyCnrStatus("idle");
+      waitingForFollowUpQueryRef.current = false;
+    }
+  };
+
   const toggleRecording = () => {
     if (isRecording) {
       recognitionRef.current?.stop();
       return;
+    }
+
+    if (heyCnrRecognitionRef.current) {
+      try {
+        heyCnrRecognitionRef.current.abort();
+      } catch {}
     }
 
     const SpeechRecognition =
@@ -1466,6 +1635,167 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
     recognitionRef.current = recognition;
     recognition.start();
   };
+
+  // Wake-word recognition effect (Hey CNR background listener)
+  useEffect(() => {
+    const SpeechRecognition =
+      (window as any).SpeechRecognition ||
+      (window as any).webkitSpeechRecognition;
+
+    if (!SpeechRecognition) return;
+
+    if (!isHeyCnrActive) {
+      if (heyCnrRecognitionRef.current) {
+        try {
+          heyCnrRecognitionRef.current.abort();
+        } catch {}
+      }
+      setHeyCnrStatus("idle");
+      return;
+    }
+
+    let isDestroyed = false;
+    const WAKE_WORD_PATTERN = /(?:hey|ey|selam|merhaba)?\s*(?:cnr|c\s*\.?\s*n\s*\.?\s*r|ce\s*ne\s*re|c\s*ne\s*re|caner|çınar|cinar|cener|ceyner|ci\s*en\s*ar|si\s*en\s*ar|senar)\b/i;
+
+    const startWakeWordListener = () => {
+      if (isDestroyed || !isHeyCnrActiveRef.current || isRecordingRef.current || isLoadingRef.current) {
+        return;
+      }
+
+      try {
+        const recognition = new SpeechRecognition();
+        recognition.lang = language === "tr" ? "tr-TR" : "en-US";
+        recognition.continuous = true;
+        recognition.interimResults = true;
+
+        recognition.onstart = () => {
+          if (!isDestroyed && isHeyCnrActiveRef.current) {
+            setHeyCnrStatus(waitingForFollowUpQueryRef.current ? "waiting_query" : "listening");
+          }
+        };
+
+        recognition.onresult = (event: any) => {
+          if (isLoadingRef.current || isRecordingRef.current) return;
+
+          let fullTranscript = "";
+          for (let i = event.resultIndex; i < event.results.length; i++) {
+            fullTranscript += event.results[i][0].transcript + " ";
+          }
+          fullTranscript = fullTranscript.trim();
+          if (!fullTranscript) return;
+
+          // Case A: Waiting for user to speak the question after "Hey CNR"
+          if (waitingForFollowUpQueryRef.current) {
+            setHeyCnrPromptText(fullTranscript);
+            const lastResult = event.results[event.results.length - 1];
+            if (lastResult.isFinal && fullTranscript.length > 2) {
+              waitingForFollowUpQueryRef.current = false;
+              setHeyCnrStatus("detected");
+              playHeyCnrChime();
+              setIsAutoSpeak(true);
+              handleSend(null, fullTranscript);
+              setTimeout(() => {
+                if (isHeyCnrActiveRef.current) {
+                  setHeyCnrStatus("listening");
+                  setHeyCnrPromptText("");
+                }
+              }, 4000);
+            }
+            return;
+          }
+
+          // Case B: Checking for wake-word
+          const match = fullTranscript.match(WAKE_WORD_PATTERN);
+          if (match && match.index !== undefined) {
+            const afterWake = fullTranscript.slice(match.index + match[0].length).replace(/^[,:.\s?!]+/, '').trim();
+
+            if (afterWake.length > 2) {
+              // User said "Hey CNR [question]" in one breath
+              const lastResult = event.results[event.results.length - 1];
+              if (lastResult.isFinal) {
+                playHeyCnrChime();
+                setHeyCnrStatus("detected");
+                setHeyCnrPromptText(afterWake);
+                setIsAutoSpeak(true);
+                handleSend(null, afterWake);
+                setTimeout(() => {
+                  if (isHeyCnrActiveRef.current) {
+                    setHeyCnrStatus("listening");
+                    setHeyCnrPromptText("");
+                  }
+                }, 4000);
+              }
+            } else {
+              // User said only "Hey CNR!"
+              playHeyCnrChime();
+              waitingForFollowUpQueryRef.current = true;
+              setHeyCnrStatus("waiting_query");
+              setHeyCnrPromptText(language === "tr" ? "Dinliyorum... Sorunuzu söyleyin." : "Listening... Ask your question.");
+
+              // Timeout after 10s
+              setTimeout(() => {
+                if (waitingForFollowUpQueryRef.current) {
+                  waitingForFollowUpQueryRef.current = false;
+                  if (isHeyCnrActiveRef.current) {
+                    setHeyCnrStatus("listening");
+                    setHeyCnrPromptText("");
+                  }
+                }
+              }, 10000);
+            }
+          }
+        };
+
+        recognition.onerror = (e: any) => {
+          if (e.error === "not-allowed") {
+            setIsHeyCnrActive(false);
+            setHeyCnrStatus("idle");
+          }
+        };
+
+        recognition.onend = () => {
+          if (!isDestroyed && isHeyCnrActiveRef.current && !isRecordingRef.current && !isLoadingRef.current) {
+            clearTimeout(heyCnrRestartTimerRef.current);
+            heyCnrRestartTimerRef.current = setTimeout(() => {
+              startWakeWordListener();
+            }, 300);
+          } else if (!isHeyCnrActiveRef.current) {
+            setHeyCnrStatus("idle");
+          }
+        };
+
+        heyCnrRecognitionRef.current = recognition;
+        recognition.start();
+      } catch (err) {
+        // Ignored
+      }
+    };
+
+    startWakeWordListener();
+
+    return () => {
+      isDestroyed = true;
+      clearTimeout(heyCnrRestartTimerRef.current);
+      if (heyCnrRecognitionRef.current) {
+        try {
+          heyCnrRecognitionRef.current.abort();
+        } catch {}
+      }
+    };
+  }, [isHeyCnrActive, language]);
+
+  useEffect(() => {
+    if (!isLoading && isHeyCnrActive && !isRecording) {
+      const timer = setTimeout(() => {
+        if (isHeyCnrActiveRef.current && !isRecordingRef.current && !isLoadingRef.current) {
+          try {
+            heyCnrRecognitionRef.current?.start();
+          } catch {}
+        }
+      }, 600);
+      return () => clearTimeout(timer);
+    }
+  }, [isLoading, isHeyCnrActive, isRecording]);
 
   const lastSentMessageRef = useRef<string>("");
 
@@ -1982,6 +2312,52 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
               </button>
             </div>
 
+            {/* PRO Bilgi ve İletişim Kartı */}
+            <div className={`p-3.5 rounded-2xl border transition-all mb-4 ${
+              theme === "dark" 
+                ? "bg-gradient-to-br from-amber-500/10 via-[#161616] to-[#121212] border-amber-500/30 text-zinc-200" 
+                : "bg-gradient-to-br from-amber-50/80 via-white to-amber-50/40 border-amber-200 text-zinc-800 shadow-sm"
+            }`}>
+              <div className="flex items-center justify-between gap-2 mb-2">
+                <div className="flex items-center gap-1.5">
+                  <div className="w-6 h-6 rounded-lg bg-amber-500/20 text-amber-500 flex items-center justify-center">
+                    <Crown size={14} className="text-amber-500" />
+                  </div>
+                  <span className="text-xs font-black uppercase tracking-wider text-amber-500">
+                    {user?.isPro ? "PRO Üyeliğiniz Aktif" : "PRO'ya Geçiş"}
+                  </span>
+                </div>
+                {user?.isPro ? (
+                  <span className="text-[9px] font-bold bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded border border-amber-500/30">
+                    AKTİF
+                  </span>
+                ) : (
+                  <span className="text-[9px] font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 px-1.5 py-0.5 rounded border border-amber-500/20">
+                    ÖZEL
+                  </span>
+                )}
+              </div>
+              
+              <p className="text-[11px] leading-relaxed opacity-90 mb-3">
+                {user?.isPro ? (
+                  <>Üyeliğinizi yenilemek veya destek almak için iletişime geçebilirsiniz:</>
+                ) : (
+                  <>Chat_CNR PRO ayrıcalıklarına ulaşmak isteyenlerin <strong className="text-amber-600 dark:text-amber-400 font-semibold select-all">dorukaliarslan20@gmail.com</strong> ile iletişime geçmesi gerekmektedir.</>
+                )}
+              </p>
+
+              <a
+                href="https://mail.google.com/mail/?view=cm&fs=1&to=dorukaliarslan20@gmail.com&su=Chat_CNR%20Pro%20%C3%9Cyelik%20Talebi&body=Merhaba,%20Chat_CNR%20Pro%20%C3%BCyeli%C4%9Fi%20almak%20istiyorum."
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-xs font-bold transition-all bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white shadow-md shadow-amber-500/20 active:scale-[0.98]"
+              >
+                <Mail size={13} />
+                <span>Gmail ile İletişime Geç</span>
+                <ExternalLink size={12} className="opacity-70 ml-auto" />
+              </a>
+            </div>
+
             <div className="space-y-1">
               <div className={`text-xs font-bold uppercase tracking-wider mb-3 px-2 flex items-center justify-between ${theme === "dark" ? "text-zinc-500" : "text-zinc-400"}`}>
                 Sohbetler
@@ -2130,12 +2506,49 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
               
               
 
+              {/* Hey CNR Wake-Word Button */}
+              <button
+                type="button"
+                onClick={toggleHeyCnr}
+                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs font-semibold transition-all border ${
+                  isHeyCnrActive
+                    ? "bg-amber-500/15 text-amber-500 border-amber-500/30 shadow-sm shadow-amber-500/10"
+                    : theme === "dark"
+                      ? "text-zinc-400 hover:bg-[#2a2b2f] hover:text-zinc-200 border-zinc-800"
+                      : "text-zinc-600 hover:bg-[#e1e5ea] hover:text-zinc-900 border-zinc-200"
+                }`}
+                title={
+                  isHeyCnrActive
+                    ? "Hey CNR Sesli Uyandırma Aktif (Tıklayarak kapatabilirsiniz)"
+                    : "Hey CNR Sesli Uyandırmayı Aç ('Hey CNR' diyerek soru sorabilirsiniz)"
+                }
+              >
+                <Radio size={14} className={isHeyCnrActive ? "text-amber-500 animate-pulse" : "opacity-60"} />
+                <span className="hidden sm:inline">Hey CNR</span>
+                {isHeyCnrActive ? (
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
+                ) : (
+                  <span className="hidden md:inline text-[9px] opacity-60">KAPALI</span>
+                )}
+              </button>
+
               <button
                 onClick={() => setIsAutoSpeak(!isAutoSpeak)}
                 className={`p-2 rounded-full transition-colors ${isAutoSpeak ? "bg-[#d3e3fd] text-[#041e49]" : theme === "dark" ? "text-zinc-400 hover:bg-[#2a2b2f] hover:text-zinc-200" : "text-zinc-600 hover:bg-[#e1e5ea] hover:text-zinc-900"}`}
                 title={isAutoSpeak ? t.voiceResponseOn : t.voiceResponseOff}
               >
                 {isAutoSpeak ? <Volume2 size={16} /> : <VolumeX size={16} />}
+              </button>
+              <button
+                id="header-notification-bell-btn"
+                onClick={() => setIsNotificationCenterOpen(true)}
+                className={`p-2 rounded-full transition-colors relative ${theme === "dark" ? "text-zinc-400 hover:bg-[#2a2b2f] hover:text-zinc-200" : "text-zinc-600 hover:bg-[#e1e5ea] hover:text-zinc-900"}`}
+                title="Bildirim Merkezi & Aylık Hatırlatıcılar"
+              >
+                <Bell size={16} />
+                {broadcastNotifications.length > 0 && (
+                  <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-amber-500 ring-2 ring-[#0a0a0a]" />
+                )}
               </button>
               <button
                 onClick={() => setIsSettingsOpen(true)}
@@ -2171,6 +2584,90 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                     >
                       Nereden başlayalım?
                     </motion.h2>
+
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.5, delay: 0.2 }}
+                      className={`mt-6 p-4 rounded-2xl border max-w-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3.5 ${
+                        theme === "dark"
+                          ? "bg-zinc-900/70 border-amber-500/25 text-zinc-300"
+                          : "bg-amber-50/80 border-amber-200 text-zinc-800 shadow-sm"
+                      }`}
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="p-2 rounded-xl bg-amber-500/15 text-amber-500 shrink-0 mt-0.5">
+                          <Crown size={20} />
+                        </div>
+                        <div className="space-y-0.5">
+                          <p className="text-xs font-black uppercase tracking-wider text-amber-500">
+                            Chat_CNR PRO
+                          </p>
+                          <p className="text-xs leading-relaxed opacity-90">
+                            PRO'ya ulaşmak isteyenlerin <span className="font-bold text-amber-600 dark:text-amber-400 select-all">dorukaliarslan20@gmail.com</span> ile iletişime geçmesi gerekmektedir.
+                          </p>
+                        </div>
+                      </div>
+                      <a
+                        href="https://mail.google.com/mail/?view=cm&fs=1&to=dorukaliarslan20@gmail.com&su=Chat_CNR%20Pro%20%C3%9Cyelik%20Talebi&body=Merhaba,%20Chat_CNR%20Pro%20%C3%BCyeli%C4%9Fi%20almak%20istiyorum."
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-600 text-white transition-all shadow-md shadow-amber-500/20 active:scale-95"
+                      >
+                        <Mail size={13} />
+                        <span>Gmail ile Yaz</span>
+                        <ExternalLink size={12} className="opacity-75" />
+                      </a>
+                    </motion.div>
+
+                    {/* Hey CNR Wake-Word Card */}
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.5, delay: 0.25 }}
+                      className={`mt-3 p-4 rounded-2xl border max-w-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3.5 transition-all ${
+                        isHeyCnrActive
+                          ? "bg-amber-500/10 border-amber-500/40 text-amber-500 shadow-sm"
+                          : theme === "dark"
+                            ? "bg-zinc-900/40 border-zinc-800 text-zinc-300"
+                            : "bg-zinc-50 border-zinc-200 text-zinc-800 shadow-sm"
+                      }`}
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className={`p-2 rounded-xl shrink-0 mt-0.5 ${
+                          isHeyCnrActive ? "bg-amber-500/20 text-amber-500" : "bg-blue-500/10 text-blue-500"
+                        }`}>
+                          <Radio size={20} className={isHeyCnrActive ? "animate-pulse" : ""} />
+                        </div>
+                        <div className="space-y-0.5">
+                          <div className="flex items-center gap-2">
+                            <p className="text-xs font-black uppercase tracking-wider text-amber-500">
+                              "Hey CNR" Sesli Uyandırma
+                            </p>
+                            {isHeyCnrActive && (
+                              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                                AKTİF DİNLİYOR
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-xs leading-relaxed opacity-90">
+                            Tıpkı <em>"Hey Google"</em> gibi eller serbest konuşun: <span className="font-semibold text-amber-500">"Hey CNR, bugünkü hava nasıl?"</span>
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={toggleHeyCnr}
+                        className={`shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all active:scale-95 ${
+                          isHeyCnrActive
+                            ? "bg-amber-500/20 text-amber-500 border border-amber-500/30 hover:bg-amber-500/30"
+                            : "bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-500/20"
+                        }`}
+                      >
+                        <Radio size={13} />
+                        <span>{isHeyCnrActive ? "Kapat" : "Şimdi Başlat"}</span>
+                      </button>
+                    </motion.div>
                   </div>
                 </motion.div>
               )}
@@ -2263,6 +2760,60 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                 </motion.div>
               )}
 
+              {/* Hey CNR Status / Wake Banner */}
+              <AnimatePresence>
+                {isHeyCnrActive && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 8, scale: 0.98 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 8, scale: 0.98 }}
+                    className={`mb-2.5 px-4 py-2 rounded-2xl flex items-center justify-between gap-3 text-xs border backdrop-blur-md transition-all shadow-sm ${
+                      heyCnrStatus === "detected" || heyCnrStatus === "waiting_query"
+                        ? "bg-amber-500/20 border-amber-500/50 text-amber-600 dark:text-amber-300 ring-2 ring-amber-500/20"
+                        : theme === "dark"
+                          ? "bg-zinc-900/90 border-zinc-800 text-zinc-300"
+                          : "bg-amber-50/90 border-amber-200/80 text-zinc-800"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5 overflow-hidden">
+                      <div className="relative flex items-center justify-center">
+                        <span className={`w-2.5 h-2.5 rounded-full ${
+                          heyCnrStatus === "detected" || heyCnrStatus === "waiting_query"
+                            ? "bg-amber-500 animate-ping"
+                            : "bg-emerald-500 animate-pulse"
+                        }`} />
+                        <span className={`absolute w-1.5 h-1.5 rounded-full ${
+                          heyCnrStatus === "detected" || heyCnrStatus === "waiting_query"
+                            ? "bg-amber-500"
+                            : "bg-emerald-500"
+                        }`} />
+                      </div>
+                      <span className="font-bold text-amber-500 shrink-0">Hey CNR:</span>
+                      <span className="truncate font-medium">
+                        {heyCnrStatus === "detected"
+                          ? (heyCnrPromptText ? `Algılandı: "${heyCnrPromptText}"` : "Algılandı! Dinleniyor...")
+                          : heyCnrStatus === "waiting_query"
+                            ? (heyCnrPromptText || "Dinliyorum... Sorunuzu söyleyin.")
+                            : '"Hey CNR [sorunuz]" diyerek seslenebilirsiniz.'}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                        CANLI DİNLEME
+                      </span>
+                      <button
+                        type="button"
+                        onClick={toggleHeyCnr}
+                        className="text-[11px] font-semibold text-zinc-400 hover:text-zinc-200 px-1.5 py-0.5 rounded-lg hover:bg-zinc-800/40 transition-colors"
+                        title="Hey CNR'ı Kapat"
+                      >
+                        <X size={13} />
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
               <form onSubmit={handleSend} className="flex gap-2 relative">
                 <div
                   className={`flex-1 border-2 rounded-3xl p-2 md:p-3 flex flex-col transition-all duration-500 shadow-inner relative overflow-hidden group ${
@@ -2322,6 +2873,26 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                     <div className="flex items-center gap-2">
                       <button
                         type="button"
+                        onClick={toggleHeyCnr}
+                        className={`h-9 px-2.5 rounded-full flex items-center gap-1.5 text-xs font-semibold transition-all ${
+                          isHeyCnrActive
+                            ? "bg-amber-500/20 text-amber-500 border border-amber-500/40 shadow-sm"
+                            : theme === "dark"
+                              ? "text-zinc-400 hover:bg-[#333537] hover:text-zinc-200"
+                              : "text-zinc-500 hover:bg-[#e1e5ea] hover:text-zinc-800"
+                        }`}
+                        title={
+                          isHeyCnrActive
+                            ? "Hey CNR Dinlemede ('Hey CNR' diyerek soru sorabilirsiniz - kapatmak için tıklayın)"
+                            : "Hey CNR Sesli Uyandırmayı Aç ('Hey CNR' diyerek eller serbest konuşun)"
+                        }
+                      >
+                        <Radio size={15} className={isHeyCnrActive ? "text-amber-500 animate-pulse" : ""} />
+                        <span className="hidden sm:inline">Hey CNR</span>
+                      </button>
+
+                      <button
+                        type="button"
                         onClick={toggleRecording}
                         className={`w-9 h-9 rounded-full flex items-center justify-center transition-all disabled:opacity-30 ${
                           isRecording
@@ -2330,6 +2901,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                               ? "text-zinc-400 hover:bg-[#333537] hover:text-zinc-200"
                               : "text-zinc-500 hover:bg-[#e1e5ea] hover:text-zinc-800"
                         }`}
+                        title="Sesli Konuş (Manuel Kayıt)"
                       >
                         {isRecording ? <Mic size={20} strokeWidth={1.5} /> : <Mic size={20} strokeWidth={1.5} />}
                       </button>
@@ -2464,14 +3036,25 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
         {isAdminPanelOpen && user?.role === 'admin' && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-300">
             <div
-              className={`w-full max-w-md border rounded-3xl p-6 shadow-2xl ${theme === "dark" ? "bg-[#121212] border-zinc-800 text-white" : "bg-white border-zinc-200 text-zinc-900"}`}
+              className={`w-full max-w-lg border rounded-3xl p-6 shadow-2xl ${theme === "dark" ? "bg-[#121212] border-zinc-800 text-white" : "bg-white border-zinc-200 text-zinc-900"}`}
             >
-              <div className="flex items-center justify-between mb-8">
-                <h2 className="text-xl font-bold flex items-center gap-2">
-                  <Users size={20} className="text-amber-400" />
-                  Kullanıcı Listesi
-                </h2>
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h2 className="text-xl font-bold flex items-center gap-2">
+                    <Users size={20} className="text-amber-400" />
+                    Kullanıcı Listesi
+                  </h2>
+                  <p className="text-xs text-zinc-500 mt-0.5">Kişiye tıklayarak profili ve günlük girişlerini inceleyin</p>
+                </div>
                 <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setIsBroadcastModalOpen(true)}
+                    className="px-3 py-1.5 text-xs font-bold bg-amber-500 text-black rounded-xl hover:bg-amber-400 transition-all flex items-center gap-1.5 shadow-sm shadow-amber-500/20 active:scale-95"
+                    title="Tüm kullanıcılara bildirim veya aylık hatırlatıcı yayınlayın"
+                  >
+                    <Bell size={13} />
+                    <span>Aylık Bildirim Gönder</span>
+                  </button>
                   <button
                     onClick={() => {
                       if (typeof (window as any).triggerUpdate === 'function') {
@@ -2480,9 +3063,10 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                         alert('Güncelleme servisi henüz hazır değil veya aktif değil.');
                       }
                     }}
-                    className="px-3 py-1.5 text-xs font-bold bg-amber-500/20 text-amber-500 rounded-lg hover:bg-amber-500/30 transition-all border border-amber-500/30"
+                    className="px-2.5 py-1.5 text-xs font-bold bg-zinc-800 text-zinc-300 rounded-xl hover:bg-zinc-700 transition-all border border-zinc-700"
+                    title="Güncellemeyi Test Et"
                   >
-                    Güncellemeyi Test Et
+                    Test
                   </button>
                   <button
                     onClick={() => setIsAdminPanelOpen(false)}
@@ -2493,81 +3077,104 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                 </div>
               </div>
 
-              <div className="space-y-3 max-h-[400px] overflow-y-auto custom-scrollbar pr-2">
+              <div className="space-y-3 max-h-[440px] overflow-y-auto custom-scrollbar pr-1">
                 {allUsers.length > 0 ? (
                   allUsers.map((u, i) => {
                     let isUserOnline = false;
                     if (u.isOnline && u.lastActive) {
-                       const lastActiveTime = u.lastActive.toDate ? u.lastActive.toDate().getTime() : new Date(u.lastActive).getTime();
-                       isUserOnline = (new Date().getTime() - lastActiveTime) < 3 * 60 * 1000;
+                      const lastActiveTime = u.lastActive.toDate ? u.lastActive.toDate().getTime() : new Date(u.lastActive).getTime();
+                      isUserOnline = (new Date().getTime() - lastActiveTime) < 3 * 60 * 1000;
                     }
+
+                    const todayStr = new Date().toISOString().split("T")[0];
+                    const userTodayVisits =
+                      u.dailyVisits && typeof u.dailyVisits[todayStr] === "number"
+                        ? u.dailyVisits[todayStr]
+                        : u.lastVisitDate === todayStr
+                        ? u.todayVisits || 1
+                        : 0;
+
                     return (
                     <div
-                      key={i}
-                      className={`flex items-center justify-between p-4 rounded-2xl border ${theme === "dark" ? "bg-[#1a1a1a] border-zinc-800" : "bg-zinc-50 border-zinc-200"}`}
+                      key={u.uid || i}
+                      onClick={() => {
+                        setSelectedUserForDetail(u);
+                        setIsUserDetailOpen(true);
+                      }}
+                      className={`group flex items-center justify-between p-3.5 rounded-2xl border transition-all cursor-pointer ${
+                        theme === "dark"
+                          ? "bg-[#1a1a1a] hover:bg-zinc-800/80 border-zinc-800 hover:border-amber-500/40"
+                          : "bg-zinc-50 hover:bg-zinc-100/90 border-zinc-200 hover:border-amber-400/50"
+                      }`}
                     >
-                      <div>
-                        <p className="font-bold text-sm flex items-center gap-2">
-                           {u.name}
-                           {u.uid === user.uid && <span className="text-[10px] bg-blue-500/10 text-blue-500 px-2 rounded-full">Sen</span>}
-                        </p>
-                        <p className="text-xs text-zinc-500">{u.email}</p>
-                      </div>
-                      <div className="flex flex-col items-end gap-1">
-                          <div className="flex items-center gap-1.5 mb-1">
-                            <span className={`w-2 h-2 rounded-full ${isUserOnline ? "bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]" : "bg-zinc-500"}`}></span>
-                            <span className={`text-[10px] font-bold uppercase tracking-wider ${isUserOnline ? "text-emerald-500" : "text-zinc-500"}`}>
-                              {isUserOnline ? (language === 'tr' ? 'Çevrimiçi' : 'Online') : (language === 'tr' ? 'Çevrimdışı' : 'Offline')}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            {u.isPro && (
-                              <span className="text-[10px] font-bold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/30 whitespace-nowrap">
-                                {(() => {
-                                  if (!u.proExpiresAt) return "PRO";
-                                  const exp = u.proExpiresAt.toDate ? u.proExpiresAt.toDate() : new Date(u.proExpiresAt);
-                                  const diffDays = Math.max(0, Math.ceil((exp.getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
-                                  return `${diffDays} gün kaldı`;
-                                })()}
+                      <div className="flex items-center gap-3 min-w-0 pr-2">
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white font-bold text-base shrink-0">
+                          {u.name ? u.name[0].toUpperCase() : 'U'}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="font-bold text-sm flex items-center gap-2 truncate">
+                            <span>{u.name}</span>
+                            {u.uid === user.uid && (
+                              <span className="text-[9px] bg-blue-500/10 text-blue-500 px-1.5 py-0.5 rounded-full font-bold">
+                                Sen
                               </span>
                             )}
-                            <button
-                              onClick={async () => {
-                                try {
-                                  if (u.isPro) {
-                                    // 2. Kez tıklandığında: PRO'yu hemen kapat
-                                    await setDoc(doc(db, "users", u.uid), { isPro: false, proExpiresAt: null }, { merge: true });
-                                    alert(`${u.name} kullanıcısının PRO üyeliği kapatıldı!`);
-                                    setAllUsers(prev => prev.map(p => p.uid === u.uid ? { ...p, isPro: false, proExpiresAt: null } : p));
-                                    if (u.uid === user.uid) {
-                                      setUser(prev => prev ? { ...prev, isPro: false, proExpiresAt: null } : prev);
-                                    }
-                                  } else {
-                                    // 1. Kez tıklandığında: 1 aylığına PRO aktif et (30 gün sonra otomatik kapanır)
-                                    const expiryDate = new Date();
-                                    expiryDate.setDate(expiryDate.getDate() + 30);
-                                    await setDoc(doc(db, "users", u.uid), { isPro: true, proExpiresAt: expiryDate }, { merge: true });
-                                    alert(`${u.name} kullanıcısı 1 aylığına PRO yapıldı! (30 gün sonra otomatik olarak kapanacaktır)`);
-                                    setAllUsers(prev => prev.map(p => p.uid === u.uid ? { ...p, isPro: true, proExpiresAt: expiryDate } : p));
-                                    if (u.uid === user.uid) {
-                                      setUser(prev => prev ? { ...prev, isPro: true, proExpiresAt: expiryDate } : prev);
-                                    }
-                                  }
-                                } catch (err) {
-                                  console.error(err);
-                                  alert("Hata oluştu.");
-                                }
-                              }}
-                              className={`px-2.5 py-1 text-[10px] font-bold rounded-lg border transition-all cursor-pointer ${
-                                u.isPro
-                                  ? "bg-amber-500/20 text-amber-300 hover:bg-red-500/20 hover:text-red-400 border-amber-500/40 hover:border-red-500/40"
-                                  : "bg-zinc-800 hover:bg-amber-500/20 text-zinc-300 hover:text-amber-400 border-zinc-700 hover:border-amber-500/30"
-                              }`}
-                              title={u.isPro ? "Tıklayarak PRO üyeliğini hemen kapatın" : "1 aylığına PRO yapın"}
-                            >
-                              {u.isPro ? "PRO'YU KAPAT" : "PRO YAP (1 AY)"}
-                            </button>
-                          </div>
+                          </p>
+                          <p className="text-xs text-zinc-500 truncate">{u.email}</p>
+                          <span className="text-[10px] text-amber-500/80 font-medium group-hover:text-amber-400 transition-colors">
+                            🔍 Tıkla: Profil & Giriş Detayları
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col items-end gap-1 shrink-0">
+                        <div className="flex items-center gap-1.5">
+                          <span className={`w-2 h-2 rounded-full ${isUserOnline ? "bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]" : "bg-zinc-500"}`} />
+                          <span className={`text-[10px] font-bold uppercase tracking-wider ${isUserOnline ? "text-emerald-500" : "text-zinc-500"}`}>
+                            {isUserOnline ? (language === 'tr' ? 'Çevrimiçi' : 'Online') : (language === 'tr' ? 'Çevrimdışı' : 'Offline')}
+                          </span>
+                        </div>
+
+                        {/* Today's visit count badge */}
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <span
+                            className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                              userTodayVisits > 0
+                                ? "bg-blue-500/15 border-blue-500/30 text-blue-400"
+                                : "bg-zinc-800/40 border-zinc-700/40 text-zinc-500"
+                            }`}
+                            title="Bugün kaç kez giriş yaptı"
+                          >
+                            🎯 Bugün: {userTodayVisits} kez
+                          </span>
+                        </div>
+
+                        <div className="flex items-center gap-2 mt-1">
+                          {u.isPro && (
+                            <span className="text-[9px] font-bold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/30 whitespace-nowrap">
+                              {(() => {
+                                if (!u.proExpiresAt) return "PRO";
+                                const exp = u.proExpiresAt.toDate ? u.proExpiresAt.toDate() : new Date(u.proExpiresAt);
+                                const diffDays = Math.max(0, Math.ceil((exp.getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
+                                return `${diffDays} gün kaldı`;
+                              })()}
+                            </span>
+                          )}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleToggleProForUser(u);
+                            }}
+                            className={`px-2.5 py-1 text-[10px] font-bold rounded-lg border transition-all cursor-pointer ${
+                              u.isPro
+                                ? "bg-amber-500/20 text-amber-300 hover:bg-red-500/20 hover:text-red-400 border-amber-500/40 hover:border-red-500/40"
+                                : "bg-zinc-800 hover:bg-amber-500/20 text-zinc-300 hover:text-amber-400 border-zinc-700 hover:border-amber-500/30"
+                            }`}
+                            title={u.isPro ? "Tıklayarak PRO üyeliğini hemen kapatın" : "1 aylığına PRO yapın"}
+                          >
+                            {u.isPro ? "PRO'YU KAPAT" : "PRO YAP (1 AY)"}
+                          </button>
+                        </div>
                       </div>
                     </div>
                   )})
@@ -2578,6 +3185,38 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
             </div>
           </div>
         )}
+
+        {/* User Detail & Visit Inspection Modal */}
+        <UserDetailModal
+          isOpen={isUserDetailOpen}
+          user={selectedUserForDetail}
+          onClose={() => {
+            setIsUserDetailOpen(false);
+            setSelectedUserForDetail(null);
+          }}
+          onTogglePro={handleToggleProForUser}
+          theme={theme}
+          language={language}
+        />
+
+        {/* Broadcast / Monthly Notification Modal */}
+        <BroadcastNotificationModal
+          isOpen={isBroadcastModalOpen}
+          onClose={() => setIsBroadcastModalOpen(false)}
+          theme={theme}
+          language={language}
+          userCount={allUsers.length || 1}
+        />
+
+        {/* Notification Center Modal */}
+        <NotificationCenterModal
+          isOpen={isNotificationCenterOpen}
+          onClose={() => setIsNotificationCenterOpen(false)}
+          user={user}
+          notifications={broadcastNotifications}
+          theme={theme}
+          language={language}
+        />
         {isSettingsOpen && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-300">
             <div
@@ -2709,6 +3348,40 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                         <span className="text-xs font-bold">{lang.label}</span>
                       </button>
                     ))}
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <label
+                    className={`block text-xs font-bold uppercase tracking-widest ml-1 ${theme === "dark" ? "text-zinc-500" : "text-zinc-400"}`}
+                  >
+                    Ses & Wake Word
+                  </label>
+                  <div
+                    className={`border rounded-2xl p-4 space-y-4 ${theme === "dark" ? "bg-[#1a1a1a] border-zinc-800" : "bg-zinc-50 border-zinc-200"}`}
+                  >
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="flex items-start gap-3">
+                        <div className={`p-2 rounded-xl shrink-0 mt-0.5 ${isHeyCnrActive ? "bg-amber-500/20 text-amber-500" : "bg-zinc-500/10 text-zinc-400"}`}>
+                          <Radio size={18} className={isHeyCnrActive ? "animate-pulse" : ""} />
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold">"Hey CNR" Sesli Uyandırma</p>
+                          <p className={`text-xs mt-0.5 leading-relaxed ${theme === "dark" ? "text-zinc-400" : "text-zinc-600"}`}>
+                            Tıpkı <em>Hey Google</em> gibi, "Hey CNR" diyerek ekrana dokunmadan soru sorabilirsiniz.
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={toggleHeyCnr}
+                        className={`w-12 h-6 rounded-full transition-colors relative p-0.5 shrink-0 ${isHeyCnrActive ? "bg-amber-500" : "bg-zinc-700"}`}
+                      >
+                        <div
+                          className={`w-5 h-5 rounded-full bg-white transition-transform shadow-sm ${isHeyCnrActive ? "translate-x-6" : "translate-x-0"}`}
+                        />
+                      </button>
+                    </div>
                   </div>
                 </div>
 
