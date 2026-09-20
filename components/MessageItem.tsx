@@ -85,7 +85,7 @@ const MessageItem: React.FC<MessageItemProps> = React.memo(({ message, themeColo
               ? `${themeClasses.bg} text-white rounded-tr-none border border-white/10 shadow-[0_10px_30px_rgba(37,99,235,0.15)]` 
               : `${isDark ? 'bg-[#111111]/80 backdrop-blur-sm text-zinc-100 border-zinc-800/60 shadow-[0_8px_30px_rgba(0,0,0,0.2)]' : 'bg-white text-zinc-900 border-zinc-200 shadow-sm'} border rounded-tl-none`
           }`}>
-            {!isUser && (message.isDeep || message.grounded !== undefined) && (
+            {!isUser && (message.isDeep || message.grounded === true) && (
               <div className="flex flex-wrap items-center gap-2 mb-3 animate-in fade-in slide-in-from-bottom-2">
                 {message.isDeep && (
                   <div className="flex items-center gap-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 text-[10px] font-black text-white px-2.5 py-1 rounded-md shadow-lg shadow-purple-500/20 border border-white/10 uppercase tracking-widest">
@@ -97,12 +97,6 @@ const MessageItem: React.FC<MessageItemProps> = React.memo(({ message, themeColo
                   <div className="flex items-center gap-1.5 bg-emerald-500/10 text-[10px] font-black text-emerald-500 px-2.5 py-1 rounded-md border border-emerald-500/20 uppercase tracking-widest">
                     <Search size={12} />
                     <span>CNR Search</span>
-                  </div>
-                )}
-                {message.grounded === false && (
-                  <div className="flex items-center gap-1.5 bg-zinc-500/10 text-[10px] font-black text-zinc-500 px-2.5 py-1 rounded-md border border-zinc-500/20 uppercase tracking-widest">
-                    <Search size={12} />
-                    <span>Offline Mode</span>
                   </div>
                 )}
               </div>

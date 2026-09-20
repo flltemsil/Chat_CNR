@@ -17,7 +17,6 @@ export default defineConfig(({ mode }) => {
         VitePWA({
           registerType: 'autoUpdate',
           injectRegister: 'script',
-          registerType: 'autoUpdate',
           manifest: {
             name: 'Chat CNR Bilgi Merkezi',
             short_name: 'Chat CNR',

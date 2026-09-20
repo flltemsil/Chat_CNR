@@ -938,9 +938,31 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
         const q = query(collection(db, "users"));
         try {
           const snapshot = await getDocs(q);
-          const users = snapshot.docs.map((doc) => ({
-            ...doc.data(),
-          }));
+          const now = Date.now();
+          const users = snapshot.docs.map((docSnap) => {
+            const data = docSnap.data();
+            let isPro = !!data.isPro;
+            let proExpiresAt = data.proExpiresAt ? (data.proExpiresAt.toDate ? data.proExpiresAt.toDate() : new Date(data.proExpiresAt)) : null;
+
+            // If Pro is active on a non-admin, check if 1 month has passed or legacy without expiry
+            if (isPro && data.role !== 'admin') {
+              if (proExpiresAt && proExpiresAt.getTime() <= now) {
+                isPro = false;
+                proExpiresAt = null;
+                setDoc(doc(db, "users", docSnap.id), { isPro: false, proExpiresAt: null }, { merge: true }).catch(console.error);
+              } else if (!proExpiresAt) {
+                isPro = false;
+                setDoc(doc(db, "users", docSnap.id), { isPro: false, proExpiresAt: null }, { merge: true }).catch(console.error);
+              }
+            }
+
+            return {
+              ...data,
+              uid: docSnap.id,
+              isPro,
+              proExpiresAt
+            };
+          });
           setAllUsers(users);
         } catch (err) {
           handleFirestoreError(err, OperationType.LIST, `users`);
@@ -957,13 +979,33 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
         const data = docSnap.data();
         setUser(prev => {
           if (!prev) return prev;
-          const newIsPro = data.isPro || false;
+          let newIsPro = data.isPro || false;
+          let newProExpiresAt = data.proExpiresAt ? (data.proExpiresAt.toDate ? data.proExpiresAt.toDate() : new Date(data.proExpiresAt)) : null;
+          
+          if (newIsPro && data.role !== 'admin') {
+            let isExpired = false;
+            if (newProExpiresAt) {
+              if (newProExpiresAt.getTime() <= Date.now()) {
+                isExpired = true;
+              }
+            } else {
+              isExpired = true;
+            }
+
+            if (isExpired) {
+              newIsPro = false;
+              newProExpiresAt = null;
+              setDoc(doc(db, "users", user.uid), { isPro: false, proExpiresAt: null }, { merge: true }).catch(console.error);
+            }
+          }
+
           // If something changed, return new object
-          if (prev.isPro !== newIsPro || prev.role !== data.role) {
+          if (prev.isPro !== newIsPro || prev.role !== data.role || prev.name !== data.name) {
             return {
               ...prev,
               role: data.role,
-              isPro: newIsPro
+              isPro: newIsPro,
+              proExpiresAt: newProExpiresAt
             };
           }
           return prev;
@@ -2278,47 +2320,6 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                       </button>
                     </div>
                     <div className="flex items-center gap-2">
-                      <div className="relative">
-                        <div 
-                          onClick={() => setIsModelDropdownOpen(!isModelDropdownOpen)}
-                          className={`px-3 py-1.5 rounded-full flex items-center gap-1 cursor-pointer transition-colors ${theme === "dark" ? "hover:bg-[#333537]" : "hover:bg-[#e1e5ea]"}`}
-                        >
-                          <span className={`text-[13px] font-medium ${theme === "dark" ? "text-zinc-300" : "text-zinc-700"}`}>
-                            {selectedModel === "gemini-1.5-pro" ? "Pro" : "Flash"}
-                          </span>
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`opacity-70 transition-transform ${isModelDropdownOpen ? "rotate-180" : ""}`}><path d="m6 9 6 6 6-6"/></svg>
-                        </div>
-                        
-                        {isModelDropdownOpen && (
-                          <div className={`absolute bottom-full mb-2 left-0 w-48 rounded-2xl shadow-xl border overflow-hidden ${theme === "dark" ? "bg-[#1e1f20] border-zinc-700/50" : "bg-white border-zinc-200"}`}>
-                            <div className="p-1">
-                              <button 
-                                type="button"
-                                onClick={() => { setSelectedModel("gemini-1.5-flash"); setIsModelDropdownOpen(false); }}
-                                className={`w-full text-left px-3 py-2 rounded-xl text-sm transition-colors flex flex-col ${selectedModel === "gemini-1.5-flash" ? (theme === "dark" ? "bg-[#333537] text-blue-400" : "bg-blue-50 text-blue-600") : (theme === "dark" ? "text-zinc-300 hover:bg-[#333537]" : "text-zinc-700 hover:bg-zinc-100")}`}
-                              >
-                                <span className="font-semibold">Flash</span>
-                                <span className="text-[11px] opacity-70">Hızlı ve günlük görevler için</span>
-                              </button>
-                              <button 
-                                type="button"
-                                onClick={() => { 
-                                  if(user?.isPro || user?.role === 'admin') { 
-                                    setSelectedModel("gemini-1.5-pro"); 
-                                  } else { 
-                                    alert("Pro modeline erişim için Chat_CNR Pro kullanıcısı olmalısınız."); 
-                                  } 
-                                  setIsModelDropdownOpen(false); 
-                                }}
-                                className={`w-full text-left px-3 py-2 rounded-xl text-sm transition-colors flex flex-col mt-1 ${selectedModel === "gemini-1.5-pro" ? (theme === "dark" ? "bg-[#333537] text-blue-400" : "bg-blue-50 text-blue-600") : (theme === "dark" ? "text-zinc-300 hover:bg-[#333537]" : "text-zinc-700 hover:bg-zinc-100")}`}
-                              >
-                                <span className="font-semibold flex items-center gap-1">Pro {!user?.isPro && user?.role !== 'admin' && <span className="text-[9px] px-1 bg-amber-500/20 text-amber-600 rounded">KİLİTLİ</span>}</span>
-                                <span className="text-[11px] opacity-70">En gelişmiş model, karmaşık görevler</span>
-                              </button>
-                            </div>
-                          </div>
-                        )}
-                      </div>
                       <button
                         type="button"
                         onClick={toggleRecording}
@@ -2519,27 +2520,54 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                               {isUserOnline ? (language === 'tr' ? 'Çevrimiçi' : 'Online') : (language === 'tr' ? 'Çevrimdışı' : 'Offline')}
                             </span>
                           </div>
-                          <button
-                            onClick={async () => {
-                              try {
-                                await setDoc(doc(db, "users", u.uid), { isPro: true }, { merge: true });
-                                alert(`${u.name} kullanıcısı 1 aylığına PRO yapıldı!`);
-                                // Refresh allUsers list manually or wait for effect
-                                setAllUsers(prev => prev.map(p => p.uid === u.uid ? { ...p, isPro: true } : p));
-                              } catch (err) {
-                                console.error(err);
-                                alert("Hata oluştu.");
-                              }
-                            }}
-                            className={`px-2 py-1 text-[10px] font-bold rounded border transition-all ${
-                              u.isPro
-                                ? "bg-amber-500/10 text-amber-500 border-amber-500/30 cursor-default"
-                                : "bg-zinc-800 hover:bg-amber-500/20 text-zinc-300 hover:text-amber-400 border-zinc-700 hover:border-amber-500/30"
-                            }`}
-                            disabled={u.isPro}
-                          >
-                            {u.isPro ? "PRO AKTİF" : "PRO YAP (1 AY)"}
-                          </button>
+                          <div className="flex items-center gap-2">
+                            {u.isPro && (
+                              <span className="text-[10px] font-bold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/30 whitespace-nowrap">
+                                {(() => {
+                                  if (!u.proExpiresAt) return "PRO";
+                                  const exp = u.proExpiresAt.toDate ? u.proExpiresAt.toDate() : new Date(u.proExpiresAt);
+                                  const diffDays = Math.max(0, Math.ceil((exp.getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
+                                  return `${diffDays} gün kaldı`;
+                                })()}
+                              </span>
+                            )}
+                            <button
+                              onClick={async () => {
+                                try {
+                                  if (u.isPro) {
+                                    // 2. Kez tıklandığında: PRO'yu hemen kapat
+                                    await setDoc(doc(db, "users", u.uid), { isPro: false, proExpiresAt: null }, { merge: true });
+                                    alert(`${u.name} kullanıcısının PRO üyeliği kapatıldı!`);
+                                    setAllUsers(prev => prev.map(p => p.uid === u.uid ? { ...p, isPro: false, proExpiresAt: null } : p));
+                                    if (u.uid === user.uid) {
+                                      setUser(prev => prev ? { ...prev, isPro: false, proExpiresAt: null } : prev);
+                                    }
+                                  } else {
+                                    // 1. Kez tıklandığında: 1 aylığına PRO aktif et (30 gün sonra otomatik kapanır)
+                                    const expiryDate = new Date();
+                                    expiryDate.setDate(expiryDate.getDate() + 30);
+                                    await setDoc(doc(db, "users", u.uid), { isPro: true, proExpiresAt: expiryDate }, { merge: true });
+                                    alert(`${u.name} kullanıcısı 1 aylığına PRO yapıldı! (30 gün sonra otomatik olarak kapanacaktır)`);
+                                    setAllUsers(prev => prev.map(p => p.uid === u.uid ? { ...p, isPro: true, proExpiresAt: expiryDate } : p));
+                                    if (u.uid === user.uid) {
+                                      setUser(prev => prev ? { ...prev, isPro: true, proExpiresAt: expiryDate } : prev);
+                                    }
+                                  }
+                                } catch (err) {
+                                  console.error(err);
+                                  alert("Hata oluştu.");
+                                }
+                              }}
+                              className={`px-2.5 py-1 text-[10px] font-bold rounded-lg border transition-all cursor-pointer ${
+                                u.isPro
+                                  ? "bg-amber-500/20 text-amber-300 hover:bg-red-500/20 hover:text-red-400 border-amber-500/40 hover:border-red-500/40"
+                                  : "bg-zinc-800 hover:bg-amber-500/20 text-zinc-300 hover:text-amber-400 border-zinc-700 hover:border-amber-500/30"
+                              }`}
+                              title={u.isPro ? "Tıklayarak PRO üyeliğini hemen kapatın" : "1 aylığına PRO yapın"}
+                            >
+                              {u.isPro ? "PRO'YU KAPAT" : "PRO YAP (1 AY)"}
+                            </button>
+                          </div>
                       </div>
                     </div>
                   )})

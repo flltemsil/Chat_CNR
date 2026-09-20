@@ -17,7 +17,9 @@
         "bio": { "type": "string", "description": "Short bio" },
         "phone": { "type": "string", "description": "Contact phone number" },
         "lastLogin": { "type": "string", "format": "date-time", "description": "Last login timestamp" },
-        "updatedAt": { "type": "string", "format": "date-time", "description": "Last update timestamp" }
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Last update timestamp" },
+        "isPro": { "type": "boolean", "description": "Whether user has active Pro access" },
+        "proExpiresAt": { "type": "string", "format": "date-time", "description": "Pro subscription expiration timestamp" }
       },
       "required": ["uid", "name", "email", "role"]
     },

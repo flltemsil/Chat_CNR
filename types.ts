@@ -35,6 +35,7 @@ export interface UserProfile {
   email: string;
   role: 'admin' | 'user';
   isPro?: boolean;
+  proExpiresAt?: any;
   interests?: string[];
   bio?: string;
   phone?: string;

@@ -7,12 +7,28 @@ export const profileService = {
       const docSnap = await getDoc(doc(db, 'users', uid));
       if (docSnap.exists()) {
         const data = docSnap.data();
+        let isPro = data.isPro || false;
+        let proExpiresAt = data.proExpiresAt ? (data.proExpiresAt.toDate ? data.proExpiresAt.toDate() : new Date(data.proExpiresAt)) : null;
+
+        // Auto-expire Pro if 1 month expired or if it is a legacy pro without expiration date
+        if (isPro && data.role !== 'admin') {
+          if (proExpiresAt && proExpiresAt.getTime() <= Date.now()) {
+            isPro = false;
+            proExpiresAt = null;
+            updateDoc(doc(db, 'users', uid), { isPro: false, proExpiresAt: null }).catch(console.error);
+          } else if (!proExpiresAt) {
+            isPro = false;
+            updateDoc(doc(db, 'users', uid), { isPro: false, proExpiresAt: null }).catch(console.error);
+          }
+        }
+
         return {
           uid: data.uid,
           name: data.name,
           email: data.email,
           role: data.role,
-          isPro: data.isPro || false,
+          isPro,
+          proExpiresAt,
           interests: data.interests || [],
           bio: data.bio || '',
           phone: data.phone || '',
