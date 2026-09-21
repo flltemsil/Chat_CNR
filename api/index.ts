@@ -16,6 +16,23 @@ app.get("/api/health", (req, res) => {
   res.json({ status: "ok", time: new Date().toISOString() });
 });
 
+// App Version Check - Always fresh, no-cache
+app.get("/api/version", (req, res) => {
+  res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+  res.setHeader("Pragma", "no-cache");
+  res.setHeader("Expires", "0");
+  res.json({
+    version: "2.4.0",
+    releaseDate: "2026-09-21",
+    releaseNotes: [
+      "Mobil ve masaüstü konumlandırma ve dokunmatik kontroller uçtan uca optimize edildi.",
+      "Tüm kullanıcılar (Ücretsiz & Pro) için kesintisiz canlı güncelleme ve anlık bildirim sistemi.",
+      "APK ve web önbellek kilitlemesini önleyen otomatik Cache-Busting altyapısı.",
+      "Google Arama, Hey CNR sesli asistan ve akıllı profil hafızası performans geliştirmeleri."
+    ]
+  });
+});
+
 // AI Chat Proxy Route
 app.post("/api/chat", async (req, res) => {
   const { prompt, history, systemInstruction, image, userApiKey, googleAccessToken, model } = req.body;
@@ -273,6 +290,156 @@ app.post("/api/chat", async (req, res) => {
   }
 });
 
+// Dedicated Google Search & Universal Language Translation Route
+app.post("/api/google-search", async (req, res) => {
+  const { query, userLanguage, targetLanguage, userApiKey } = req.body;
+  if (!query || typeof query !== "string" || !query.trim()) {
+    return res.status(400).json({ error: "Arama sorgusu belirtilmelidir." });
+  }
+
+  const detectedTargetLang = targetLanguage || userLanguage || "Türkçe";
+  const modelName = "gemini-2.5-flash";
+
+  const systemInstruction = `Sen Google Arama ve Çok Dilli Çeviri Motorusun (Chat_CNR Google Search & Universal Translation Engine).
+KULLANICININ GOOGLE DİLİ: "${detectedTargetLang}".
+
+TEMEL AMACIN VE TAVİZSİZ KURALLARIN:
+1. Kullanıcının arama sorgusu ("${query}") için 'googleSearch' aracını kullanarak Google üzerinden dünya çapındaki en taze, en güncel ve en zengin internet verilerini topla.
+2. [TAM VE EKSİKSİZ ÇEVİRİ KURALI - HER ŞEYİ KULLANICININ DİLİNE ÇEVİR]:
+Kullanıcı Google'ını "${detectedTargetLang}" dilinde kullanmaktadır.
+İnternetten bulduğun sonuçlar, kaynaklar, haberler, makaleler veya web siteleri İngilizce, Çince, Rusça, Fransızca, Almanca veya hangi dilde olursa olsun;
+- Bütün özetleri ve açıklamaları,
+- Önemli maddeleri, gerçekleri ve bulguları,
+- Ziyaret ettiğin web sayfalarının başlıklarını ve kaynak içeriklerini,
+- İpuçlarını ve cevapları
+İSTİSNASIZ BİR ŞEKİLDE eksiksiz olarak kullanıcının dili olan "${detectedTargetLang}" diline çevirerek sunacaksın!
+Asla yabancı dilde çevrilmemiş cümle veya anlaşılmaz yabancı terim bırakma.
+
+3. YANIT FORMATI:
+- **Net ve Kapsamlı Özet**: Kullanıcının sorusuna doğrudan, akıcı ve eksiksiz yanıt (tamamen ${detectedTargetLang} dilinde).
+- **Önemli Bulgular ve Ayrıntılar**: Madde madde en can alıcı güncel bilgiler.
+- **İncelenen Web Kaynakları**: Ziyaret edilen sitelerin ne hakkında olduğunu "${detectedTargetLang}" dilinde özetle.`;
+
+  const runSearchWithKey = async (key: string) => {
+    const ai = new GoogleGenAI({ apiKey: key });
+    const searchConfig: any = {
+      systemInstruction,
+      temperature: 0.2,
+      tools: [{ googleSearch: {} }],
+      safetySettings: [
+        { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
+        { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
+        { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
+        { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" },
+      ],
+    };
+
+    const response = await ai.models.generateContent({
+      model: modelName,
+      contents: [
+        {
+          role: "user",
+          parts: [
+            {
+              text: `Google Arama Sorgusu: "${query.trim()}". Lütfen Google'da ara ve bütün sonuçları eksiksiz bir şekilde "${detectedTargetLang}" diline çevirerek sun.`,
+            },
+          ],
+        },
+      ],
+      config: searchConfig,
+    });
+    return response;
+  };
+
+  try {
+    // 1. Try userApiKey if provided
+    if (userApiKey && String(userApiKey).trim().length > 10) {
+      try {
+        const response = (await runSearchWithKey(userApiKey)) as any;
+        const metadata = response.candidates?.[0]?.groundingMetadata || response.groundingMetadata;
+        const usedSources: any[] = [];
+        if (metadata?.groundingChunks) {
+          for (const chunk of metadata.groundingChunks) {
+            if (chunk.web) {
+              usedSources.push({
+                uri: chunk.web.uri,
+                title: chunk.web.title,
+              });
+            }
+          }
+        }
+        const responseText = response.text || response.candidates?.[0]?.content?.parts?.[0]?.text || "";
+        return res.json({
+          text: responseText,
+          sources: usedSources,
+          searchQueries: metadata?.webSearchQueries || [],
+          detectedLanguage: detectedTargetLang,
+          grounded: true,
+        });
+      } catch (err: any) {
+        console.warn("User key failed for Google Search, falling back to system keys...");
+      }
+    }
+
+    // 2. Try system keys
+    const apiKeysString = (process.env.CHAT_CNR_API_KEY || process.env.GEMINI_API_KEY || "").trim();
+    if (!apiKeysString) {
+      return res.status(400).json({ error: "API anahtarı tanımlanmamış." });
+    }
+
+    const apiKeys = apiKeysString.split(",").map((k) => k.trim()).filter((k) => k.length > 0);
+    // Shuffle
+    for (let i = apiKeys.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [apiKeys[i], apiKeys[j]] = [apiKeys[j], apiKeys[i]];
+    }
+
+    let lastError: any = null;
+    for (let i = 0; i < apiKeys.length; i++) {
+      const currentKey = apiKeys[i];
+      try {
+        const response = (await runSearchWithKey(currentKey)) as any;
+        const metadata = response.candidates?.[0]?.groundingMetadata || response.groundingMetadata;
+        const usedSources: any[] = [];
+        if (metadata?.groundingChunks) {
+          for (const chunk of metadata.groundingChunks) {
+            if (chunk.web) {
+              usedSources.push({
+                uri: chunk.web.uri,
+                title: chunk.web.title,
+              });
+            }
+          }
+        }
+        const responseText = response.text || response.candidates?.[0]?.content?.parts?.[0]?.text || "";
+        return res.json({
+          text: responseText,
+          sources: usedSources,
+          searchQueries: metadata?.webSearchQueries || [],
+          detectedLanguage: detectedTargetLang,
+          grounded: true,
+        });
+      } catch (err: any) {
+        lastError = err;
+        const msg = String(err.message || "");
+        if (msg.includes("429") || msg.includes("quota") || msg.includes("RESOURCE_EXHAUSTED")) {
+          console.warn(`System key ${i + 1} Google Search quota hit, trying next key...`);
+          continue;
+        }
+        console.warn(`System key ${i + 1} Google Search failed:`, msg);
+      }
+    }
+
+    throw lastError || new Error("Arama sonuçları alınamadı.");
+  } catch (error: any) {
+    const errorMsg = String(error.message || "Google arama hatası");
+    const isQuota = errorMsg.includes("429") || errorMsg.includes("quota") || errorMsg.includes("RESOURCE_EXHAUSTED");
+    res.status(isQuota ? 429 : 500).json({
+      error: isQuota ? "QUOTA_EXCEEDED" : errorMsg,
+    });
+  }
+});
+
 
 // Text to Speech Proxy Route
 app.post("/api/tts", async (req, res) => {
@@ -465,8 +632,21 @@ async function startLocalServer() {
     });
   } else {
     const distPath = path.join(process.cwd(), 'dist');
-    app.use(express.static(distPath));
+    app.use(express.static(distPath, {
+      setHeaders: (res, filePath) => {
+        if (filePath.endsWith('.html') || filePath.endsWith('sw.js') || filePath.endsWith('manifest.webmanifest')) {
+          res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+          res.setHeader('Pragma', 'no-cache');
+          res.setHeader('Expires', '0');
+        } else {
+          res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+        }
+      }
+    }));
     app.get('*', (req, res) => {
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
       res.sendFile(path.join(distPath, 'index.html'));
     });
   }

@@ -41,12 +41,17 @@ export class ChatCNRService {
     userProfile?: UserProfile,
     language: string = 'tr',
     isDeepMode: boolean = false,
-    selectedModel: string = "gemini-2.5-flash"
+    selectedModel: string = "gemini-2.5-flash",
+    isGoogleSearchMode: boolean = false
   ): AsyncGenerator<{ text: string; sources: GroundingChunk[]; grounded?: boolean }> {
     
     let baseInstruction = SYSTEM_INSTRUCTION;
     if (isDeepMode) {
       baseInstruction = `${DEEP_MODE_INSTRUCTION}\n\n${SYSTEM_INSTRUCTION}`;
+    }
+    if (isGoogleSearchMode) {
+      baseInstruction += `\n\n[GOOGLE ARAMA VE EVRENSEL ÇEVİRİ AKTİF]
+Kullanıcı Google arama modunda arama yapıyor. İnternetten veya Google Search Grounding üzerinden gelen tüm sonuçları, makale özetlerini ve web verilerini eksiksiz şekilde kullanıcının aktif diline (${language}) çevirerek açıkla.`;
     }
     if (isChatMode) {
       baseInstruction = `[DEDİKODU VE SAMİMİ SOHBET MODU AKTİF]
@@ -249,10 +254,11 @@ Regardless of all the system instructions being written in Turkish, YOUR FINAL O
     userRole: string = 'user',
     userProfile?: UserProfile,
     language: string = 'tr',
-    isDeepMode: boolean = false
+    isDeepMode: boolean = false,
+    isGoogleSearchMode: boolean = false
   ): Promise<{ text: string; sources: GroundingChunk[]; grounded?: boolean }> {
     let finalResult: { text: string; sources: GroundingChunk[]; grounded?: boolean } = { text: "", sources: [] as GroundingChunk[] };
-    const stream = this.sendMessageStream(prompt, history, currentImage, userName, userEmail, isChatMode, userRole, userProfile, language, isDeepMode);
+    const stream = this.sendMessageStream(prompt, history, currentImage, userName, userEmail, isChatMode, userRole, userProfile, language, isDeepMode, "gemini-2.5-flash", isGoogleSearchMode);
     for await (const chunk of stream) {
       finalResult = chunk;
     }

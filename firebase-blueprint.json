@@ -79,9 +79,25 @@
         "images": { "type": "integer", "description": "Number of images generated today" },
         "updatedAt": { "type": "string", "format": "date-time" }
       }
+    },
+    "SystemConfig": {
+      "title": "SystemConfig",
+      "description": "Global system configurations and latest app version",
+      "type": "object",
+      "properties": {
+        "latestVersion": { "type": "string" },
+        "releaseDate": { "type": "string" },
+        "releaseNotes": { "type": "array", "items": { "type": "string" } },
+        "forceReload": { "type": "boolean" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      }
     }
   },
   "firestore": {
+    "/system/{configId}": {
+      "schema": "SystemConfig",
+      "description": "System-wide configurations and latest version information"
+    },
     "/users/{userId}": {
       "schema": "User",
       "description": "User profiles"

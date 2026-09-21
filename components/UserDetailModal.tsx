@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { UserProfile, Language } from '../types';
 import { notificationService } from '../services/notificationService';
+import { translations } from '../translations';
 
 interface UserDetailModalProps {
   user: UserProfile | null;
@@ -33,6 +34,7 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
   theme = 'dark',
   language = 'tr',
 }) => {
+  const t = translations[language] || translations.tr;
   const [isSendingNotif, setIsSendingNotif] = useState(false);
   const [notifMessage, setNotifMessage] = useState('');
   const [notifSentSuccess, setNotifSentSuccess] = useState(false);
@@ -59,9 +61,9 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
 
   // Format last active date
   const formatDateTime = (d: any) => {
-    if (!d) return 'Henüz kaydedilmedi';
+    if (!d) return language === 'tr' ? 'Henüz kaydedilmedi' : 'Not recorded yet';
     const dateObj = d.toDate ? d.toDate() : new Date(d);
-    return dateObj.toLocaleString('tr-TR', {
+    return dateObj.toLocaleString(language === 'tr' ? 'tr-TR' : 'en-US', {
       day: '2-digit',
       month: 'long',
       year: 'numeric',
@@ -77,10 +79,10 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
     const dateKey = dt.toISOString().split('T')[0];
     const dayLabel =
       i === 0
-        ? 'Bugün'
+        ? (language === 'tr' ? 'Bugün' : 'Today')
         : i === 1
-        ? 'Dün'
-        : dt.toLocaleDateString('tr-TR', { weekday: 'short', day: 'numeric', month: 'numeric' });
+        ? (language === 'tr' ? 'Dün' : 'Yesterday')
+        : dt.toLocaleDateString(language === 'tr' ? 'tr-TR' : 'en-US', { weekday: 'short', day: 'numeric', month: 'numeric' });
     const count = user.dailyVisits?.[dateKey] || (dateKey === todayStr ? todayVisits : 0);
     return { dateKey, dayLabel, count };
   });
@@ -91,7 +93,7 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
     setIsSendingNotif(true);
     try {
       await notificationService.sendBroadcastNotification(
-        `Chat_CNR: Sayın ${user.name}`,
+        `Chat_CNR: ${user.name}`,
         notifMessage.trim(),
         'monthly',
         'dorukaliarslan20@gmail.com',
@@ -102,7 +104,7 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
       setTimeout(() => setNotifSentSuccess(false), 4000);
     } catch (err) {
       console.error('Failed to send notification to user:', err);
-      alert('Bildirim gönderilirken bir sorun oluştu.');
+      alert(language === 'tr' ? 'Bildirim gönderilirken bir sorun oluştu.' : 'Failed to send notification.');
     } finally {
       setIsSendingNotif(false);
     }
@@ -137,8 +139,10 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
               <User size={20} />
             </div>
             <div>
-              <h2 className="text-lg font-bold">Kullanıcı Profili & İstatistikleri</h2>
-              <p className="text-xs text-zinc-500">Kullanıcı ID: {user.uid.slice(0, 10)}...</p>
+              <h2 className="text-lg font-bold">
+                {language === 'tr' ? 'Kullanıcı Profili & İstatistikleri' : 'User Profile & Statistics'}
+              </h2>
+              <p className="text-xs text-zinc-500">ID: {user.uid.slice(0, 10)}...</p>
             </div>
           </div>
           <button
@@ -164,7 +168,7 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
               className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 ${
                 theme === 'dark' ? 'border-[#121212]' : 'border-white'
               } ${isOnline ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]' : 'bg-zinc-500'}`}
-              title={isOnline ? 'Çevrimiçi' : 'Çevrimdışı'}
+              title={isOnline ? (language === 'tr' ? 'Çevrimiçi' : 'Online') : (language === 'tr' ? 'Çevrimdışı' : 'Offline')}
             />
           </div>
 
@@ -173,11 +177,11 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
               <h3 className="text-xl font-bold">{user.name}</h3>
               {user.role === 'admin' ? (
                 <span className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-amber-500 text-black">
-                  Kurucu / Admin
+                  {t.adminKurucu}
                 </span>
               ) : (
                 <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-400">
-                  Üye
+                  {t.adminMember}
                 </span>
               )}
               {user.isPro && (
@@ -189,12 +193,14 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
 
             <p className="text-xs text-zinc-400 flex items-center justify-center sm:justify-start gap-1.5">
               <Mail size={13} className="text-zinc-500" />
-              <span>{user.email || 'E-posta bulunmuyor'}</span>
+              <span>{user.email || (language === 'tr' ? 'E-posta bulunmuyor' : 'No email available')}</span>
             </p>
 
             <p className="text-[11px] text-zinc-500 flex items-center justify-center sm:justify-start gap-1.5 pt-0.5">
               <Clock size={12} />
-              <span>Son Aktiflik: {formatDateTime(user.lastActive || user.lastLogin)}</span>
+              <span>
+                {language === 'tr' ? 'Son Aktiflik:' : 'Last Active:'} {formatDateTime(user.lastActive || user.lastLogin)}
+              </span>
             </p>
           </div>
         </div>
@@ -213,11 +219,11 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
                 <Activity size={16} />
               </div>
               <span className="text-xs font-bold uppercase tracking-wider text-blue-400">
-                Bugünkü Giriş Raporu
+                {language === 'tr' ? 'Bugünkü Giriş Raporu' : "Today's Visit Report"}
               </span>
             </div>
             <span className="text-[11px] font-medium text-zinc-400">
-              {new Date().toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })}
+              {new Date().toLocaleDateString(language === 'tr' ? 'tr-TR' : 'en-US', { day: 'numeric', month: 'long', year: 'numeric' })}
             </span>
           </div>
 
@@ -226,22 +232,22 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
               {todayVisits}
             </span>
             <span className="text-sm font-semibold text-zinc-400">
-              kez bugün giriş yaptı / sayfayı açtı
+              {language === 'tr' ? 'kez bugün giriş yaptı / sayfayı açtı' : 'visits / opens today'}
             </span>
           </div>
 
           <p className="text-xs text-zinc-400 leading-relaxed">
             {todayVisits === 0
-              ? 'Kullanıcı bugün henüz uygulamayı açmadı veya oturum açmadı.'
+              ? (language === 'tr' ? 'Kullanıcı bugün henüz uygulamayı açmadı veya oturum açmadı.' : 'User has not opened the app today yet.')
               : todayVisits === 1
-              ? 'Kullanıcı bugün uygulamayı 1 kez açıp kullandı.'
-              : `Kullanıcı bugün Chat_CNR'ı tam ${todayVisits} kez ziyaret edip oturum açtı.`}
+              ? (language === 'tr' ? 'Kullanıcı bugün uygulamayı 1 kez açıp kullandı.' : 'User opened and used the app 1 time today.')
+              : (language === 'tr' ? `Kullanıcı bugün Chat_CNR'ı tam ${todayVisits} kez ziyaret edip oturum açtı.` : `User visited and opened Chat_CNR ${todayVisits} times today.`)}
           </p>
 
           {/* Mini 5-Day Activity Visualizer */}
           <div className="mt-4 pt-3 border-t border-zinc-800/40">
             <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block mb-2">
-              Son Günlerin Giriş Geçmişi
+              {language === 'tr' ? 'Son Günlerin Giriş Geçmişi' : 'Recent Visit History'}
             </span>
             <div className="grid grid-cols-5 gap-2 text-center">
               {recentDays.map((d, i) => (
@@ -257,7 +263,9 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
                 >
                   <span className="text-[10px] font-semibold">{d.dayLabel}</span>
                   <span className="text-base font-black mt-0.5">{d.count}</span>
-                  <span className="text-[9px] opacity-70">giriş</span>
+                  <span className="text-[9px] opacity-70">
+                    {language === 'tr' ? 'giriş' : 'visits'}
+                  </span>
                 </div>
               ))}
             </div>
@@ -273,22 +281,24 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Crown size={18} className="text-amber-400" />
-              <span className="text-sm font-bold">PRO Üyelik Durumu</span>
+              <span className="text-sm font-bold">
+                {language === 'tr' ? 'PRO Üyelik Durumu' : 'PRO Status'}
+              </span>
             </div>
             {user.isPro ? (
               <span className="text-xs font-bold text-amber-400 bg-amber-500/15 px-2.5 py-1 rounded-full border border-amber-500/30">
                 {(() => {
-                  if (!user.proExpiresAt) return 'Aktif PRO';
+                  if (!user.proExpiresAt) return language === 'tr' ? 'Aktif PRO' : 'Active PRO';
                   const exp = (user.proExpiresAt as any).toDate
                     ? (user.proExpiresAt as any).toDate()
                     : new Date(user.proExpiresAt);
                   const diffDays = Math.max(0, Math.ceil((exp.getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
-                  return `PRO (${diffDays} gün kaldı)`;
+                  return `PRO (${diffDays} ${t.proDaysLeft})`;
                 })()}
               </span>
             ) : (
               <span className="text-xs font-semibold text-zinc-500 bg-zinc-800/40 px-2.5 py-1 rounded-full">
-                Standart Üye (Ücretsiz)
+                {language === 'tr' ? 'Standart Üye (Ücretsiz)' : 'Standard Member (Free)'}
               </span>
             )}
           </div>
@@ -296,8 +306,8 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
           <div className="flex items-center justify-between gap-3 pt-1">
             <p className="text-xs text-zinc-400 leading-relaxed">
               {user.isPro
-                ? 'Bu kullanıcı şu anda PRO avantajlarından (sınırsız kota, derin düşünme, hızlı yanıt) yararlanıyor.'
-                : '1 Aylığına PRO yapabilir veya istediğiniz zaman kapatabilirsiniz.'}
+                ? (language === 'tr' ? 'Bu kullanıcı şu anda PRO avantajlarından (sınırsız kota, derin düşünme, hızlı yanıt) yararlanıyor.' : 'This user is currently enjoying PRO privileges (unlimited quota, deep reasoning, rapid response).')
+                : (language === 'tr' ? '1 Aylığına PRO yapabilir veya istediğiniz zaman kapatabilirsiniz.' : 'Activate PRO for 1 month or turn it off anytime.')}
             </p>
             <button
               id="user-detail-toggle-pro-btn"
@@ -310,7 +320,7 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
                   : 'bg-amber-500 hover:bg-amber-600 text-black font-extrabold shadow-md shadow-amber-500/20'
               }`}
             >
-              {isProLoading ? 'İşleniyor...' : user.isPro ? "PRO'YU KAPAT" : '1 AY PRO YAP'}
+              {isProLoading ? (language === 'tr' ? 'İşleniyor...' : 'Processing...') : user.isPro ? t.proTurnOff : t.proTurnOn}
             </button>
           </div>
         </div>
@@ -324,7 +334,9 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Bell size={18} className="text-blue-400" />
-              <span className="text-sm font-bold">Kullanıcıya Özel Bildirim Gönder</span>
+              <span className="text-sm font-bold">
+                {language === 'tr' ? 'Kullanıcıya Özel Bildirim Gönder' : 'Send Custom Notification'}
+              </span>
             </div>
             <span className="text-[10px] font-bold text-zinc-400 bg-zinc-800/40 px-2 py-0.5 rounded">
               Web Push / In-App
@@ -336,7 +348,7 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
               type="text"
               value={notifMessage}
               onChange={(e) => setNotifMessage(e.target.value)}
-              placeholder="Örn: Merhaba, yeni yapay zeka güncellemeleri hazır!"
+              placeholder={language === 'tr' ? "Örn: Merhaba, yeni yapay zeka güncellemeleri hazır!" : "e.g., Hello, new AI features are ready!"}
               className={`w-full px-3.5 py-2.5 rounded-xl text-xs border transition-all focus:outline-none focus:ring-2 focus:ring-blue-500/50 ${
                 theme === 'dark'
                   ? 'bg-zinc-900 border-zinc-800 text-white placeholder:text-zinc-600'
@@ -349,12 +361,14 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
                 type="button"
                 onClick={() =>
                   setNotifMessage(
-                    `Chat_CNR Aylık Hatırlatıcı: Yeni yapay zeka özellikleri ve sesli Hey CNR asistanı sizi bekliyor! 🚀`
+                    language === 'tr'
+                      ? `Chat_CNR Aylık Hatırlatıcı: Yeni yapay zeka özellikleri ve sesli Hey CNR asistanı sizi bekliyor! 🚀`
+                      : `Chat_CNR Monthly Reminder: New AI capabilities and voice Hey CNR assistant await you! 🚀`
                   )
                 }
                 className="text-[11px] text-blue-400 hover:underline font-medium"
               >
-                + Aylık Şablonu Ekle
+                + {language === 'tr' ? 'Aylık Şablonu Ekle' : 'Insert Monthly Template'}
               </button>
 
               <button
@@ -364,7 +378,7 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
                 className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all disabled:opacity-40"
               >
                 <Send size={12} />
-                <span>{isSendingNotif ? 'Gönderiliyor...' : 'Bildirimi Gönder'}</span>
+                <span>{isSendingNotif ? (language === 'tr' ? 'Gönderiliyor...' : 'Sending...') : (language === 'tr' ? 'Bildirimi Gönder' : 'Send Notification')}</span>
               </button>
             </div>
           </form>
@@ -372,7 +386,7 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
           {notifSentSuccess && (
             <div className="p-2.5 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-xs flex items-center gap-2">
               <CheckCircle2 size={15} />
-              <span>Bildirim başarıyla kaydedildi ve kullanıcıya iletildi!</span>
+              <span>{language === 'tr' ? 'Bildirim başarıyla kaydedildi ve kullanıcıya iletildi!' : 'Notification saved and delivered successfully!'}</span>
             </div>
           )}
         </div>
@@ -380,11 +394,11 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
         {/* Footer Actions */}
         <div className="pt-5 mt-2 flex items-center justify-between border-t border-zinc-800/40">
           <a
-            href={`mailto:${user.email}?subject=Chat_CNR%20Bilgilendirme`}
+            href={`mailto:${user.email}?subject=Chat_CNR%20Info`}
             className="text-xs font-semibold text-zinc-400 hover:text-white flex items-center gap-1.5 transition-colors"
           >
             <Mail size={13} />
-            <span>Doğrudan E-posta Yaz</span>
+            <span>{language === 'tr' ? 'Doğrudan E-posta Yaz' : 'Email Directly'}</span>
           </a>
 
           <button
@@ -395,7 +409,7 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
                 : 'bg-zinc-100 hover:bg-zinc-200 text-zinc-800'
             }`}
           >
-            Kapat
+            {t.close}
           </button>
         </div>
       </div>

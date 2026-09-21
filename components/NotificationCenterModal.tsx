@@ -28,7 +28,9 @@ export const NotificationCenterModal: React.FC<NotificationCenterModalProps> = (
   user,
   notifications,
   theme = 'dark',
+  language = 'tr',
 }) => {
+  const isTr = language === 'tr';
   const [permission, setPermission] = useState<NotificationPermission>(() =>
     notificationService.getPermissionStatus()
   );
@@ -53,12 +55,25 @@ export const NotificationCenterModal: React.FC<NotificationCenterModalProps> = (
     const granted = await notificationService.requestPermission();
     setPermission(notificationService.getPermissionStatus());
     if (granted) {
-      setFeedback('Tarayıcı bildirimleri başarıyla etkinleştirildi! 🎉');
-      notificationService.showLocalNotification('Chat_CNR Bildirimleri Aktif! 🎉', {
-        body: 'Artık aylık hatırlatıcıları ve yeni yapay zeka duyurularını anında alacaksınız.',
-      });
+      setFeedback(
+        isTr
+          ? 'Tarayıcı bildirimleri başarıyla etkinleştirildi! 🎉'
+          : 'Browser notifications successfully enabled! 🎉'
+      );
+      notificationService.showLocalNotification(
+        isTr ? 'Chat_CNR Bildirimleri Aktif! 🎉' : 'Chat_CNR Notifications Enabled! 🎉',
+        {
+          body: isTr
+            ? 'Artık aylık hatırlatıcıları ve yeni yapay zeka duyurularını anında alacaksınız.'
+            : 'You will now receive monthly reminders and new AI announcements in real-time.',
+        }
+      );
     } else {
-      setFeedback('Bildirim izni reddedildi. Tarayıcı ayarlarınızdan izin verebilirsiniz.');
+      setFeedback(
+        isTr
+          ? 'Bildirim izni reddedildi. Tarayıcı ayarlarınızdan izin verebilirsiniz.'
+          : 'Notification permission denied. You can enable it in your browser settings.'
+      );
     }
     setTimeout(() => setFeedback(null), 4000);
   };
@@ -93,8 +108,12 @@ export const NotificationCenterModal: React.FC<NotificationCenterModalProps> = (
               <Bell size={20} />
             </div>
             <div>
-              <h2 className="text-lg font-bold">Bildirim Merkezi</h2>
-              <p className="text-xs text-zinc-500">Aylık güncellemeler ve duyurular</p>
+              <h2 className="text-lg font-bold">
+                {isTr ? 'Bildirim Merkezi' : 'Notification Center'}
+              </h2>
+              <p className="text-xs text-zinc-500">
+                {isTr ? 'Aylık güncellemeler ve duyurular' : 'Monthly updates & announcements'}
+              </p>
             </div>
           </div>
           <button
@@ -122,12 +141,18 @@ export const NotificationCenterModal: React.FC<NotificationCenterModalProps> = (
               {permission === 'granted' ? <CheckCircle2 size={20} /> : <AlertCircle size={20} />}
               <div>
                 <p className="text-xs font-bold uppercase tracking-wider">
-                  {permission === 'granted' ? 'Bildirimler Etkin' : 'Bildirim İzni Gerekli'}
+                  {permission === 'granted'
+                    ? (isTr ? 'Bildirimler Etkin' : 'Notifications Active')
+                    : (isTr ? 'Bildirim İzni Gerekli' : 'Permission Required')}
                 </p>
                 <p className="text-[11px] opacity-80 mt-0.5">
                   {permission === 'granted'
-                    ? 'Tarayıcı bildirimleri açık, aylık bildirimleri alabilirsiniz.'
-                    : 'Aylık bildirimler için tarayıcı izni vermeniz önerilir.'}
+                    ? (isTr
+                        ? 'Tarayıcı bildirimleri açık, aylık bildirimleri alabilirsiniz.'
+                        : 'Browser notifications are active; you will receive monthly updates.')
+                    : (isTr
+                        ? 'Aylık bildirimler için tarayıcı izni vermeniz önerilir.'
+                        : 'Browser permission is recommended for monthly reminders.')}
                 </p>
               </div>
             </div>
@@ -138,7 +163,7 @@ export const NotificationCenterModal: React.FC<NotificationCenterModalProps> = (
                 onClick={handleEnableNotifications}
                 className="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-black text-xs font-bold transition-all shrink-0 active:scale-95"
               >
-                İzin Ver
+                {isTr ? 'İzin Ver' : 'Allow'}
               </button>
             )}
           </div>
@@ -152,10 +177,14 @@ export const NotificationCenterModal: React.FC<NotificationCenterModalProps> = (
             <div className="space-y-0.5">
               <div className="flex items-center gap-1.5">
                 <Calendar size={15} className="text-blue-400" />
-                <span className="text-xs font-bold">Aylık Hatırlatma Bildirimleri</span>
+                <span className="text-xs font-bold">
+                  {isTr ? 'Aylık Hatırlatma Bildirimleri' : 'Monthly Reminder Notifications'}
+                </span>
               </div>
               <p className="text-[11px] text-zinc-500 leading-relaxed">
-                Her ay 1 kez yeni modeller ve özellikler hakkında bildirim gönder.
+                {isTr
+                  ? 'Her ay 1 kez yeni modeller ve özellikler hakkında bildirim gönder.'
+                  : 'Receive notifications once a month regarding new models and features.'}
               </p>
             </div>
 
@@ -185,7 +214,7 @@ export const NotificationCenterModal: React.FC<NotificationCenterModalProps> = (
         {/* Recent Notifications List */}
         <div className="flex-1 space-y-2.5 pb-2">
           <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block">
-            Son Bildirimler ({notifications.length})
+            {isTr ? `Son Bildirimler (${notifications.length})` : `Recent Notifications (${notifications.length})`}
           </span>
 
           {notifications.length > 0 ? (
@@ -211,7 +240,7 @@ export const NotificationCenterModal: React.FC<NotificationCenterModalProps> = (
                       {n.title}
                     </span>
                     <span className="text-[10px] text-zinc-500">
-                      {n.createdAt ? new Date(n.createdAt).toLocaleDateString('tr-TR') : ''}
+                      {n.createdAt ? new Date(n.createdAt).toLocaleDateString(isTr ? 'tr-TR' : 'en-US') : ''}
                     </span>
                   </div>
                   <p className="text-xs text-zinc-400 leading-relaxed">{n.message}</p>
@@ -221,9 +250,13 @@ export const NotificationCenterModal: React.FC<NotificationCenterModalProps> = (
           ) : (
             <div className="p-8 text-center rounded-2xl border border-dashed border-zinc-800/60">
               <Bell size={28} className="mx-auto text-zinc-600 mb-2 opacity-60" />
-              <p className="text-xs font-medium text-zinc-400">Henüz yeni bir bildirim yok</p>
+              <p className="text-xs font-medium text-zinc-400">
+                {isTr ? 'Henüz yeni bir bildirim yok' : 'No new notifications yet'}
+              </p>
               <p className="text-[11px] text-zinc-600 mt-0.5">
-                Aylık duyurular ve hatırlatıcılar burada görüntülenecektir.
+                {isTr
+                  ? 'Aylık duyurular ve hatırlatıcılar burada görüntülenecektir.'
+                  : 'Monthly announcements and reminders will appear here.'}
               </p>
             </div>
           )}
@@ -239,7 +272,7 @@ export const NotificationCenterModal: React.FC<NotificationCenterModalProps> = (
                 : 'bg-zinc-100 hover:bg-zinc-200 text-zinc-800'
             }`}
           >
-            Kapat
+            {isTr ? 'Kapat' : 'Close'}
           </button>
         </div>
       </div>

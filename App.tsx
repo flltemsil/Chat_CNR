@@ -14,9 +14,14 @@ import { CameraModal } from "./components/CameraModal";
 import { UserDetailModal } from "./components/UserDetailModal";
 import { BroadcastNotificationModal } from "./components/BroadcastNotificationModal";
 import { NotificationCenterModal } from "./components/NotificationCenterModal";
+import { GoogleSearchModal } from "./components/GoogleSearchModal";
+import { googleSearchService } from "./services/googleSearchService";
 import { profileService } from "./services/profileService";
 import { notificationService } from "./services/notificationService";
 import { AppNotification } from "./types";
+import { UpdateModal } from "./components/UpdateModal";
+import { updateService, UpdateInfo } from "./services/updateService";
+import { APP_VERSION } from "./version";
 import {
   Menu,
   Plus,
@@ -59,7 +64,7 @@ import {
   Compass,
   Lightbulb,
   PenTool,
-  Code, Activity, Globe} from "lucide-react";
+  Code, Activity, Globe, RefreshCw} from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import {
   auth,
@@ -755,6 +760,12 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const [shareDialogUrl, setShareDialogUrl] = useState<string | null>(null);
 
+  // Live Update States
+  const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
+  const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
+  const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
+  const [updateCheckToast, setUpdateCheckToast] = useState<string | null>(null);
+
   const [dailyUsage, setDailyUsage] = useState({ messages: 0, images: 0 });
   const [isRecording, setIsRecording] = useState(false);
   const [isAutoSpeak, setIsAutoSpeak] = useState(false);
@@ -877,6 +888,8 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
   const [isUserDetailOpen, setIsUserDetailOpen] = useState(false);
   const [isBroadcastModalOpen, setIsBroadcastModalOpen] = useState(false);
   const [isNotificationCenterOpen, setIsNotificationCenterOpen] = useState(false);
+  const [isGoogleSearchOpen, setIsGoogleSearchOpen] = useState(false);
+  const [isGoogleSearchModeActive, setIsGoogleSearchModeActive] = useState(false);
   const [broadcastNotifications, setBroadcastNotifications] = useState<AppNotification[]>([]);
   const [deletingSessionId, setDeletingSessionId] = useState<string | null>(
     null,
@@ -887,7 +900,14 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
     sources: any[];
   } | null>(null);
 
-
+  // Subscribe to live update notifications
+  useEffect(() => {
+    const unsubscribe = updateService.subscribe((info) => {
+      setUpdateInfo(info);
+      setIsUpdateModalOpen(true);
+    });
+    return () => unsubscribe();
+  }, []);
 
   useEffect(() => {
     if (!user) return;
@@ -1981,7 +2001,8 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
         user,
         language,
         isDeepMode,
-        'gemini-2.5-flash'
+        'gemini-2.5-flash',
+        isGoogleSearchModeActive
       );
 
       // Show streaming message locally only
@@ -2253,20 +2274,22 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
       className={`flex h-[100dvh] overflow-hidden font-['Inter'] transition-all duration-700 ${theme === "dark" ? "bg-[#131314] text-zinc-100" : "bg-zinc-50 text-zinc-900"} `}
     >
       {/* Sidebar */}
-      <aside className={`fixed inset-y-0 left-0 z-[60] w-[280px] transition-all duration-500 ease-[0.23, 1, 0.32, 1] lg:relative lg:translate-x-0 ${isSidebarOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full"} ${theme === "dark" ? "bg-[#050505] border-r border-zinc-800/50" : "bg-[#f8f9fa] border-r border-zinc-200"}`}>
-        <div className="flex flex-col h-full overflow-hidden">
-          <div className={`px-6 py-6 border-b flex items-center justify-between ${theme === "dark" ? "border-zinc-800/50" : "border-zinc-200"}`}>
+      <aside className={`fixed inset-y-0 left-0 z-[60] w-[85vw] max-w-[300px] lg:w-[280px] transition-all duration-500 ease-[0.23, 1, 0.32, 1] lg:relative lg:translate-x-0 ${isSidebarOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full"} ${theme === "dark" ? "bg-[#0a0a0b] border-r border-zinc-800/60" : "bg-[#f8f9fa] border-r border-zinc-200"}`}>
+        <div className="flex flex-col h-full overflow-hidden pt-[env(safe-area-inset-top,0)] pb-[env(safe-area-inset-bottom,0)]">
+          <div className={`px-4 sm:px-6 py-4 sm:py-5 border-b flex items-center justify-between ${theme === "dark" ? "border-zinc-800/50" : "border-zinc-200"}`}>
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
+              <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/20 shrink-0">
                 <Brain size={18} className="text-white" />
               </div>
               <h1 className={`font-bold text-lg tracking-tight ${theme === "dark" ? "text-white" : "text-zinc-900"}`}>Chat_CNR</h1>
             </div>
             <button
               onClick={() => setIsSidebarOpen(false)}
-              className={`p-2 rounded-lg transition-colors lg:hidden ${theme === "dark" ? "hover:bg-zinc-800 text-zinc-400" : "hover:bg-zinc-200 text-zinc-600"}`}
+              className={`p-2 rounded-xl transition-colors lg:hidden active:scale-95 ${theme === "dark" ? "hover:bg-zinc-800 text-zinc-400 hover:text-white" : "hover:bg-zinc-200 text-zinc-600"}`}
+              title="Kapat"
+              aria-label="Kapat"
             >
-              <Menu size={20} />
+              <X size={20} />
             </button>
           </div>
 
@@ -2309,6 +2332,21 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
               <button onClick={() => setImageFilter(!imageFilter)} className={`w-full flex items-center gap-3 py-2.5 px-3 rounded-xl text-[13px] font-medium transition-colors border ${imageFilter ? (theme === "dark" ? "bg-blue-900/20 text-blue-400 border-blue-900/50" : "bg-blue-50 text-blue-600 border-blue-100") : (theme === "dark" ? "border-transparent text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/50 hover:border-zinc-800" : "border-transparent text-zinc-600 hover:text-zinc-900 hover:bg-white hover:border-zinc-200 hover:shadow-sm")}`}>
                 <ImageIcon size={16} className="opacity-70" />
                 Resimler {imageFilter && <span className="ml-auto text-[9px] bg-blue-500/20 px-2 py-0.5 rounded-full">Filtre Aktif</span>}
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsGoogleSearchOpen(true)}
+                className={`w-full flex items-center gap-3 py-2.5 px-3 rounded-xl text-[13px] font-medium transition-all border ${
+                  theme === "dark"
+                    ? "bg-blue-500/10 text-blue-400 border-blue-500/30 hover:bg-blue-500/20 hover:border-blue-400/50"
+                    : "bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100 shadow-xs"
+                }`}
+              >
+                <Search size={16} className="text-blue-500" />
+                <span className="flex-1 text-left font-semibold">Google Arama & Çeviri</span>
+                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-500/20 text-blue-400 font-bold">
+                  CANLI
+                </span>
               </button>
             </div>
 
@@ -2399,7 +2437,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                             e.stopPropagation();
                             setDeletingSessionId(session.id);
                           }}
-                          className={`absolute right-2 p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-all ${
+                          className={`absolute right-2 p-1.5 rounded-lg opacity-80 lg:opacity-0 lg:group-hover:opacity-100 transition-all ${
                             theme === "dark"
                               ? "hover:bg-red-500/20 text-zinc-400 hover:text-red-500"
                               : "hover:bg-red-50 text-zinc-400 hover:text-red-500"
@@ -2436,6 +2474,18 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
               </div>
               <Settings size={16} className={`${theme === "dark" ? "text-zinc-500" : "text-zinc-400"}`} />
             </button>
+            <div className={`mt-2 pt-2 border-t flex items-center justify-between px-2 text-[10px] ${theme === "dark" ? "border-zinc-800/40 text-zinc-500" : "border-zinc-200 text-zinc-400"}`}>
+              <span className="flex items-center gap-1 font-mono">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block animate-pulse"></span>
+                v{APP_VERSION}
+              </span>
+              <button
+                onClick={() => setIsSettingsOpen(true)}
+                className="hover:text-blue-400 transition-colors font-semibold"
+              >
+                {language === "tr" ? "Canlı Sürüm" : "Live Release"}
+              </button>
+            </div>
           </div>
         </div>
       </aside>
@@ -2461,27 +2511,38 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
           )}
 
           {/* Header */}
-          <header className={`h-16 flex items-center justify-between px-4 sticky top-0 z-50 ${theme === "dark" ? "bg-transparent" : "bg-white"}`}>
-            <div className="flex items-center gap-3 md:gap-4 overflow-hidden">
+          <header className={`h-14 sm:h-16 flex items-center justify-between px-2.5 sm:px-6 sticky top-0 z-40 backdrop-blur-xl border-b transition-colors pt-[env(safe-area-inset-top,0)] ${
+            theme === "dark" 
+              ? "bg-[#131314]/90 border-zinc-800/60 text-zinc-100" 
+              : "bg-white/95 border-zinc-200/80 text-zinc-900 shadow-2xs"
+          }`}>
+            <div className="flex items-center gap-2 sm:gap-3 overflow-hidden shrink-0">
               <button
                 onClick={() => setIsSidebarOpen(true)}
-                className={`lg:hidden p-2 rounded-full transition-all flex-shrink-0 ${theme === "dark" ? "text-zinc-400 hover:bg-[#2a2b2f]" : "text-zinc-500 hover:bg-[#e1e5ea]"}`}
+                className={`p-2 rounded-xl transition-all flex-shrink-0 lg:hidden active:scale-95 ${
+                  theme === "dark" ? "text-zinc-300 hover:bg-zinc-800" : "text-zinc-600 hover:bg-zinc-100"
+                }`}
+                aria-label="Menüyü Aç"
               >
                 <Menu size={20} />
               </button>
-              <div className="flex items-center gap-2">
-                <h1 className={`text-[20px] md:text-[22px] font-medium tracking-tight flex items-center gap-2 ${theme === "dark" ? "text-zinc-200" : "text-[#444746]"}`}>
-                  <span className="text-[#d96570]"><Sparkles size={24} fill="currentColor" /></span>
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <span className="text-[#d96570] flex items-center justify-center">
+                  <Sparkles size={20} className="sm:w-6 sm:h-6" fill="currentColor" />
+                </span>
+                <h1 className="text-base sm:text-lg font-bold tracking-tight">
                   Chat_CNR
                 </h1>
               </div>
             </div>
 
-            <div className="flex items-center gap-1.5 relative z-50">
+            <div className="flex items-center gap-1 sm:gap-1.5 relative z-50">
               {user?.role === 'admin' && (
                 <button
                   onClick={() => setIsAdminPanelOpen(true)}
-                  className={`p-2 rounded-full transition-colors ${theme === "dark" ? "text-zinc-400 hover:bg-[#2a2b2f] hover:text-zinc-200" : "text-zinc-600 hover:bg-[#e1e5ea] hover:text-zinc-900"}`}
+                  className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center transition-colors ${
+                    theme === "dark" ? "text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200" : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900"
+                  }`}
                   title={t.userList || "Kişiler"}
                 >
                   <Users size={16} />
@@ -2497,44 +2558,65 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                       alert("Paylaşım başarısız oldu: " + err.message);
                     }
                   }}
-                  className={`p-2 rounded-full transition-colors ${theme === "dark" ? "text-zinc-400 hover:bg-[#2a2b2f] hover:text-blue-400" : "text-zinc-600 hover:bg-[#e1e5ea] hover:text-blue-600"}`}
+                  className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center transition-colors ${
+                    theme === "dark" ? "text-zinc-400 hover:bg-zinc-800 hover:text-blue-400" : "text-zinc-600 hover:bg-zinc-100 hover:text-blue-600"
+                  }`}
                   title="Paylaş"
                 >
                   <Share2 size={16} />
                 </button>
               )}
-              
-              
 
               {/* Hey CNR Wake-Word Button */}
               <button
                 type="button"
                 onClick={toggleHeyCnr}
-                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs font-semibold transition-all border ${
+                className={`h-8 sm:h-9 px-2 sm:px-2.5 rounded-full text-xs font-semibold transition-all border flex items-center gap-1.5 shrink-0 ${
                   isHeyCnrActive
-                    ? "bg-amber-500/15 text-amber-500 border-amber-500/30 shadow-sm shadow-amber-500/10"
+                    ? "bg-amber-500/15 text-amber-500 border-amber-500/30 shadow-2xs shadow-amber-500/10"
                     : theme === "dark"
-                      ? "text-zinc-400 hover:bg-[#2a2b2f] hover:text-zinc-200 border-zinc-800"
-                      : "text-zinc-600 hover:bg-[#e1e5ea] hover:text-zinc-900 border-zinc-200"
+                      ? "text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200 border-zinc-800"
+                      : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 border-zinc-200"
                 }`}
                 title={
                   isHeyCnrActive
-                    ? "Hey CNR Sesli Uyandırma Aktif (Tıklayarak kapatabilirsiniz)"
-                    : "Hey CNR Sesli Uyandırmayı Aç ('Hey CNR' diyerek soru sorabilirsiniz)"
+                    ? "Hey CNR Sesli Uyandırma Aktif (Kapatmak için tıklayın)"
+                    : "Hey CNR Sesli Uyandırmayı Aç"
                 }
               >
                 <Radio size={14} className={isHeyCnrActive ? "text-amber-500 animate-pulse" : "opacity-60"} />
                 <span className="hidden sm:inline">Hey CNR</span>
                 {isHeyCnrActive ? (
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
                 ) : (
                   <span className="hidden md:inline text-[9px] opacity-60">KAPALI</span>
                 )}
               </button>
 
+              {/* Google Search Hub Button */}
+              <button
+                type="button"
+                onClick={() => setIsGoogleSearchOpen(true)}
+                className={`h-8 sm:h-9 px-2 sm:px-2.5 rounded-full text-xs font-semibold transition-all border flex items-center gap-1.5 shrink-0 ${
+                  theme === "dark"
+                    ? "bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 border-blue-500/30 shadow-2xs"
+                    : "bg-blue-50 text-blue-600 hover:bg-blue-100 border-blue-200 shadow-2xs"
+                }`}
+                title="Google Canlı Arama ve Dil Çevirisi"
+              >
+                <Search size={14} className="text-blue-500" />
+                <span className="hidden sm:inline font-bold">Google</span>
+              </button>
+
               <button
                 onClick={() => setIsAutoSpeak(!isAutoSpeak)}
-                className={`p-2 rounded-full transition-colors ${isAutoSpeak ? "bg-[#d3e3fd] text-[#041e49]" : theme === "dark" ? "text-zinc-400 hover:bg-[#2a2b2f] hover:text-zinc-200" : "text-zinc-600 hover:bg-[#e1e5ea] hover:text-zinc-900"}`}
+                className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center transition-colors shrink-0 ${
+                  isAutoSpeak 
+                    ? "bg-blue-500/20 text-blue-400" 
+                    : theme === "dark" 
+                      ? "text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200" 
+                      : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900"
+                }`}
                 title={isAutoSpeak ? t.voiceResponseOn : t.voiceResponseOff}
               >
                 {isAutoSpeak ? <Volume2 size={16} /> : <VolumeX size={16} />}
@@ -2542,17 +2624,21 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
               <button
                 id="header-notification-bell-btn"
                 onClick={() => setIsNotificationCenterOpen(true)}
-                className={`p-2 rounded-full transition-colors relative ${theme === "dark" ? "text-zinc-400 hover:bg-[#2a2b2f] hover:text-zinc-200" : "text-zinc-600 hover:bg-[#e1e5ea] hover:text-zinc-900"}`}
+                className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center transition-colors relative shrink-0 ${
+                  theme === "dark" ? "text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200" : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900"
+                }`}
                 title="Bildirim Merkezi & Aylık Hatırlatıcılar"
               >
                 <Bell size={16} />
                 {broadcastNotifications.length > 0 && (
-                  <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-amber-500 ring-2 ring-[#0a0a0a]" />
+                  <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-amber-500 ring-2 ring-[#0a0a0a]" />
                 )}
               </button>
               <button
                 onClick={() => setIsSettingsOpen(true)}
-                className={`p-2 rounded-full transition-colors ${theme === "dark" ? "text-zinc-400 hover:bg-[#2a2b2f] hover:text-zinc-200" : "text-zinc-600 hover:bg-[#e1e5ea] hover:text-zinc-900"}`}
+                className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center transition-colors shrink-0 ${
+                  theme === "dark" ? "text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200" : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900"
+                }`}
                 title={t.settings}
               >
                 <Settings size={16} />
@@ -2561,16 +2647,16 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
           </header>
 
           {/* Messages Area */}
-          <main className={`overflow-y-auto custom-scrollbar relative z-10 px-4 md:px-8 ${(!activeSession || (activeSession.messages && activeSession.messages.length === 0)) ? "flex-1 flex flex-col justify-end pb-8" : "flex-1 py-8 space-y-8"} bg-transparent`}>
+          <main className={`overflow-y-auto custom-scrollbar relative z-10 px-2.5 sm:px-4 md:px-8 ${(!activeSession || (activeSession.messages && activeSession.messages.length === 0)) ? "flex-1 flex flex-col justify-center py-4 sm:py-8" : "flex-1 py-3 sm:py-6 space-y-4 sm:space-y-6"} bg-transparent`}>
             <div className="max-w-4xl mx-auto w-full">
               {(!activeSession || (activeSession.messages && activeSession.messages.length === 0)) && (
-                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col justify-center min-h-[50vh] w-full max-w-4xl mx-auto pb-4">
-                  <div className="flex flex-col mb-12 md:mb-16 self-start w-full px-4">
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col justify-center w-full max-w-2xl mx-auto py-2 sm:py-6">
+                  <div className="flex flex-col mb-4 sm:mb-8 self-start w-full px-1 sm:px-4">
                     <motion.h1 
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.5 }}
-                      className="text-4xl md:text-5xl lg:text-[56px] font-medium tracking-tight mb-2"
+                      className="text-2xl sm:text-4xl md:text-5xl font-medium tracking-tight mb-1 sm:mb-2"
                     >
                       <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#4285f4] via-[#9b72cb] to-[#d96570]">
                         Merhaba{user?.name ? `, ${user.name.split(' ')[0]}` : ''}
@@ -2580,7 +2666,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.5, delay: 0.1 }}
-                      className={`text-4xl md:text-5xl lg:text-[56px] font-medium tracking-tight ${theme === "dark" ? "text-[#444746]" : "text-[#c4c7c5]"}`}
+                      className={`text-2xl sm:text-4xl md:text-5xl font-medium tracking-tight ${theme === "dark" ? "text-[#55585a]" : "text-[#b0b3b1]"}`}
                     >
                       Nereden başlayalım?
                     </motion.h2>
@@ -2589,18 +2675,18 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.5, delay: 0.2 }}
-                      className={`mt-6 p-4 rounded-2xl border max-w-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3.5 ${
+                      className={`mt-4 sm:mt-6 p-3 sm:p-4 rounded-2xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 ${
                         theme === "dark"
                           ? "bg-zinc-900/70 border-amber-500/25 text-zinc-300"
-                          : "bg-amber-50/80 border-amber-200 text-zinc-800 shadow-sm"
+                          : "bg-amber-50/80 border-amber-200 text-zinc-800 shadow-xs"
                       }`}
                     >
-                      <div className="flex items-start gap-3">
-                        <div className="p-2 rounded-xl bg-amber-500/15 text-amber-500 shrink-0 mt-0.5">
-                          <Crown size={20} />
+                      <div className="flex items-start gap-2.5 sm:gap-3">
+                        <div className="p-1.5 sm:p-2 rounded-xl bg-amber-500/15 text-amber-500 shrink-0 mt-0.5">
+                          <Crown size={18} className="sm:w-5 sm:h-5" />
                         </div>
                         <div className="space-y-0.5">
-                          <p className="text-xs font-black uppercase tracking-wider text-amber-500">
+                          <p className="text-[11px] sm:text-xs font-black uppercase tracking-wider text-amber-500">
                             Chat_CNR PRO
                           </p>
                           <p className="text-xs leading-relaxed opacity-90">
@@ -2612,7 +2698,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                         href="https://mail.google.com/mail/?view=cm&fs=1&to=dorukaliarslan20@gmail.com&su=Chat_CNR%20Pro%20%C3%9Cyelik%20Talebi&body=Merhaba,%20Chat_CNR%20Pro%20%C3%BCyeli%C4%9Fi%20almak%20istiyorum."
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-600 text-white transition-all shadow-md shadow-amber-500/20 active:scale-95"
+                        className="w-full sm:w-auto shrink-0 flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-600 text-white transition-all shadow-md shadow-amber-500/20 active:scale-95 text-center"
                       >
                         <Mail size={13} />
                         <span>Gmail ile Yaz</span>
@@ -2625,23 +2711,23 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.5, delay: 0.25 }}
-                      className={`mt-3 p-4 rounded-2xl border max-w-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3.5 transition-all ${
+                      className={`mt-2.5 sm:mt-3 p-3 sm:p-4 rounded-2xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 transition-all ${
                         isHeyCnrActive
-                          ? "bg-amber-500/10 border-amber-500/40 text-amber-500 shadow-sm"
+                          ? "bg-amber-500/10 border-amber-500/40 text-amber-500 shadow-xs"
                           : theme === "dark"
                             ? "bg-zinc-900/40 border-zinc-800 text-zinc-300"
-                            : "bg-zinc-50 border-zinc-200 text-zinc-800 shadow-sm"
+                            : "bg-zinc-50 border-zinc-200 text-zinc-800 shadow-xs"
                       }`}
                     >
-                      <div className="flex items-start gap-3">
-                        <div className={`p-2 rounded-xl shrink-0 mt-0.5 ${
+                      <div className="flex items-start gap-2.5 sm:gap-3">
+                        <div className={`p-1.5 sm:p-2 rounded-xl shrink-0 mt-0.5 ${
                           isHeyCnrActive ? "bg-amber-500/20 text-amber-500" : "bg-blue-500/10 text-blue-500"
                         }`}>
-                          <Radio size={20} className={isHeyCnrActive ? "animate-pulse" : ""} />
+                          <Radio size={18} className={`sm:w-5 sm:h-5 ${isHeyCnrActive ? "animate-pulse" : ""}`} />
                         </div>
                         <div className="space-y-0.5">
                           <div className="flex items-center gap-2">
-                            <p className="text-xs font-black uppercase tracking-wider text-amber-500">
+                            <p className="text-[11px] sm:text-xs font-black uppercase tracking-wider text-amber-500">
                               "Hey CNR" Sesli Uyandırma
                             </p>
                             {isHeyCnrActive && (
@@ -2651,14 +2737,14 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                             )}
                           </div>
                           <p className="text-xs leading-relaxed opacity-90">
-                            Tıpkı <em>"Hey Google"</em> gibi eller serbest konuşun: <span className="font-semibold text-amber-500">"Hey CNR, bugünkü hava nasıl?"</span>
+                            Tıpkı <em>"Hey Google"</em> gibi eller serbest: <span className="font-semibold text-amber-500">"Hey CNR, bugünkü hava nasıl?"</span>
                           </p>
                         </div>
                       </div>
                       <button
                         type="button"
                         onClick={toggleHeyCnr}
-                        className={`shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all active:scale-95 ${
+                        className={`w-full sm:w-auto shrink-0 flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all active:scale-95 ${
                           isHeyCnrActive
                             ? "bg-amber-500/20 text-amber-500 border border-amber-500/30 hover:bg-amber-500/30"
                             : "bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-500/20"
@@ -2737,25 +2823,27 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
           </main>
 
           {/* Footer */}
-          <footer className={`px-4 md:px-8 transition-colors duration-500 ${(!activeSession || (activeSession.messages && activeSession.messages.length === 0)) ? "pb-[20vh] border-transparent" : "py-4 md:py-6 pb-[calc(env(safe-area-inset-bottom,0)+16px)] border-t"} ${theme === "dark" ? ((!activeSession || (activeSession.messages && activeSession.messages.length === 0)) ? "bg-transparent border-transparent" : "bg-[#131314] border-zinc-800/40") : "bg-white border-zinc-100"}`}>
+          <footer className={`px-2.5 sm:px-4 md:px-8 transition-colors duration-300 py-2 sm:py-3.5 pb-[max(env(safe-area-inset-bottom,0px),0.75rem)] border-t ${
+            theme === "dark" ? "bg-[#131314]/95 border-zinc-800/60 backdrop-blur-lg" : "bg-white/95 border-zinc-200/80 backdrop-blur-lg"
+          }`}>
 
-            <div className="max-w-4xl mx-auto">
+            <div className="max-w-4xl mx-auto w-full">
               {selectedImage && (
                 <motion.div
                   initial={{ opacity: 0, scale: 0.9, y: 10 }}
                   animate={{ opacity: 1, scale: 1, y: 0 }}
-                  className="mb-4 relative inline-block group"
+                  className="mb-2.5 relative inline-block group"
                 >
                   <img
                     src={selectedImage}
                     alt="Seçilen"
-                    className={`h-28 w-28 object-cover rounded-2xl border-2 ${theme === "dark" ? "border-blue-500/40 ring-8 ring-blue-500/5" : "border-blue-200"}`}
+                    className={`h-20 w-20 sm:h-28 sm:w-28 object-cover rounded-2xl border-2 ${theme === "dark" ? "border-blue-500/40 ring-4 ring-blue-500/10" : "border-blue-200"}`}
                   />
                   <button
                     onClick={() => setSelectedImage(null)}
-                    className="absolute -top-3 -right-3 bg-red-500 text-white rounded-full p-2 shadow-2xl transition-transform hover:scale-110 active:scale-95 border-2 border-[#050505]"
+                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1.5 shadow-lg transition-transform hover:scale-110 active:scale-95 border-2 border-[#050505]"
                   >
-                    <X size={14} />
+                    <X size={12} />
                   </button>
                 </motion.div>
               )}
@@ -2764,10 +2852,10 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
               <AnimatePresence>
                 {isHeyCnrActive && (
                   <motion.div
-                    initial={{ opacity: 0, y: 8, scale: 0.98 }}
+                    initial={{ opacity: 0, y: 6, scale: 0.98 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: 8, scale: 0.98 }}
-                    className={`mb-2.5 px-4 py-2 rounded-2xl flex items-center justify-between gap-3 text-xs border backdrop-blur-md transition-all shadow-sm ${
+                    exit={{ opacity: 0, y: 6, scale: 0.98 }}
+                    className={`mb-2 px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl sm:rounded-2xl flex items-center justify-between gap-2 text-xs border backdrop-blur-md transition-all shadow-2xs ${
                       heyCnrStatus === "detected" || heyCnrStatus === "waiting_query"
                         ? "bg-amber-500/20 border-amber-500/50 text-amber-600 dark:text-amber-300 ring-2 ring-amber-500/20"
                         : theme === "dark"
@@ -2775,9 +2863,9 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                           : "bg-amber-50/90 border-amber-200/80 text-zinc-800"
                     }`}
                   >
-                    <div className="flex items-center gap-2.5 overflow-hidden">
-                      <div className="relative flex items-center justify-center">
-                        <span className={`w-2.5 h-2.5 rounded-full ${
+                    <div className="flex items-center gap-2 overflow-hidden min-w-0">
+                      <div className="relative flex items-center justify-center shrink-0">
+                        <span className={`w-2 h-2 rounded-full ${
                           heyCnrStatus === "detected" || heyCnrStatus === "waiting_query"
                             ? "bg-amber-500 animate-ping"
                             : "bg-emerald-500 animate-pulse"
@@ -2788,26 +2876,26 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                             : "bg-emerald-500"
                         }`} />
                       </div>
-                      <span className="font-bold text-amber-500 shrink-0">Hey CNR:</span>
-                      <span className="truncate font-medium">
+                      <span className="font-bold text-amber-500 shrink-0 text-[11px] sm:text-xs">Hey CNR:</span>
+                      <span className="truncate font-medium text-[11px] sm:text-xs">
                         {heyCnrStatus === "detected"
-                          ? (heyCnrPromptText ? `Algılandı: "${heyCnrPromptText}"` : "Algılandı! Dinleniyor...")
+                          ? (heyCnrPromptText ? `"${heyCnrPromptText}"` : "Algılandı...")
                           : heyCnrStatus === "waiting_query"
-                            ? (heyCnrPromptText || "Dinliyorum... Sorunuzu söyleyin.")
-                            : '"Hey CNR [sorunuz]" diyerek seslenebilirsiniz.'}
+                            ? (heyCnrPromptText || "Dinliyorum...")
+                            : 'Dinlemede. "Hey CNR" diyebilirsiniz.'}
                       </span>
                     </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                        CANLI DİNLEME
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <span className="hidden sm:inline text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                        CANLI
                       </span>
                       <button
                         type="button"
                         onClick={toggleHeyCnr}
-                        className="text-[11px] font-semibold text-zinc-400 hover:text-zinc-200 px-1.5 py-0.5 rounded-lg hover:bg-zinc-800/40 transition-colors"
+                        className="text-[11px] text-zinc-400 hover:text-zinc-200 p-1 rounded-lg hover:bg-zinc-800/40 transition-colors"
                         title="Hey CNR'ı Kapat"
                       >
-                        <X size={13} />
+                        <X size={12} />
                       </button>
                     </div>
                   </motion.div>
@@ -2816,22 +2904,40 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
 
               <form onSubmit={handleSend} className="flex gap-2 relative">
                 <div
-                  className={`flex-1 border-2 rounded-3xl p-2 md:p-3 flex flex-col transition-all duration-500 shadow-inner relative overflow-hidden group ${
+                  className={`flex-1 border-2 rounded-2xl sm:rounded-3xl p-1.5 sm:p-2.5 md:p-3 flex flex-col transition-all duration-300 shadow-inner relative overflow-hidden group ${
                     theme === "dark"
-                      ? "bg-[#131314] border-zinc-800/80 focus-within:border-blue-600/30 focus-within:shadow-[0_0_60px_rgba(37,99,235,0.05)]"
-                      : "bg-zinc-50 border-zinc-200 focus-within:border-blue-500/20"
+                      ? "bg-[#131314] border-zinc-800 focus-within:border-blue-600/40"
+                      : "bg-zinc-50 border-zinc-200 focus-within:border-blue-500/30"
                   }`}
                 >
+                  {isGoogleSearchModeActive && (
+                    <div className="mb-1.5 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-xl sm:rounded-2xl bg-blue-500/10 border border-blue-500/30 text-blue-400 text-[11px] sm:text-xs flex items-center justify-between animate-in fade-in">
+                      <div className="flex items-center gap-1.5 sm:gap-2 truncate">
+                        <Globe size={13} className="text-blue-400 animate-pulse shrink-0" />
+                        <span className="truncate leading-snug">
+                          <strong>Google Canlı Arama Aktif:</strong> İnternet taranarak yanıtlanacak
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setIsGoogleSearchModeActive(false)}
+                        className="p-0.5 hover:text-white shrink-0 ml-1.5"
+                        title="Google Modunu Kapat"
+                      >
+                        <X size={12} />
+                      </button>
+                    </div>
+                  )}
+
                   <div className="flex items-end gap-2 px-1">
                     <textarea
                       value={input}
-                      
                       onChange={(e) => setInput(e.target.value)}
                       placeholder={
                         activeSession ? t.inputPlaceholder : t.noSession
                       }
                       rows={1}
-                      className={`flex-1 bg-transparent border-none focus:ring-0 py-2 resize-none max-h-40 md:max-h-56 custom-scrollbar text-[15px] font-medium leading-relaxed tracking-tight placeholder:text-zinc-700 disabled:opacity-50 ${theme === "dark" ? "text-white" : "text-zinc-900"}`}
+                      className={`flex-1 bg-transparent border-none focus:ring-0 py-1 sm:py-2 resize-none min-h-[36px] max-h-32 sm:max-h-48 custom-scrollbar text-[14px] sm:text-[15px] font-medium leading-relaxed tracking-tight placeholder:text-zinc-500 disabled:opacity-50 ${theme === "dark" ? "text-white" : "text-zinc-900"}`}
                       onKeyDown={(e) => {
                         if (e.key === "Enter" && !e.shiftKey && activeSession) {
                           e.preventDefault();
@@ -2839,20 +2945,20 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                         }
                       }}
                     />
-
-                    {/* Send button & mic button inline with text mostly (on desktop or tablet if you prefer) - actually let's put mic and send at the bottom right */}
                   </div>
 
-                  {/* Toolbar row (icons) - below text on mobile, or bottom row always */}
-                  <div className="flex items-center justify-between mt-1 md:mt-2 px-1">
-                    <div className="flex items-center gap-1">
+                  {/* Toolbar row (icons) */}
+                  <div className="flex items-center justify-between mt-1 px-0.5 gap-1">
+                    <div className="flex items-center gap-0.5 sm:gap-1">
                       <button
                         type="button"
                         onClick={() => fileInputRef.current?.click()}
-                        className={`w-9 h-9 rounded-full flex items-center justify-center transition-all ${theme === "dark" ? "text-zinc-400 hover:bg-[#333537] hover:text-zinc-200" : "text-zinc-500 hover:bg-[#e1e5ea] hover:text-zinc-800"}`}
+                        className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center transition-all shrink-0 ${
+                          theme === "dark" ? "text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200" : "text-zinc-500 hover:bg-zinc-200 hover:text-zinc-800"
+                        }`}
                         title="Dosya veya Görsel Ekle"
                       >
-                        <Plus size={22} strokeWidth={1.5} />
+                        <Plus size={19} strokeWidth={2} />
                       </button>
                       <input
                         type="file"
@@ -2864,47 +2970,83 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                       <button
                         type="button"
                         onClick={() => setIsCameraOpen(true)}
-                        className={`w-9 h-9 rounded-full flex items-center justify-center transition-all ${theme === "dark" ? "text-zinc-400 hover:bg-[#333537] hover:text-zinc-200" : "text-zinc-500 hover:bg-[#e1e5ea] hover:text-zinc-800"}`}
+                        className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center transition-all shrink-0 ${
+                          theme === "dark" ? "text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200" : "text-zinc-500 hover:bg-zinc-200 hover:text-zinc-800"
+                        }`}
                         title="Kamera ile Fotoğraf Çek"
                       >
-                        <Camera size={20} strokeWidth={1.5} />
+                        <Camera size={17} strokeWidth={1.75} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setIsGoogleSearchOpen(true)}
+                        className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center transition-all shrink-0 ${
+                          theme === "dark"
+                            ? "text-blue-400 hover:bg-blue-500/20"
+                            : "text-blue-600 hover:bg-blue-100"
+                        }`}
+                        title="Google Canlı Arama ve Evrensel Çeviri Modalı"
+                      >
+                        <Search size={16} strokeWidth={2} />
                       </button>
                     </div>
-                    <div className="flex items-center gap-2">
+
+                    <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => setIsGoogleSearchModeActive(!isGoogleSearchModeActive)}
+                        className={`h-8 sm:h-9 px-2 sm:px-2.5 rounded-full flex items-center gap-1 text-xs font-semibold transition-all ${
+                          isGoogleSearchModeActive
+                            ? "bg-blue-500/20 text-blue-400 border border-blue-500/40 shadow-xs"
+                            : theme === "dark"
+                              ? "text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200"
+                              : "text-zinc-500 hover:bg-zinc-200 hover:text-zinc-800"
+                        }`}
+                        title={
+                          isGoogleSearchModeActive
+                            ? "Google Canlı Arama Modu Aktif (Kapatmak için tıklayın)"
+                            : "Sohbette Google Canlı Arama ve Otomatik Dil Çevirisini Aç"
+                        }
+                      >
+                        <Globe size={14} className={isGoogleSearchModeActive ? "text-blue-400 animate-spin" : ""} />
+                        <span className="hidden sm:inline">Google Ara</span>
+                      </button>
+
                       <button
                         type="button"
                         onClick={toggleHeyCnr}
-                        className={`h-9 px-2.5 rounded-full flex items-center gap-1.5 text-xs font-semibold transition-all ${
+                        className={`h-8 sm:h-9 px-2 sm:px-2.5 rounded-full flex items-center gap-1 text-xs font-semibold transition-all ${
                           isHeyCnrActive
-                            ? "bg-amber-500/20 text-amber-500 border border-amber-500/40 shadow-sm"
+                            ? "bg-amber-500/20 text-amber-500 border border-amber-500/40 shadow-xs"
                             : theme === "dark"
-                              ? "text-zinc-400 hover:bg-[#333537] hover:text-zinc-200"
-                              : "text-zinc-500 hover:bg-[#e1e5ea] hover:text-zinc-800"
+                              ? "text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200"
+                              : "text-zinc-500 hover:bg-zinc-200 hover:text-zinc-800"
                         }`}
                         title={
                           isHeyCnrActive
-                            ? "Hey CNR Dinlemede ('Hey CNR' diyerek soru sorabilirsiniz - kapatmak için tıklayın)"
-                            : "Hey CNR Sesli Uyandırmayı Aç ('Hey CNR' diyerek eller serbest konuşun)"
+                            ? "Hey CNR Dinlemede (Kapatmak için tıklayın)"
+                            : "Hey CNR Sesli Uyandırmayı Aç"
                         }
                       >
-                        <Radio size={15} className={isHeyCnrActive ? "text-amber-500 animate-pulse" : ""} />
+                        <Radio size={14} className={isHeyCnrActive ? "text-amber-500 animate-pulse" : ""} />
                         <span className="hidden sm:inline">Hey CNR</span>
                       </button>
 
                       <button
                         type="button"
                         onClick={toggleRecording}
-                        className={`w-9 h-9 rounded-full flex items-center justify-center transition-all disabled:opacity-30 ${
+                        className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center transition-all shrink-0 disabled:opacity-30 ${
                           isRecording
-                            ? "bg-red-500/10 text-red-500 animate-pulse"
+                            ? "bg-red-500/15 text-red-500 animate-pulse"
                             : theme === "dark"
-                              ? "text-zinc-400 hover:bg-[#333537] hover:text-zinc-200"
-                              : "text-zinc-500 hover:bg-[#e1e5ea] hover:text-zinc-800"
+                              ? "text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200"
+                              : "text-zinc-500 hover:bg-zinc-200 hover:text-zinc-800"
                         }`}
                         title="Sesli Konuş (Manuel Kayıt)"
                       >
-                        {isRecording ? <Mic size={20} strokeWidth={1.5} /> : <Mic size={20} strokeWidth={1.5} />}
+                        <Mic size={17} strokeWidth={1.75} />
                       </button>
+
                       <button
                         type="submit"
                         disabled={
@@ -2912,19 +3054,19 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                           (!input.trim() && !selectedImage) ||
                           isLoading
                         }
-                        className={`w-10 h-10 rounded-full flex items-center justify-center transition-all disabled:opacity-30 disabled:scale-100 active:scale-95 ${
+                        className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center transition-all shrink-0 disabled:opacity-30 disabled:scale-100 active:scale-95 ${
                           input.trim() || selectedImage
-                            ? (theme === "dark" ? "bg-white text-zinc-900" : "bg-[#1a73e8] text-white")
+                            ? (theme === "dark" ? "bg-white text-zinc-900" : "bg-[#1a73e8] text-white shadow-xs")
                             : "bg-transparent text-zinc-500"
                         }`}
+                        title="Gönder"
                       >
-                        <Send size={18} strokeWidth={2} className={(input.trim() || selectedImage) ? "ml-0.5" : ""} />
+                        <Send size={15} strokeWidth={2.2} className={(input.trim() || selectedImage) ? "ml-0.5" : ""} />
                       </button>
                     </div>
                   </div>
                 </div>
               </form>
-              <div className="mt-4 flex items-center justify-between px-2"></div>
             </div>
           </footer>
         </div>
@@ -3034,26 +3176,41 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
 
         {/* Admin Panel Modal */}
         {isAdminPanelOpen && user?.role === 'admin' && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-300">
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-300">
             <div
-              className={`w-full max-w-lg border rounded-3xl p-6 shadow-2xl ${theme === "dark" ? "bg-[#121212] border-zinc-800 text-white" : "bg-white border-zinc-200 text-zinc-900"}`}
+              className={`w-full max-w-lg border rounded-3xl p-4 sm:p-6 shadow-2xl flex flex-col max-h-[90dvh] ${theme === "dark" ? "bg-[#121212] border-zinc-800 text-white" : "bg-white border-zinc-200 text-zinc-900"}`}
             >
-              <div className="flex items-center justify-between mb-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 sm:mb-6">
                 <div>
-                  <h2 className="text-xl font-bold flex items-center gap-2">
+                  <h2 className="text-lg sm:text-xl font-bold flex items-center gap-2">
                     <Users size={20} className="text-amber-400" />
                     Kullanıcı Listesi
                   </h2>
                   <p className="text-xs text-zinc-500 mt-0.5">Kişiye tıklayarak profili ve günlük girişlerini inceleyin</p>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5 sm:gap-2 self-end sm:self-auto">
+                  <button
+                    onClick={async () => {
+                      try {
+                        await updateService.publishVersionToAllUsers(APP_VERSION);
+                        alert(`v${APP_VERSION} sürümü tüm kullanıcıların (Web, Mobil, APK) ekranına canlı olarak yayınlandı!`);
+                      } catch (e: any) {
+                        alert('Yayınlama hatası: ' + e?.message);
+                      }
+                    }}
+                    className="px-2.5 sm:px-3 py-1.5 text-[11px] sm:text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white rounded-xl transition-all flex items-center gap-1.5 shadow-sm shadow-blue-600/20 active:scale-95"
+                    title={`v${APP_VERSION} sürümünü tüm aktif kullanıcılara anlık bildirim olarak gönderin`}
+                  >
+                    <Sparkles size={13} />
+                    <span>v{APP_VERSION} Yayınla</span>
+                  </button>
                   <button
                     onClick={() => setIsBroadcastModalOpen(true)}
-                    className="px-3 py-1.5 text-xs font-bold bg-amber-500 text-black rounded-xl hover:bg-amber-400 transition-all flex items-center gap-1.5 shadow-sm shadow-amber-500/20 active:scale-95"
+                    className="px-2.5 sm:px-3 py-1.5 text-[11px] sm:text-xs font-bold bg-amber-500 text-black rounded-xl hover:bg-amber-400 transition-all flex items-center gap-1.5 shadow-sm shadow-amber-500/20 active:scale-95"
                     title="Tüm kullanıcılara bildirim veya aylık hatırlatıcı yayınlayın"
                   >
                     <Bell size={13} />
-                    <span>Aylık Bildirim Gönder</span>
+                    <span>Bildirim</span>
                   </button>
                   <button
                     onClick={() => {
@@ -3063,21 +3220,21 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                         alert('Güncelleme servisi henüz hazır değil veya aktif değil.');
                       }
                     }}
-                    className="px-2.5 py-1.5 text-xs font-bold bg-zinc-800 text-zinc-300 rounded-xl hover:bg-zinc-700 transition-all border border-zinc-700"
+                    className="px-2 sm:px-2.5 py-1.5 text-[11px] sm:text-xs font-bold bg-zinc-800 text-zinc-300 rounded-xl hover:bg-zinc-700 transition-all border border-zinc-700"
                     title="Güncellemeyi Test Et"
                   >
                     Test
                   </button>
                   <button
                     onClick={() => setIsAdminPanelOpen(false)}
-                    className={`p-2 rounded-xl transition-all ${theme === "dark" ? "text-zinc-400 hover:bg-zinc-800" : "text-zinc-500 hover:bg-zinc-100"}`}
+                    className={`p-1.5 sm:p-2 rounded-xl transition-all ${theme === "dark" ? "text-zinc-400 hover:bg-zinc-800" : "text-zinc-500 hover:bg-zinc-100"}`}
                   >
-                    <X size={20} />
+                    <X size={18} />
                   </button>
                 </div>
               </div>
 
-              <div className="space-y-3 max-h-[440px] overflow-y-auto custom-scrollbar pr-1">
+              <div className="space-y-3 flex-1 overflow-y-auto custom-scrollbar pr-1">
                 {allUsers.length > 0 ? (
                   allUsers.map((u, i) => {
                     let isUserOnline = false;
@@ -3216,6 +3373,23 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
           notifications={broadcastNotifications}
           theme={theme}
           language={language}
+        />
+
+        {/* Google Search & Universal Translation Modal */}
+        <GoogleSearchModal
+          isOpen={isGoogleSearchOpen}
+          onClose={() => setIsGoogleSearchOpen(false)}
+          onSendToChat={(snippet) => {
+            setInput(snippet);
+          }}
+          theme={theme}
+          language={language}
+          onLanguageChange={(newLang) => {
+            setLanguage(newLang);
+            try {
+              localStorage.setItem("chat_cnr_lang", newLang);
+            } catch (e) {}
+          }}
         />
         {isSettingsOpen && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-300">
@@ -3668,6 +3842,89 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                   </div>
                 </div>
 
+                {/* Sürüm & Canlı Güncelleme */}
+                <div className="space-y-4">
+                  <label
+                    className={`block text-xs font-bold uppercase tracking-widest ml-1 ${theme === "dark" ? "text-zinc-500" : "text-zinc-400"}`}
+                  >
+                    {language === "tr" ? "Sürüm & Canlı Güncelleme" : "Version & Live Updates"}
+                  </label>
+                  <div
+                    className={`border rounded-2xl p-4 space-y-3 ${theme === "dark" ? "bg-[#1a1a1a] border-zinc-800" : "bg-zinc-50 border-zinc-200"}`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2.5">
+                        <div className="p-2 rounded-xl bg-blue-600/10 text-blue-500">
+                          <Sparkles size={18} />
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold flex items-center gap-2">
+                            Chat_CNR
+                            <span className="text-[11px] px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400 font-mono font-bold">
+                              v{APP_VERSION}
+                            </span>
+                          </p>
+                          <p className={`text-[11px] ${theme === "dark" ? "text-zinc-400" : "text-zinc-600"}`}>
+                            {language === "tr" ? "Tüm kullanıcılar (Web & APK) senkron" : "All users (Web & APK) synced"}
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={async () => {
+                          setIsCheckingUpdate(true);
+                          setUpdateCheckToast(null);
+                          try {
+                            const newInfo = await updateService.checkForUpdates(true);
+                            if (newInfo) {
+                              setUpdateInfo(newInfo);
+                              setIsUpdateModalOpen(true);
+                            } else {
+                              setUpdateCheckToast(
+                                language === "tr" 
+                                  ? `En son sürümü kullanıyorsunuz! (v${APP_VERSION})` 
+                                  : `You are on the latest version! (v${APP_VERSION})`
+                              );
+                              setTimeout(() => setUpdateCheckToast(null), 4000);
+                            }
+                          } catch (err) {
+                            setUpdateCheckToast(
+                              language === "tr" ? "Kontrol tamamlandı (Güncel)" : "Check complete (Latest)"
+                            );
+                            setTimeout(() => setUpdateCheckToast(null), 3000);
+                          } finally {
+                            setIsCheckingUpdate(false);
+                          }
+                        }}
+                        disabled={isCheckingUpdate}
+                        className="px-3 py-1.5 text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white rounded-xl transition-all flex items-center gap-1.5 shadow-sm shadow-blue-600/20 disabled:opacity-50 active:scale-95"
+                      >
+                        <RefreshCw size={13} className={isCheckingUpdate ? "animate-spin" : ""} />
+                        <span>
+                          {isCheckingUpdate 
+                            ? (language === "tr" ? "Denetleniyor..." : "Checking...") 
+                            : (language === "tr" ? "Denetle" : "Check")}
+                        </span>
+                      </button>
+                    </div>
+
+                    {updateCheckToast && (
+                      <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium text-center animate-in fade-in">
+                        {updateCheckToast}
+                      </div>
+                    )}
+
+                    <div className="pt-2 border-t border-zinc-800/40 flex items-center justify-between text-xs text-zinc-500">
+                      <span>{language === "tr" ? "Önbellek kilidi temizleme:" : "Cache lock clearing:"}</span>
+                      <button
+                        onClick={() => updateService.applyUpdate()}
+                        className="text-blue-400 hover:underline text-[11px] font-semibold"
+                      >
+                        {language === "tr" ? "Önbelleği Boşalt & Yenile" : "Clear Cache & Reload"}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
                 <div
                   className={`pt-4 border-t ${theme === "dark" ? "border-zinc-800" : "border-zinc-200"}`}
                 >
@@ -3802,7 +4059,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                    transition={{ delay: 2.5, duration: 1 }}
                    className="text-xl md:text-2xl text-zinc-400 font-medium tracking-[0.2em] uppercase"
                  >
-                   Sistem Yükseltiliyor...
+                   {t.proAnimUpgrading}
                  </motion.p>
                  <motion.p
                    initial={{ opacity: 0, y: 20 }}
@@ -3810,7 +4067,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                    transition={{ delay: 4, duration: 1 }}
                    className="text-2xl md:text-3xl text-amber-500 font-bold tracking-[0.1em] uppercase"
                  >
-                   Gelişmiş Yapay Zeka Aktif
+                   {t.proAnimAiActive}
                  </motion.p>
                  <motion.p
                    initial={{ opacity: 0, scale: 0.9 }}
@@ -3818,7 +4075,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                    transition={{ delay: 5.5, duration: 1.5 }}
                    className="text-4xl md:text-5xl text-white font-black tracking-widest uppercase drop-shadow-[0_0_15px_rgba(255,255,255,0.6)]"
                  >
-                   Sınırlar Kaldırıldı
+                   {t.proAnimLimitsRemoved}
                  </motion.p>
                </div>
             </div>
@@ -3846,10 +4103,10 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                 </div>
                 
                 <h2 className="text-3xl md:text-4xl font-black text-center text-white mb-2 tracking-tight">
-                  ChatCNR <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-orange-500">PRO</span>'ya Hoş Geldiniz
+                  {t.proWelcomeTitle}
                 </h2>
                 <p className="text-zinc-400 text-center text-lg mb-8">
-                  Yapay zeka deneyiminiz başarıyla 2.0 sürümüne yükseltildi.
+                  {t.proWelcomeSubtitle}
                 </p>
                 
                 <div className="space-y-4 mb-8">
@@ -3858,8 +4115,8 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                       <Cpu size={20} />
                     </div>
                     <div>
-                      <h4 className="text-white font-bold mb-1">ChatCNR 3.0 Mimarisi</h4>
-                      <p className="text-sm text-zinc-400">Dünyanın en hızlı ve en gelişmiş yapay zeka modeline özel erişim. Önceki modellere göre 4x daha hızlı işlem hacmi.</p>
+                      <h4 className="text-white font-bold mb-1">{t.proFeature1Title}</h4>
+                      <p className="text-sm text-zinc-400">{t.proFeature1Desc}</p>
                     </div>
                   </div>
                   
@@ -3868,8 +4125,8 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                       <Zap size={20} />
                     </div>
                     <div>
-                      <h4 className="text-white font-bold mb-1">Öncelikli İşlem Gücü</h4>
-                      <p className="text-sm text-zinc-400">Sunucu yoğunluğundan etkilenmeden, her zaman maksimum performansla öncelikli yanıt süreleri.</p>
+                      <h4 className="text-white font-bold mb-1">{t.proFeature2Title}</h4>
+                      <p className="text-sm text-zinc-400">{t.proFeature2Desc}</p>
                     </div>
                   </div>
                   
@@ -3878,8 +4135,8 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                       <Search size={20} />
                     </div>
                     <div>
-                      <h4 className="text-white font-bold mb-1">Sınırsız Arama Kapasitesi</h4>
-                      <p className="text-sm text-zinc-400">İnternet aramalarında kota sınırı olmadan, en güncel verilere kesintisiz erişim.</p>
+                      <h4 className="text-white font-bold mb-1">{t.proFeature3Title}</h4>
+                      <p className="text-sm text-zinc-400">{t.proFeature3Desc}</p>
                     </div>
                   </div>
                 </div>
@@ -3888,13 +4145,22 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                   onClick={() => setShowProWelcome(false)}
                   className="w-full py-4 bg-white text-black hover:bg-zinc-200 rounded-xl font-bold text-lg transition-all active:scale-[0.98] shadow-lg flex items-center justify-center"
                 >
-                  Keşfetmeye Başla
+                  {t.proWelcomeStartBtn}
                 </button>
               </div>
             </motion.div>
           </div>
         )}
       </AnimatePresence>
+
+      {/* Universal Live Update Modal for Web, Mobile & APK */}
+      <UpdateModal
+        isOpen={isUpdateModalOpen}
+        updateInfo={updateInfo}
+        onClose={() => setIsUpdateModalOpen(false)}
+        theme={theme}
+        language={language}
+      />
 
     </div>
   );

@@ -26,12 +26,17 @@ export const BroadcastNotificationModal: React.FC<BroadcastNotificationModalProp
   isOpen,
   onClose,
   theme = 'dark',
+  language = 'tr',
   userCount,
 }) => {
-  const [title, setTitle] = useState('Chat_CNR Aylık Hatırlatıcı 🌟');
-  const [message, setMessage] = useState(
-    'Yeni yapay zeka güncellemeleri, sesli "Hey CNR" özellikleri ve akıllı araçlar sizi bekliyor! Sohbete katılmak için tıklayın.'
-  );
+  const isTr = language === 'tr';
+  const defaultTitle = isTr ? 'Chat_CNR Aylık Hatırlatıcı 🌟' : 'Chat_CNR Monthly Reminder 🌟';
+  const defaultMsg = isTr
+    ? 'Yeni yapay zeka güncellemeleri, sesli "Hey CNR" özellikleri ve akıllı araçlar sizi bekliyor! Sohbete katılmak için tıklayın.'
+    : 'New AI model updates, "Hey CNR" voice features, and intelligent tools are waiting for you! Tap to chat.';
+
+  const [title, setTitle] = useState(defaultTitle);
+  const [message, setMessage] = useState(defaultMsg);
   const [notifType, setNotifType] = useState<'monthly' | 'announcement'>('monthly');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
@@ -40,22 +45,28 @@ export const BroadcastNotificationModal: React.FC<BroadcastNotificationModalProp
 
   const presets = [
     {
-      label: '📅 Standart Aylık Hatırlatıcı',
+      label: isTr ? '📅 Standart Aylık Hatırlatıcı' : '📅 Standard Monthly Reminder',
       type: 'monthly' as const,
-      title: 'Chat_CNR Aylık Hatırlatıcı 🌟',
-      msg: 'Yeni yapay zeka modelleri, sesli "Hey CNR" özellikleri ve aylık geliştirmeler sizi bekliyor! Sohbete dönmek için tıklayın.',
+      title: isTr ? 'Chat_CNR Aylık Hatırlatıcı 🌟' : 'Chat_CNR Monthly Reminder 🌟',
+      msg: isTr
+        ? 'Yeni yapay zeka modelleri, sesli "Hey CNR" özellikleri ve aylık geliştirmeler sizi bekliyor! Sohbete dönmek için tıklayın.'
+        : 'New AI models, voice "Hey CNR" features, and monthly upgrades are here! Tap to start chatting.',
     },
     {
-      label: '🚀 Yeni Sürüm & Özellik Duyurusu',
+      label: isTr ? '🚀 Yeni Sürüm & Özellik Duyurusu' : '🚀 Release & Feature Announcement',
       type: 'announcement' as const,
-      title: 'Chat_CNR Yeni Özellikler Yayında! 🚀',
-      msg: 'Uygulamamıza sesli uyandırma (Hey CNR), gelişmiş profil analizi ve yeni araçlar eklendi.',
+      title: isTr ? 'Chat_CNR Yeni Özellikler Yayında! 🚀' : 'Chat_CNR New Features Released! 🚀',
+      msg: isTr
+        ? 'Uygulamamıza sesli uyandırma (Hey CNR), gelişmiş profil analizi ve yeni araçlar eklendi.'
+        : 'Voice wake word (Hey CNR), advanced profile analysis, and new tools have been added to Chat_CNR.',
     },
     {
-      label: '👑 PRO Üyelik & Ayrılacıklar',
+      label: isTr ? '👑 PRO Üyelik & Ayrıcalıklar' : '👑 PRO Membership & Privileges',
       type: 'monthly' as const,
-      title: 'Chat_CNR PRO ile Sınırsız Güç 👑',
-      msg: 'Sınırsız mesajlaşma ve en güncel yapay zeka zekası için PRO avantajlarını inceleyin.',
+      title: isTr ? 'Chat_CNR PRO ile Sınırsız Güç 👑' : 'Unlimited Power with Chat_CNR PRO 👑',
+      msg: isTr
+        ? 'Sınırsız mesajlaşma ve en güncel yapay zeka zekası için PRO avantajlarını inceleyin.'
+        : 'Explore PRO privileges for unlimited messages and the fastest, smartest AI models.',
     },
   ];
 
@@ -72,14 +83,18 @@ export const BroadcastNotificationModal: React.FC<BroadcastNotificationModalProp
         'dorukaliarslan20@gmail.com',
         'all'
       );
-      setSuccessMsg(`Bildirim ${userCount} kayıtlı kullanıcıya başarıyla yayınlandı ve cihazlara iletildi!`);
+      setSuccessMsg(
+        isTr
+          ? `Bildirim ${userCount} kayıtlı kullanıcıya başarıyla yayınlandı ve cihazlara iletildi!`
+          : `Notification successfully broadcasted to ${userCount} registered users!`
+      );
       setTimeout(() => {
         setSuccessMsg(null);
         onClose();
       }, 2500);
     } catch (err: any) {
       console.error(err);
-      alert('Bildirim gönderilirken bir hata oluştu: ' + (err.message || ''));
+      alert((isTr ? 'Bildirim gönderilirken bir hata oluştu: ' : 'Error sending notification: ') + (err.message || ''));
     } finally {
       setIsSubmitting(false);
     }
@@ -92,7 +107,11 @@ export const BroadcastNotificationModal: React.FC<BroadcastNotificationModalProp
           body: message,
         });
       } else {
-        alert('Tarayıcı bildirim izni verilmedi. Lütfen tarayıcınızın site ayarlarından bildirim iznini açın.');
+        alert(
+          isTr
+            ? 'Tarayıcı bildirim izni verilmedi. Lütfen tarayıcınızın site ayarlarından bildirim iznini açın.'
+            : 'Notification permission not granted. Please enable notifications in your browser settings.'
+        );
       }
     });
   };
@@ -117,8 +136,14 @@ export const BroadcastNotificationModal: React.FC<BroadcastNotificationModalProp
               <Bell size={20} />
             </div>
             <div>
-              <h2 className="text-lg font-bold">Kullanıcılara Aylık / Genel Bildirim Gönder</h2>
-              <p className="text-xs text-zinc-500">Kayıtlı {userCount} kullanıcıya web push & bildirim yayını</p>
+              <h2 className="text-lg font-bold">
+                {isTr ? 'Kullanıcılara Aylık / Genel Bildirim Gönder' : 'Broadcast Monthly / General Notification'}
+              </h2>
+              <p className="text-xs text-zinc-500">
+                {isTr
+                  ? `Kayıtlı ${userCount} kullanıcıya web push & bildirim yayını`
+                  : `Web push & broadcast notification to ${userCount} registered users`}
+              </p>
             </div>
           </div>
           <button
@@ -138,10 +163,13 @@ export const BroadcastNotificationModal: React.FC<BroadcastNotificationModalProp
           <div className="p-3.5 rounded-2xl bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs flex items-start gap-2.5">
             <Clock size={16} className="shrink-0 mt-0.5" />
             <div className="space-y-1">
-              <p className="font-bold">Aylık Bildirim Döngüsü Nasıl Çalışır?</p>
+              <p className="font-bold">
+                {isTr ? 'Aylık Bildirim Döngüsü Nasıl Çalışır?' : 'How Does the Monthly Notification Cycle Work?'}
+              </p>
               <p className="leading-relaxed opacity-90 text-[11px]">
-                Kullanıcılar uygulamayı açtıklarında 30 gün (1 ay) geçmişse sistem otomatik olarak aylık hatırlatıcı bildirimini tetikler.
-                Ayrıca siz buradan dilediğiniz an tek tıkla tüm kullanıcılara aylık veya özel bildirim yayınlayabilirsiniz.
+                {isTr
+                  ? 'Kullanıcılar uygulamayı açtıklarında 30 gün (1 ay) geçmişse sistem otomatik olarak aylık hatırlatıcı bildirimini tetikler. Ayrıca siz buradan dilediğiniz an tek tıkla tüm kullanıcılara aylık veya özel bildirim yayınlayabilirsiniz.'
+                  : 'When users open the app after 30 days (1 month), the system automatically triggers a monthly reminder. You can also broadcast custom or monthly notifications to all users anytime from here.'}
               </p>
             </div>
           </div>
@@ -150,7 +178,7 @@ export const BroadcastNotificationModal: React.FC<BroadcastNotificationModalProp
         {/* Presets */}
         <div className="space-y-2 mb-4">
           <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block">
-            Hızlı Şablon Seç
+            {isTr ? 'Hızlı Şablon Seç' : 'Quick Template Presets'}
           </label>
           <div className="flex flex-wrap gap-2">
             {presets.map((p, idx) => (
@@ -179,13 +207,15 @@ export const BroadcastNotificationModal: React.FC<BroadcastNotificationModalProp
         {/* Form */}
         <form onSubmit={handleSend} className="space-y-4">
           <div className="space-y-1.5">
-            <label className="text-xs font-bold text-zinc-400">Bildirim Başlığı</label>
+            <label className="text-xs font-bold text-zinc-400">
+              {isTr ? 'Bildirim Başlığı' : 'Notification Title'}
+            </label>
             <input
               type="text"
               required
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="Örn: Chat_CNR Aylık Hatırlatıcı"
+              placeholder={isTr ? 'Örn: Chat_CNR Aylık Hatırlatıcı' : 'e.g. Chat_CNR Monthly Reminder'}
               className={`w-full px-4 py-2.5 rounded-xl text-sm border transition-all focus:outline-none focus:ring-2 focus:ring-amber-500/50 ${
                 theme === 'dark'
                   ? 'bg-zinc-900 border-zinc-800 text-white'
@@ -195,13 +225,19 @@ export const BroadcastNotificationModal: React.FC<BroadcastNotificationModalProp
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-xs font-bold text-zinc-400">Bildirim İçeriği (Mesaj)</label>
+            <label className="text-xs font-bold text-zinc-400">
+              {isTr ? 'Bildirim İçeriği (Mesaj)' : 'Notification Content (Message)'}
+            </label>
             <textarea
               required
               rows={3}
               value={message}
               onChange={(e) => setMessage(e.target.value)}
-              placeholder="Kullanıcılara iletilecek mesajınızı buraya yazın..."
+              placeholder={
+                isTr
+                  ? 'Kullanıcılara iletilecek mesajınızı buraya yazın...'
+                  : 'Write your broadcast message to users here...'
+              }
               className={`w-full px-4 py-2.5 rounded-xl text-sm border transition-all resize-none focus:outline-none focus:ring-2 focus:ring-amber-500/50 ${
                 theme === 'dark'
                   ? 'bg-zinc-900 border-zinc-800 text-white'
@@ -222,7 +258,7 @@ export const BroadcastNotificationModal: React.FC<BroadcastNotificationModalProp
               }`}
             >
               <Volume2 size={14} />
-              <span>Kendi Cihazımda Test Et</span>
+              <span>{isTr ? 'Kendi Cihazımda Test Et' : 'Test on My Device'}</span>
             </button>
 
             <button
@@ -231,7 +267,11 @@ export const BroadcastNotificationModal: React.FC<BroadcastNotificationModalProp
               className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-black font-extrabold text-xs flex items-center justify-center gap-2 transition-all shadow-md shadow-amber-500/20 active:scale-95 disabled:opacity-40"
             >
               <Send size={14} />
-              <span>{isSubmitting ? 'Yayınlanıyor...' : 'Tüm Kullanıcılara Gönder'}</span>
+              <span>
+                {isSubmitting
+                  ? (isTr ? 'Yayınlanıyor...' : 'Broadcasting...')
+                  : (isTr ? 'Tüm Kullanıcılara Gönder' : 'Send to All Users')}
+              </span>
             </button>
           </div>
         </form>

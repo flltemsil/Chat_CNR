@@ -3,47 +3,55 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 import { registerSW } from 'virtual:pwa-register';
+import { updateService } from './services/updateService';
+import { APP_VERSION, APP_RELEASE_DATE, APP_RELEASE_NOTES } from './version';
 
-// Register the service worker
+// Register the service worker with automatic non-blocking updates
 const updateSW = registerSW({
   onNeedRefresh() {
-    console.log('App needs refresh');
-    if (window.confirm("Kritik Sistem Güncellemesi\n\nChat CNR - Professional Edition için yeni bir sürüm mevcut. Sürüm yükseltmek ve en iyi performansı almak için lütfen onaylayın.")) {
-      updateSW(true);
-    }
+    console.log('[SW] App needs refresh - notifying update service');
+    updateService.notifyUpdate({
+      version: APP_VERSION,
+      releaseDate: APP_RELEASE_DATE,
+      releaseNotes: APP_RELEASE_NOTES,
+      forceReload: true
+    });
   },
   onOfflineReady() {
-    console.log('App ready for offline use');
+    console.log('[SW] App ready for offline use');
   },
   onRegisteredSW(swUrl, r) {
-    console.log('SW Registered');
+    console.log('[SW] SW Registered successfully');
 
     (window as any).triggerUpdate = () => {
-      if (window.confirm("Kritik Sistem Güncellemesi\n\nChat CNR - Professional Edition için yeni bir sürüm mevcut. Sürüm yükseltmek ve en iyi performansı almak için lütfen onaylayın.")) {
-        if (r) {
-          r.update().then(() => updateSW(true));
-        } else {
-           updateSW(true);
-        }
+      updateService.notifyUpdate({
+        version: APP_VERSION,
+        releaseDate: APP_RELEASE_DATE,
+        releaseNotes: APP_RELEASE_NOTES,
+        forceReload: true
+      });
+      if (r) {
+        r.update().then(() => updateSW(true)).catch(() => updateSW(true));
+      } else {
+        updateSW(true);
       }
     };
 
     if (r) {
       // Force update check now
-      r.update();
+      r.update().catch(() => {});
       
-      // Check for updates every 10 minutes
+      // Check for updates every 5 minutes
       setInterval(async () => {
         if (!(!r.installing && navigator)) return;
         if (('connection' in navigator) && !navigator.onLine) return;
-        console.log('Checking for SW update...');
-        await r.update();
-      }, 10 * 60 * 1000); // 10 mins
+        await r.update().catch(() => {});
+      }, 5 * 60 * 1000);
 
       // Check when app resumes or comes to foreground
       document.addEventListener('visibilitychange', () => {
         if (document.visibilityState === 'visible') {
-           r.update();
+          r.update().catch(() => {});
         }
       });
     }
