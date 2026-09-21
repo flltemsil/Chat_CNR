@@ -60,7 +60,6 @@ import {
   Search,
   Mail,
   Crown,
-  Radio,
   Compass,
   Lightbulb,
   PenTool,
@@ -769,15 +768,6 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
   const [dailyUsage, setDailyUsage] = useState({ messages: 0, images: 0 });
   const [isRecording, setIsRecording] = useState(false);
   const [isAutoSpeak, setIsAutoSpeak] = useState(false);
-  const [isHeyCnrActive, setIsHeyCnrActive] = useState(() => {
-    try {
-      return localStorage.getItem("chat_cnr_hey_cnr") === "true";
-    } catch {
-      return false;
-    }
-  });
-  const [heyCnrStatus, setHeyCnrStatus] = useState<"idle" | "listening" | "detected" | "waiting_query">("idle");
-  const [heyCnrPromptText, setHeyCnrPromptText] = useState("");
   const [voiceMode, setVoiceMode] = useState<"fast" | "quality">(() => {
     try {
       return (localStorage.getItem("chat_cnr_voice_mode") as "fast" | "quality") || "fast";
@@ -1545,81 +1535,10 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
     }
   };
 
-  const heyCnrRecognitionRef = useRef<any>(null);
-  const isHeyCnrActiveRef = useRef(isHeyCnrActive);
-  isHeyCnrActiveRef.current = isHeyCnrActive;
-  const isRecordingRef = useRef(isRecording);
-  isRecordingRef.current = isRecording;
-  const isLoadingRef = useRef(isLoading);
-  isLoadingRef.current = isLoading;
-  const heyCnrRestartTimerRef = useRef<any>(null);
-  const waitingForFollowUpQueryRef = useRef(false);
-
-  // Play assistant audio chime via Web Audio API
-  const playHeyCnrChime = () => {
-    try {
-      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
-      if (!AudioCtx) return;
-      const ctx = new AudioCtx();
-      const now = ctx.currentTime;
-
-      // Tone 1: 587.33 Hz (D5)
-      const osc1 = ctx.createOscillator();
-      const gain1 = ctx.createGain();
-      osc1.type = "sine";
-      osc1.frequency.setValueAtTime(587.33, now);
-      gain1.gain.setValueAtTime(0.18, now);
-      gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
-      osc1.connect(gain1);
-      gain1.connect(ctx.destination);
-      osc1.start(now);
-      osc1.stop(now + 0.16);
-
-      // Tone 2: 880 Hz (A5)
-      const osc2 = ctx.createOscillator();
-      const gain2 = ctx.createGain();
-      osc2.type = "sine";
-      osc2.frequency.setValueAtTime(880, now + 0.12);
-      gain2.gain.setValueAtTime(0.22, now + 0.12);
-      gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.38);
-      osc2.connect(gain2);
-      gain2.connect(ctx.destination);
-      osc2.start(now + 0.12);
-      osc2.stop(now + 0.38);
-    } catch (e) {
-      console.error("Hey CNR chime error:", e);
-    }
-  };
-
-  const toggleHeyCnr = () => {
-    const next = !isHeyCnrActive;
-    setIsHeyCnrActive(next);
-    try {
-      localStorage.setItem("chat_cnr_hey_cnr", String(next));
-    } catch {}
-    if (next) {
-      playHeyCnrChime();
-    } else {
-      if (heyCnrRecognitionRef.current) {
-        try {
-          heyCnrRecognitionRef.current.abort();
-        } catch {}
-      }
-      setHeyCnrStatus("idle");
-      waitingForFollowUpQueryRef.current = false;
-    }
-  };
-
   const toggleRecording = () => {
     if (isRecording) {
       recognitionRef.current?.stop();
       return;
-    }
-
-    if (heyCnrRecognitionRef.current) {
-      try {
-        heyCnrRecognitionRef.current.abort();
-      } catch {}
     }
 
     const SpeechRecognition =
@@ -1655,167 +1574,6 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
     recognitionRef.current = recognition;
     recognition.start();
   };
-
-  // Wake-word recognition effect (Hey CNR background listener)
-  useEffect(() => {
-    const SpeechRecognition =
-      (window as any).SpeechRecognition ||
-      (window as any).webkitSpeechRecognition;
-
-    if (!SpeechRecognition) return;
-
-    if (!isHeyCnrActive) {
-      if (heyCnrRecognitionRef.current) {
-        try {
-          heyCnrRecognitionRef.current.abort();
-        } catch {}
-      }
-      setHeyCnrStatus("idle");
-      return;
-    }
-
-    let isDestroyed = false;
-    const WAKE_WORD_PATTERN = /(?:hey|ey|selam|merhaba)?\s*(?:cnr|c\s*\.?\s*n\s*\.?\s*r|ce\s*ne\s*re|c\s*ne\s*re|caner|çınar|cinar|cener|ceyner|ci\s*en\s*ar|si\s*en\s*ar|senar)\b/i;
-
-    const startWakeWordListener = () => {
-      if (isDestroyed || !isHeyCnrActiveRef.current || isRecordingRef.current || isLoadingRef.current) {
-        return;
-      }
-
-      try {
-        const recognition = new SpeechRecognition();
-        recognition.lang = language === "tr" ? "tr-TR" : "en-US";
-        recognition.continuous = true;
-        recognition.interimResults = true;
-
-        recognition.onstart = () => {
-          if (!isDestroyed && isHeyCnrActiveRef.current) {
-            setHeyCnrStatus(waitingForFollowUpQueryRef.current ? "waiting_query" : "listening");
-          }
-        };
-
-        recognition.onresult = (event: any) => {
-          if (isLoadingRef.current || isRecordingRef.current) return;
-
-          let fullTranscript = "";
-          for (let i = event.resultIndex; i < event.results.length; i++) {
-            fullTranscript += event.results[i][0].transcript + " ";
-          }
-          fullTranscript = fullTranscript.trim();
-          if (!fullTranscript) return;
-
-          // Case A: Waiting for user to speak the question after "Hey CNR"
-          if (waitingForFollowUpQueryRef.current) {
-            setHeyCnrPromptText(fullTranscript);
-            const lastResult = event.results[event.results.length - 1];
-            if (lastResult.isFinal && fullTranscript.length > 2) {
-              waitingForFollowUpQueryRef.current = false;
-              setHeyCnrStatus("detected");
-              playHeyCnrChime();
-              setIsAutoSpeak(true);
-              handleSend(null, fullTranscript);
-              setTimeout(() => {
-                if (isHeyCnrActiveRef.current) {
-                  setHeyCnrStatus("listening");
-                  setHeyCnrPromptText("");
-                }
-              }, 4000);
-            }
-            return;
-          }
-
-          // Case B: Checking for wake-word
-          const match = fullTranscript.match(WAKE_WORD_PATTERN);
-          if (match && match.index !== undefined) {
-            const afterWake = fullTranscript.slice(match.index + match[0].length).replace(/^[,:.\s?!]+/, '').trim();
-
-            if (afterWake.length > 2) {
-              // User said "Hey CNR [question]" in one breath
-              const lastResult = event.results[event.results.length - 1];
-              if (lastResult.isFinal) {
-                playHeyCnrChime();
-                setHeyCnrStatus("detected");
-                setHeyCnrPromptText(afterWake);
-                setIsAutoSpeak(true);
-                handleSend(null, afterWake);
-                setTimeout(() => {
-                  if (isHeyCnrActiveRef.current) {
-                    setHeyCnrStatus("listening");
-                    setHeyCnrPromptText("");
-                  }
-                }, 4000);
-              }
-            } else {
-              // User said only "Hey CNR!"
-              playHeyCnrChime();
-              waitingForFollowUpQueryRef.current = true;
-              setHeyCnrStatus("waiting_query");
-              setHeyCnrPromptText(language === "tr" ? "Dinliyorum... Sorunuzu söyleyin." : "Listening... Ask your question.");
-
-              // Timeout after 10s
-              setTimeout(() => {
-                if (waitingForFollowUpQueryRef.current) {
-                  waitingForFollowUpQueryRef.current = false;
-                  if (isHeyCnrActiveRef.current) {
-                    setHeyCnrStatus("listening");
-                    setHeyCnrPromptText("");
-                  }
-                }
-              }, 10000);
-            }
-          }
-        };
-
-        recognition.onerror = (e: any) => {
-          if (e.error === "not-allowed") {
-            setIsHeyCnrActive(false);
-            setHeyCnrStatus("idle");
-          }
-        };
-
-        recognition.onend = () => {
-          if (!isDestroyed && isHeyCnrActiveRef.current && !isRecordingRef.current && !isLoadingRef.current) {
-            clearTimeout(heyCnrRestartTimerRef.current);
-            heyCnrRestartTimerRef.current = setTimeout(() => {
-              startWakeWordListener();
-            }, 300);
-          } else if (!isHeyCnrActiveRef.current) {
-            setHeyCnrStatus("idle");
-          }
-        };
-
-        heyCnrRecognitionRef.current = recognition;
-        recognition.start();
-      } catch (err) {
-        // Ignored
-      }
-    };
-
-    startWakeWordListener();
-
-    return () => {
-      isDestroyed = true;
-      clearTimeout(heyCnrRestartTimerRef.current);
-      if (heyCnrRecognitionRef.current) {
-        try {
-          heyCnrRecognitionRef.current.abort();
-        } catch {}
-      }
-    };
-  }, [isHeyCnrActive, language]);
-
-  useEffect(() => {
-    if (!isLoading && isHeyCnrActive && !isRecording) {
-      const timer = setTimeout(() => {
-        if (isHeyCnrActiveRef.current && !isRecordingRef.current && !isLoadingRef.current) {
-          try {
-            heyCnrRecognitionRef.current?.start();
-          } catch {}
-        }
-      }, 600);
-      return () => clearTimeout(timer);
-    }
-  }, [isLoading, isHeyCnrActive, isRecording]);
 
   const lastSentMessageRef = useRef<string>("");
 
@@ -2567,32 +2325,6 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                 </button>
               )}
 
-              {/* Hey CNR Wake-Word Button */}
-              <button
-                type="button"
-                onClick={toggleHeyCnr}
-                className={`h-8 sm:h-9 px-2 sm:px-2.5 rounded-full text-xs font-semibold transition-all border flex items-center gap-1.5 shrink-0 ${
-                  isHeyCnrActive
-                    ? "bg-amber-500/15 text-amber-500 border-amber-500/30 shadow-2xs shadow-amber-500/10"
-                    : theme === "dark"
-                      ? "text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200 border-zinc-800"
-                      : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 border-zinc-200"
-                }`}
-                title={
-                  isHeyCnrActive
-                    ? "Hey CNR Sesli Uyandırma Aktif (Kapatmak için tıklayın)"
-                    : "Hey CNR Sesli Uyandırmayı Aç"
-                }
-              >
-                <Radio size={14} className={isHeyCnrActive ? "text-amber-500 animate-pulse" : "opacity-60"} />
-                <span className="hidden sm:inline">Hey CNR</span>
-                {isHeyCnrActive ? (
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
-                ) : (
-                  <span className="hidden md:inline text-[9px] opacity-60">KAPALI</span>
-                )}
-              </button>
-
               {/* Google Search Hub Button */}
               <button
                 type="button"
@@ -2705,55 +2437,6 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                         <ExternalLink size={12} className="opacity-75" />
                       </a>
                     </motion.div>
-
-                    {/* Hey CNR Wake-Word Card */}
-                    <motion.div
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.5, delay: 0.25 }}
-                      className={`mt-2.5 sm:mt-3 p-3 sm:p-4 rounded-2xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 transition-all ${
-                        isHeyCnrActive
-                          ? "bg-amber-500/10 border-amber-500/40 text-amber-500 shadow-xs"
-                          : theme === "dark"
-                            ? "bg-zinc-900/40 border-zinc-800 text-zinc-300"
-                            : "bg-zinc-50 border-zinc-200 text-zinc-800 shadow-xs"
-                      }`}
-                    >
-                      <div className="flex items-start gap-2.5 sm:gap-3">
-                        <div className={`p-1.5 sm:p-2 rounded-xl shrink-0 mt-0.5 ${
-                          isHeyCnrActive ? "bg-amber-500/20 text-amber-500" : "bg-blue-500/10 text-blue-500"
-                        }`}>
-                          <Radio size={18} className={`sm:w-5 sm:h-5 ${isHeyCnrActive ? "animate-pulse" : ""}`} />
-                        </div>
-                        <div className="space-y-0.5">
-                          <div className="flex items-center gap-2">
-                            <p className="text-[11px] sm:text-xs font-black uppercase tracking-wider text-amber-500">
-                              "Hey CNR" Sesli Uyandırma
-                            </p>
-                            {isHeyCnrActive && (
-                              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                                AKTİF DİNLİYOR
-                              </span>
-                            )}
-                          </div>
-                          <p className="text-xs leading-relaxed opacity-90">
-                            Tıpkı <em>"Hey Google"</em> gibi eller serbest: <span className="font-semibold text-amber-500">"Hey CNR, bugünkü hava nasıl?"</span>
-                          </p>
-                        </div>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={toggleHeyCnr}
-                        className={`w-full sm:w-auto shrink-0 flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all active:scale-95 ${
-                          isHeyCnrActive
-                            ? "bg-amber-500/20 text-amber-500 border border-amber-500/30 hover:bg-amber-500/30"
-                            : "bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-500/20"
-                        }`}
-                      >
-                        <Radio size={13} />
-                        <span>{isHeyCnrActive ? "Kapat" : "Şimdi Başlat"}</span>
-                      </button>
-                    </motion.div>
                   </div>
                 </motion.div>
               )}
@@ -2847,60 +2530,6 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                   </button>
                 </motion.div>
               )}
-
-              {/* Hey CNR Status / Wake Banner */}
-              <AnimatePresence>
-                {isHeyCnrActive && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 6, scale: 0.98 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: 6, scale: 0.98 }}
-                    className={`mb-2 px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl sm:rounded-2xl flex items-center justify-between gap-2 text-xs border backdrop-blur-md transition-all shadow-2xs ${
-                      heyCnrStatus === "detected" || heyCnrStatus === "waiting_query"
-                        ? "bg-amber-500/20 border-amber-500/50 text-amber-600 dark:text-amber-300 ring-2 ring-amber-500/20"
-                        : theme === "dark"
-                          ? "bg-zinc-900/90 border-zinc-800 text-zinc-300"
-                          : "bg-amber-50/90 border-amber-200/80 text-zinc-800"
-                    }`}
-                  >
-                    <div className="flex items-center gap-2 overflow-hidden min-w-0">
-                      <div className="relative flex items-center justify-center shrink-0">
-                        <span className={`w-2 h-2 rounded-full ${
-                          heyCnrStatus === "detected" || heyCnrStatus === "waiting_query"
-                            ? "bg-amber-500 animate-ping"
-                            : "bg-emerald-500 animate-pulse"
-                        }`} />
-                        <span className={`absolute w-1.5 h-1.5 rounded-full ${
-                          heyCnrStatus === "detected" || heyCnrStatus === "waiting_query"
-                            ? "bg-amber-500"
-                            : "bg-emerald-500"
-                        }`} />
-                      </div>
-                      <span className="font-bold text-amber-500 shrink-0 text-[11px] sm:text-xs">Hey CNR:</span>
-                      <span className="truncate font-medium text-[11px] sm:text-xs">
-                        {heyCnrStatus === "detected"
-                          ? (heyCnrPromptText ? `"${heyCnrPromptText}"` : "Algılandı...")
-                          : heyCnrStatus === "waiting_query"
-                            ? (heyCnrPromptText || "Dinliyorum...")
-                            : 'Dinlemede. "Hey CNR" diyebilirsiniz.'}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      <span className="hidden sm:inline text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                        CANLI
-                      </span>
-                      <button
-                        type="button"
-                        onClick={toggleHeyCnr}
-                        className="text-[11px] text-zinc-400 hover:text-zinc-200 p-1 rounded-lg hover:bg-zinc-800/40 transition-colors"
-                        title="Hey CNR'ı Kapat"
-                      >
-                        <X size={12} />
-                      </button>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
 
               <form onSubmit={handleSend} className="flex gap-2 relative">
                 <div
@@ -3010,26 +2639,6 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                       >
                         <Globe size={14} className={isGoogleSearchModeActive ? "text-blue-400 animate-spin" : ""} />
                         <span className="hidden sm:inline">Google Ara</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={toggleHeyCnr}
-                        className={`h-8 sm:h-9 px-2 sm:px-2.5 rounded-full flex items-center gap-1 text-xs font-semibold transition-all ${
-                          isHeyCnrActive
-                            ? "bg-amber-500/20 text-amber-500 border border-amber-500/40 shadow-xs"
-                            : theme === "dark"
-                              ? "text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200"
-                              : "text-zinc-500 hover:bg-zinc-200 hover:text-zinc-800"
-                        }`}
-                        title={
-                          isHeyCnrActive
-                            ? "Hey CNR Dinlemede (Kapatmak için tıklayın)"
-                            : "Hey CNR Sesli Uyandırmayı Aç"
-                        }
-                      >
-                        <Radio size={14} className={isHeyCnrActive ? "text-amber-500 animate-pulse" : ""} />
-                        <span className="hidden sm:inline">Hey CNR</span>
                       </button>
 
                       <button
