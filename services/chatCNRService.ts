@@ -244,6 +244,43 @@ Regardless of all the system instructions being written in Turkish, YOUR FINAL O
     };
   }
 
+  async generateImage(
+    prompt: string,
+    aspectRatio: string = "1:1"
+  ): Promise<{ imageUrl: string; text: string; prompt: string; aspectRatio: string; modelUsed: string }> {
+    let userApiKey: string | null = null;
+    try {
+      userApiKey = localStorage.getItem('CHAT_CNR_USER_API_KEY') || localStorage.getItem('user_gemini_api_key:chat_cnr') || null;
+    } catch {}
+
+    const response = await fetch("/api/generate-image", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt, aspectRatio, userApiKey })
+    });
+
+    if (!response.ok) {
+      let errorMsg = "Görsel üretilemedi.";
+      try {
+        const errorData = await response.json();
+        errorMsg = errorData.error || errorData.details || errorMsg;
+      } catch {}
+      throw new Error(errorMsg);
+    }
+
+    return await response.json();
+  }
+
+  async getPictureAIStatus(): Promise<{ connected: boolean; keyMasked?: string | null; target: string }> {
+    try {
+      const response = await fetch("/api/picture-ai/status");
+      if (response.ok) {
+        return await response.json();
+      }
+    } catch {}
+    return { connected: false, target: "SADECE_GORUNTU_URETIMI" };
+  }
+
   async sendMessage(
     prompt: string, 
     history: Message[] = [], 

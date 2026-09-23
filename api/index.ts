@@ -11,6 +11,49 @@ const __dirname = path.dirname(__filename);
 const app = express();
 app.use(express.json({ limit: '50mb' }));
 
+// Auto-load secrets from /app/.dev.env.json if available
+let devEnvSecrets: Record<string, string> = {};
+try {
+  const devEnvPath = "/app/.dev.env.json";
+  if (fs.existsSync(devEnvPath)) {
+    devEnvSecrets = JSON.parse(fs.readFileSync(devEnvPath, "utf-8"));
+  }
+} catch (e) {
+  console.warn("Could not parse /app/.dev.env.json:", e);
+}
+
+// Dedicated secret for Image Generation ONLY (PICTURE_AI)
+export const getPictureAIKey = (): string => {
+  return (
+    process.env.PICTURE_AI ||
+    process.env["PİCTURE_AI"] ||
+    process.env.PICTURE_AI_KEY ||
+    devEnvSecrets["PİCTURE_AI"] ||
+    devEnvSecrets["PICTURE_AI"] ||
+    devEnvSecrets["PICTURE_AI_KEY"] ||
+    ""
+  ).trim();
+};
+
+// General Chat / Text / Search / TTS keys (NEVER includes PICTURE_AI)
+export const getChatCNRKeys = (): string[] => {
+  const raw = (
+    process.env.CHAT_CNR_API_KEY ||
+    devEnvSecrets["CHAT_CNR_API_KEY"] ||
+    process.env.GEMINI_API_KEY ||
+    devEnvSecrets["GEMINI_API_KEY"] ||
+    ""
+  ).trim();
+  return raw.split(",").map(k => k.trim()).filter(k => k.length > 0);
+};
+
+const picKeyFound = getPictureAIKey();
+if (picKeyFound) {
+  console.log(`[PİCTURE_AI] Secret successfully loaded and connected! (Dedicated SOLELY for image generation, length: ${picKeyFound.length})`);
+} else {
+  console.warn(`[PİCTURE_AI] Warning: PICTURE_AI secret not found in environment.`);
+}
+
 // Health check - At the top to respond quickly
 app.get("/api/health", (req, res) => {
   res.json({ status: "ok", time: new Date().toISOString() });
@@ -156,13 +199,10 @@ app.post("/api/chat", async (req, res) => {
       }
     }
 
-    const apiKeysString = (process.env.CHAT_CNR_API_KEY || "").trim();
-    if (!apiKeysString) {
+    const apiKeys = getChatCNRKeys();
+    if (apiKeys.length === 0) {
       return res.status(400).json({ error: "API_KEY_MISSING" });
     }
-
-    // Support multiple keys separated by comma for rotation
-    const apiKeys = apiKeysString.split(",").map(k => k.trim()).filter(k => k.length > 0);
     
     // Shuffle apiKeys to distribute load evenly
     for (let i = apiKeys.length - 1; i > 0; i--) {
@@ -382,12 +422,10 @@ Asla yabancı dilde çevrilmemiş cümle veya anlaşılmaz yabancı terim bırak
     }
 
     // 2. Try system keys
-    const apiKeysString = (process.env.CHAT_CNR_API_KEY || process.env.GEMINI_API_KEY || "").trim();
-    if (!apiKeysString) {
+    const apiKeys = getChatCNRKeys();
+    if (apiKeys.length === 0) {
       return res.status(400).json({ error: "API anahtarı tanımlanmamış." });
     }
-
-    const apiKeys = apiKeysString.split(",").map((k) => k.trim()).filter((k) => k.length > 0);
     // Shuffle
     for (let i = apiKeys.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
@@ -490,12 +528,11 @@ app.post("/api/tts", async (req, res) => {
       }
     }
 
-    const apiKeysString = (process.env.CHAT_CNR_API_KEY || "").trim();
-    if (!apiKeysString) {
+    const apiKeys = getChatCNRKeys();
+    if (apiKeys.length === 0) {
       return res.status(400).json({ error: "API_KEY_MISSING" });
     }
 
-    const apiKeys = apiKeysString.split(",").map(k => k.trim()).filter(k => k.length > 0);
     for (let i = apiKeys.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [apiKeys[i], apiKeys[j]] = [apiKeys[j], apiKeys[i]];
@@ -526,6 +563,107 @@ app.post("/api/tts", async (req, res) => {
   }
 });
 
+// Dedicated Image Generation Route - Powered SOLELY by PICTURE_AI secret
+app.get("/api/picture-ai/status", (req, res) => {
+  const key = getPictureAIKey();
+  res.json({
+    connected: !!key && key.length > 5,
+    keyMasked: key ? `${key.slice(0, 4)}...${key.slice(-4)}` : null,
+    target: "SADECE_GORUNTU_URETIMI"
+  });
+});
+
+app.post("/api/generate-image", async (req, res) => {
+  const { prompt, aspectRatio = "1:1", userApiKey } = req.body;
+
+  if (!prompt || typeof prompt !== "string" || !prompt.trim()) {
+    return res.status(400).json({ error: "Görsel üretimi için geçerli bir açıklama (prompt) gereklidir." });
+  }
+
+  // Strictly use PICTURE_AI key for image generation (or user-provided key if supplied)
+  const pictureKey = (userApiKey && String(userApiKey).trim().length > 10)
+    ? String(userApiKey).trim()
+    : getPictureAIKey();
+
+  if (!pictureKey) {
+    return res.status(400).json({
+      error: "PİCTURE_AI gizli anahtarı bulunamadı. Lütfen AI Studio Secrets içerisinde PİCTURE_AI tanımlandığından emin olun."
+    });
+  }
+
+  const ai = new GoogleGenAI({ apiKey: pictureKey });
+  const validAspectRatios = ["1:1", "3:4", "4:3", "9:16", "16:9"];
+  const selectedRatio = validAspectRatios.includes(aspectRatio) ? aspectRatio : "1:1";
+
+  // Attempt image generation with supported image models
+  const candidateModels = [
+    "gemini-3.1-flash-lite-image",
+    "gemini-3.1-flash-image",
+    "gemini-2.5-flash-image",
+    "gemini-3-pro-image"
+  ];
+
+  let lastError: any = null;
+
+  for (const model of candidateModels) {
+    try {
+      console.log(`[PİCTURE_AI] Generating image with model: ${model}, ratio: ${selectedRatio}...`);
+      const response = await ai.models.generateContent({
+        model,
+        contents: {
+          parts: [{ text: prompt.trim() }]
+        },
+        config: {
+          imageConfig: {
+            aspectRatio: selectedRatio as any
+          }
+        }
+      });
+
+      const parts = response.candidates?.[0]?.content?.parts || [];
+      let foundBase64: string | null = null;
+      let textDesc = "";
+
+      for (const part of parts) {
+        if (part.inlineData?.data) {
+          const mime = part.inlineData.mimeType || "image/png";
+          foundBase64 = `data:${mime};base64,${part.inlineData.data}`;
+        } else if (part.text) {
+          textDesc += part.text + " ";
+        }
+      }
+
+      if (foundBase64) {
+        console.log(`[PİCTURE_AI] Image generated successfully using model ${model}`);
+        return res.json({
+          imageUrl: foundBase64,
+          text: textDesc.trim() || `"${prompt.trim()}" için görsel Chat_CNR (PİCTURE_AI) ile başarıyla oluşturuldu.`,
+          prompt: prompt.trim(),
+          aspectRatio: selectedRatio,
+          modelUsed: model
+        });
+      }
+    } catch (err: any) {
+      lastError = err;
+      const errMsg = String(err.message || "");
+      console.warn(`[PİCTURE_AI] Model ${model} generation attempt:`, errMsg.slice(0, 150));
+      if (errMsg.includes("404") || errMsg.includes("not found")) {
+        continue;
+      }
+    }
+  }
+
+  const errorMsg = String(lastError?.message || "Görsel üretilemedi.");
+  const isQuota = errorMsg.includes("429") || errorMsg.includes("quota") || errorMsg.includes("RESOURCE_EXHAUSTED");
+
+  return res.status(isQuota ? 429 : 500).json({
+    error: isQuota 
+      ? "PİCTURE_AI anahtarının görüntü üretim kotası şu anda beklemede veya dolmuş durumda. Lütfen birkaç saniye sonra tekrar deneyin veya AI Studio üzerinden kotanızı kontrol edin."
+      : errorMsg,
+    details: errorMsg
+  });
+});
+
 app.post("/api/analyze-preferences", async (req, res) => {
   const { history, currentBio, currentInterests, userApiKey } = req.body;
   if (!history || history.length === 0) return res.json({});
@@ -535,7 +673,6 @@ app.post("/api/analyze-preferences", async (req, res) => {
   const generateWithKey = async (key: string) => {
     const ai = new GoogleGenAI({ apiKey: key });
     
-    // Sadece son 40 mesajı alalım ki token sınırı aşılmasın ve en güncel veriler üzerinden çıkarım yapılsın
     const recentHistory = history.slice(-40);
     const conversationStr = recentHistory.map((m: any) => `${m.role}: ${m.text}`).join("\n");
     
@@ -578,9 +715,8 @@ Sonucu AŞAĞIDAKİ GİBİ SADECE JSON formatında döndür. Hiçbir fazladan ya
   try {
     let keyToUse = userApiKey;
     if (!keyToUse) {
-       const apiKeysString = (process.env.CHAT_CNR_API_KEY || "").trim();
-       if (!apiKeysString) return res.status(400).json({ error: "No API Key" });
-       const apiKeys = apiKeysString.split(",").map(k => k.trim()).filter(k => k.length > 0);
+       const apiKeys = getChatCNRKeys();
+       if (apiKeys.length === 0) return res.status(400).json({ error: "No API Key" });
        keyToUse = apiKeys[Math.floor(Math.random() * apiKeys.length)];
     }
 

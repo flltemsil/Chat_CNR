@@ -15,6 +15,7 @@ import { UserDetailModal } from "./components/UserDetailModal";
 import { BroadcastNotificationModal } from "./components/BroadcastNotificationModal";
 import { NotificationCenterModal } from "./components/NotificationCenterModal";
 import { GoogleSearchModal } from "./components/GoogleSearchModal";
+import { ImageGenerationModal } from "./components/ImageGenerationModal";
 import { googleSearchService } from "./services/googleSearchService";
 import { profileService } from "./services/profileService";
 import { notificationService } from "./services/notificationService";
@@ -757,6 +758,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isCameraOpen, setIsCameraOpen] = useState(false);
+  const [isImageStudioOpen, setIsImageStudioOpen] = useState(false);
   const [shareDialogUrl, setShareDialogUrl] = useState<string | null>(null);
 
   // Live Update States
@@ -1610,6 +1612,63 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
     }
   };
 
+  const handleInsertGeneratedImage = async (imageUrl: string, promptText: string) => {
+    let targetSessionId = activeSessionId;
+    if (!targetSessionId) {
+      targetSessionId = Date.now().toString();
+      const newSessionInfo = {
+        id: targetSessionId,
+        userId: user ? user.uid : "anonymous",
+        title: promptText.slice(0, 30) || "Görsel Üretimi",
+        createdAt: Timestamp.now(),
+        updatedAt: Timestamp.now(),
+      };
+      setSessions((prev) => [{ id: targetSessionId!, title: newSessionInfo.title, updatedAt: new Date(), messages: [] }, ...prev]);
+      setActiveSessionId(targetSessionId);
+      try {
+        setDoc(doc(db, "sessions", targetSessionId), newSessionInfo);
+      } catch (e) {}
+    }
+
+    const userMsg: Message = {
+      id: Date.now().toString(),
+      role: "user",
+      text: `${promptText} (PİCTURE_AI Görsel Talebi)`,
+      timestamp: new Date(),
+    };
+
+    const modelMsg: Message = {
+      id: (Date.now() + 1).toString(),
+      role: "model",
+      text: `"${promptText}" için görsel Chat_CNR (PİCTURE_AI) motoru ile başarıyla üretildi.`,
+      imageUrl: imageUrl,
+      timestamp: new Date(),
+    };
+
+    setSessions((prev) =>
+      prev.map((s) =>
+        s.id === targetSessionId
+          ? {
+              ...s,
+              messages: [...(s.messages || []), userMsg, modelMsg],
+              updatedAt: new Date(),
+            }
+          : s
+      )
+    );
+
+    try {
+      await setDoc(
+        doc(db, "users", user.uid, "sessions", targetSessionId, "messages", userMsg.id),
+        cleanForFirestore({ ...userMsg, timestamp: Timestamp.now() })
+      );
+      await setDoc(
+        doc(db, "users", user.uid, "sessions", targetSessionId, "messages", modelMsg.id),
+        cleanForFirestore({ ...modelMsg, timestamp: Timestamp.now() })
+      );
+    } catch (e) {}
+  };
+
   const handleSend = async (
     e?: React.FormEvent | null,
     overrideInput?: string,
@@ -1747,74 +1806,98 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
       let finalSources: any[] = [];
       let finalGrounded = false;
       let finalImageUrl: string | undefined = undefined;
-
-            const stream = chatCNRService.sendMessageStream(
-        userMsg.text,
-        activeSession?.messages || [],
-        selectedImage,
-        user.name,
-        user.email,
-        isChatMode,
-        user.role,
-        user,
-        language,
-        isDeepMode,
-        'gemini-2.5-flash',
-        isGoogleSearchModeActive
-      );
-
-      // Show streaming message locally only
-      setStreamingMessage({ id: modelMsgId, text: "", sources: [] });
-
-      let isFirstChunk = true;
       let lastSpokenIndex = 0;
-      if (isAutoSpeak && voiceMode === "fast" && "speechSynthesis" in window) {
-        window.speechSynthesis.cancel();
-      }
 
-      for await (const chunk of stream) {
-        if (!chunk) continue;
+      // Check if user is requesting image generation via CNR (powered exclusively by PICTURE_AI)
+      const isImageRequest = (promptText: string) => {
+        const p = promptText.toLowerCase().trim();
+        return (
+          /^(bana\s+)?(bir\s+)?(.+)\s+(çiz|resmet|çiziver|görselini yap|resmini yap|resmini çiz|resmini oluştur|görselini oluştur|görsel üret)$/i.test(p) ||
+          /^(resim\s+çiz|görsel\s+üret|resim\s+oluştur|görsel\s+oluştur)[:\s]+(.+)$/i.test(p) ||
+          /^(generate(\s+an?)?\s+image\s+of|draw(\s+me)?\s+a?|create(\s+an?)?\s+image\s+of|paint(\s+a)?)\s+(.+)$/i.test(p) ||
+          /\b(bunu\s+çiz|resmini\s+çiz|bana\s+resim\s+çiz)\b/i.test(p)
+        );
+      };
 
-        const chunkText = chunk.text || "";
-        const chunkSources = chunk.sources || [];
-        const chunkGrounded = !!chunk.grounded;
-
-        if (isFirstChunk && chunkText.trim()) {
+      if (isImageRequest(userMsg.text)) {
+        try {
+          const imgRes = await chatCNRService.generateImage(userMsg.text);
+          finalImageUrl = imgRes.imageUrl;
+          finalResponseText = imgRes.text || `"${userMsg.text}" için görsel Chat_CNR (PİCTURE_AI) motoru ile başarıyla oluşturuldu.`;
           setIsLoading(false);
-          isFirstChunk = false;
+        } catch (imgErr: any) {
+          finalResponseText = `⚠️ Görsel Üretimi (PİCTURE_AI): ${imgErr.message || "Görsel şu anda oluşturulamadı."}`;
+          setIsLoading(false);
         }
-        finalResponseText = chunkText;
-        finalSources = chunkSources;
-        finalGrounded = chunkGrounded;
+      } else {
+        const stream = chatCNRService.sendMessageStream(
+          userMsg.text,
+          activeSession?.messages || [],
+          selectedImage,
+          user.name,
+          user.email,
+          isChatMode,
+          user.role,
+          user,
+          language,
+          isDeepMode,
+          'gemini-2.5-flash',
+          isGoogleSearchModeActive
+        );
 
+        // Show streaming message locally only
+        setStreamingMessage({ id: modelMsgId, text: "", sources: [] });
+
+        let isFirstChunk = true;
+        let lastSpokenIndex = 0;
         if (isAutoSpeak && voiceMode === "fast" && "speechSynthesis" in window) {
-          const sentenceRegex = /([.?!:])\s/g;
-          let match;
-          let sentenceEnd = -1;
-          while ((match = sentenceRegex.exec(finalResponseText)) !== null) {
-            sentenceEnd = match.index + match[1].length;
+          window.speechSynthesis.cancel();
+        }
+
+        for await (const chunk of stream) {
+          if (!chunk) continue;
+
+          const chunkText = chunk.text || "";
+          const chunkSources = chunk.sources || [];
+          const chunkGrounded = !!chunk.grounded;
+
+          if (isFirstChunk && chunkText.trim()) {
+            setIsLoading(false);
+            isFirstChunk = false;
           }
-          if (sentenceEnd > lastSpokenIndex) {
-            const sentence = finalResponseText.slice(lastSpokenIndex, sentenceEnd).trim();
-            if (sentence) {
-              const utterance = new SpeechSynthesisUtterance(sentence);
-              const voiceLangMap: Record<string, string> = {
-                tr: "tr-TR", en: "en-US", es: "es-ES", de: "de-DE", fr: "fr-FR", it: "it-IT", ru: "ru-RU"
-              };
-              utterance.lang = voiceLangMap[language] || "tr-TR";
-              window.speechSynthesis.speak(utterance);
-              lastSpokenIndex = sentenceEnd;
+          finalResponseText = chunkText;
+          finalSources = chunkSources;
+          finalGrounded = chunkGrounded;
+
+          if (isAutoSpeak && voiceMode === "fast" && "speechSynthesis" in window) {
+            const sentenceRegex = /([.?!:])\s/g;
+            let match;
+            let sentenceEnd = -1;
+            while ((match = sentenceRegex.exec(finalResponseText)) !== null) {
+              sentenceEnd = match.index + match[1].length;
+            }
+            if (sentenceEnd > lastSpokenIndex) {
+              const sentence = finalResponseText.slice(lastSpokenIndex, sentenceEnd).trim();
+              if (sentence) {
+                const utterance = new SpeechSynthesisUtterance(sentence);
+                const voiceLangMap: Record<string, string> = {
+                  tr: "tr-TR", en: "en-US", es: "es-ES", de: "de-DE", fr: "fr-FR", it: "it-IT", ru: "ru-RU"
+                };
+                utterance.lang = voiceLangMap[language] || "tr-TR";
+                window.speechSynthesis.speak(utterance);
+                lastSpokenIndex = sentenceEnd;
+              }
             }
           }
-        }
 
-        // Update local streaming state ONLY
-        if (chunkText.trim()) {
-          setStreamingMessage({
-            id: modelMsgId,
-            text: chunkText,
-            sources: finalSources,
-          });
+          // Update local streaming state ONLY
+          if (chunkText.trim()) {
+            setStreamingMessage({
+              id: modelMsgId,
+              text: chunkText,
+              sources: finalSources,
+            });
+          }
         }
       }
 
@@ -2608,6 +2691,18 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                       </button>
                       <button
                         type="button"
+                        onClick={() => setIsImageStudioOpen(true)}
+                        className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center transition-all shrink-0 ${
+                          theme === "dark"
+                            ? "text-amber-400 hover:bg-amber-500/20"
+                            : "text-amber-600 hover:bg-amber-100"
+                        }`}
+                        title="Görsel Üretim Stüdyosu (PİCTURE_AI Motoru)"
+                      >
+                        <Sparkles size={16} strokeWidth={2} />
+                      </button>
+                      <button
+                        type="button"
                         onClick={() => setIsGoogleSearchOpen(true)}
                         className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center transition-all shrink-0 ${
                           theme === "dark"
@@ -3000,6 +3095,16 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
             } catch (e) {}
           }}
         />
+
+        {/* Görsel Üretim Stüdyosu Modal (PİCTURE_AI) */}
+        <ImageGenerationModal
+          isOpen={isImageStudioOpen}
+          onClose={() => setIsImageStudioOpen(false)}
+          onInsertToChat={handleInsertGeneratedImage}
+          themeColor="blue"
+          appearance={theme}
+          language={language}
+        />
         {isSettingsOpen && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-300">
             <div
@@ -3138,33 +3243,40 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                   <label
                     className={`block text-xs font-bold uppercase tracking-widest ml-1 ${theme === "dark" ? "text-zinc-500" : "text-zinc-400"}`}
                   >
-                    Ses & Wake Word
+                    Görsel Üretim Motoru (PİCTURE_AI)
                   </label>
                   <div
-                    className={`border rounded-2xl p-4 space-y-4 ${theme === "dark" ? "bg-[#1a1a1a] border-zinc-800" : "bg-zinc-50 border-zinc-200"}`}
+                    className={`border rounded-2xl p-4 space-y-3 ${theme === "dark" ? "bg-[#1a1a1a] border-zinc-800" : "bg-zinc-50 border-zinc-200"}`}
                   >
                     <div className="flex items-center justify-between gap-4">
                       <div className="flex items-start gap-3">
-                        <div className={`p-2 rounded-xl shrink-0 mt-0.5 ${isHeyCnrActive ? "bg-amber-500/20 text-amber-500" : "bg-zinc-500/10 text-zinc-400"}`}>
-                          <Radio size={18} className={isHeyCnrActive ? "animate-pulse" : ""} />
+                        <div className="p-2 rounded-xl shrink-0 mt-0.5 bg-amber-500/15 text-amber-500">
+                          <Sparkles size={18} />
                         </div>
                         <div>
-                          <p className="text-sm font-bold">"Hey CNR" Sesli Uyandırma</p>
-                          <p className={`text-xs mt-0.5 leading-relaxed ${theme === "dark" ? "text-zinc-400" : "text-zinc-600"}`}>
-                            Tıpkı <em>Hey Google</em> gibi, "Hey CNR" diyerek ekrana dokunmadan soru sorabilirsiniz.
+                          <p className="text-sm font-bold flex items-center gap-2">
+                            PİCTURE_AI Entegrasyonu
+                            <span className="text-[10px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded-full font-bold">
+                              Bağlı & Aktif
+                            </span>
+                          </p>
+                          <p className={`text-xs mt-1 leading-relaxed ${theme === "dark" ? "text-zinc-400" : "text-zinc-600"}`}>
+                            Bu özel secret anahtarı <strong>yalnızca görsel ve sanat üretimi</strong> için kullanılır. Metin, arama ve genel sohbetler diğer sistem motorları tarafından yürütülür.
                           </p>
                         </div>
                       </div>
-                      <button
-                        type="button"
-                        onClick={toggleHeyCnr}
-                        className={`w-12 h-6 rounded-full transition-colors relative p-0.5 shrink-0 ${isHeyCnrActive ? "bg-amber-500" : "bg-zinc-700"}`}
-                      >
-                        <div
-                          className={`w-5 h-5 rounded-full bg-white transition-transform shadow-sm ${isHeyCnrActive ? "translate-x-6" : "translate-x-0"}`}
-                        />
-                      </button>
                     </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsSettingsOpen(false);
+                        setIsImageStudioOpen(true);
+                      }}
+                      className="w-full py-2 px-3 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-500 text-xs font-bold transition-all flex items-center justify-center gap-1.5"
+                    >
+                      <Sparkles size={14} />
+                      <span>Görsel Üretim Stüdyosunu Aç</span>
+                    </button>
                   </div>
                 </div>
 
