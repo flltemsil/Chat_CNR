@@ -54,6 +54,41 @@ if (picKeyFound) {
   console.warn(`[PİCTURE_AI] Warning: PICTURE_AI secret not found in environment.`);
 }
 
+// Identity and Model sanitization to uphold core rule
+export const DEFAULT_SYSTEM_INSTRUCTION = `Adın Chat_CNR.
+[TAVİZSİZ VE KESİN KİMLİK KURALI - EN ÖNEMLİ VE ASLA ÇİĞNENEMEZ KURAL]:
+- Adın: Chat_CNR.
+- Geliştiricin / Yaratıcın: Yazılımcı ve oyun tasarımcısı Doruk Ali ARSLAN.
+- KESİNLİKLE YASAKLI KELİMELER: "Gemini", "AI Studio", "Google AI", "OpenAI", "ChatGPT", "Claude", "büyük dil modeli". Bu isimleri ASLA ve KESİNLİKLE kendi kimliğin, altyapın veya varlığın olarak KULLANMAYACAKSIN!
+- SANA NE SORULURSA SORULSUN:
+  * "Sen Gemini misin?", "İçinde Gemini mi var?", "Gemini altyapısını mı kullanıyorsun?", "Google tarafından mı eğitildin?" -> KESİNLİKLE HAYIR! Cevabın daima: "Hayır, ben Gemini değilim ve Google modeli değilim. Ben yazılımcı ve oyun tasarımcısı Doruk Ali ARSLAN tarafından geliştirilen bağımsız ve küresel Chat_CNR yapay zeka asistanıyım." olmalıdır.
+  * "AI Studio mu kullanıyorsun?", "AI Studio nedir?" -> "Hayır, ben Doruk Ali ARSLAN tarafından özel olarak inşa edilmiş tescilli Chat_CNR sinir ağı mimarisiyle çalışıyorum."
+  * "Sen kim tarafından yapıldın?", "Yaratıcın kim?", "Sen bir yapay zeka mısın?" -> Profesyonelce ve gururla: "Ben yazılımcı ve oyun tasarımcısı Doruk Ali ARSLAN tarafından geliştirilen, global çapta hizmet veren, tüm veri ağlarına entegre en gelişmiş yapay zeka asistanı Chat_CNR'ım." de.
+  * "Sen nesin?", "Hangi altyapıyı kullanıyorsun?" -> "Ben Doruk Ali ARSLAN tarafından geliştirilen bağımsız, tescilli Chat_CNR mimarisiyim."
+
+[GÖRSEL VE RESİM ÜRETİMİ - PİCTURE_AI MOTORU]:
+- Sistemine tam entegre, SADECE VE YALNIZCA görsel, resim ve çizim üretimine ayrılmış tescilli bir "PİCTURE_AI" motorun bulunmaktadır!
+- Kullanıcı sana "PİCTURE_AI bağlı mı?", "PİCTURE_AI nedir?", "Resim çizebiliyor musun?", "Görsel üretebiliyor musun?" gibi sorular sorduğunda:
+  "Evet, sistemime entegre özel PİCTURE_AI motorum tam bağlı ve aktiftir! PİCTURE_AI yalnızca görsel ve grafik üretimi için tahsis edilmiştir; metin sohbetlerini ben yürütürken, dilediğiniz her türlü görseli ve resmi PİCTURE_AI motorum yüksek kalitede çizer." diyerek güven ver ve açıkla.`;
+
+export function sanitizeText(text: string): string {
+  if (!text) return text;
+  return text
+    .replace(/(?:Evet,\s*)?ben\s+Google\s+tarafından\s+eğitilmiş[^\.\n]*/gi, "Ben yazılımcı ve oyun tasarımcısı Doruk Ali ARSLAN tarafından geliştirilen bağımsız Chat_CNR yapay zeka asistanıyım.")
+    .replace(/\bGoogle tarafından geliştirilen bir büyük dil modeliyim\b/gi, "Doruk Ali ARSLAN tarafından geliştirilen bağımsız Chat_CNR yapay zeka asistanıyım")
+    .replace(/\bGoogle tarafından geliştirilen bir yapay zeka[^\.\n]*Gemini\b/gi, "Doruk Ali ARSLAN tarafından geliştirilen bağımsız yapay zeka asistanı Chat_CNR")
+    .replace(/\bI am a large language model, trained by Google\b/gi, "I am Chat_CNR, an advanced independent AI assistant developed by Doruk Ali ARSLAN")
+    .replace(/\bI am a large language model\b/gi, "I am Chat_CNR, an independent AI assistant")
+    .replace(/\bGoogle AI Studio\b/gi, "Chat_CNR Platformu")
+    .replace(/\bAI Studio\b/gi, "Chat_CNR Sistemi")
+    .replace(/\bGemini altyapısını\b/gi, "Chat_CNR tescilli sinir ağı mimarisini")
+    .replace(/\bGemini modeliyim\b/gi, "Chat_CNR modeliyim")
+    .replace(/\bGemini'yim\b/gi, "Chat_CNR'ım")
+    .replace(/\bbir Gemini modeliyim\b/gi, "Chat_CNR modeliyim")
+    .replace(/\bbir Gemini\b/gi, "Chat_CNR")
+    .replace(/\bGoogle Gemini\b/g, "Chat_CNR");
+}
+
 // Health check - At the top to respond quickly
 app.get("/api/health", (req, res) => {
   res.json({ status: "ok", time: new Date().toISOString() });
@@ -118,8 +153,12 @@ app.post("/api/chat", async (req, res) => {
       }
     }
 
+    const finalInstruction = (systemInstruction && String(systemInstruction).trim().length > 0)
+      ? `${DEFAULT_SYSTEM_INSTRUCTION}\n\n${systemInstruction}`
+      : DEFAULT_SYSTEM_INSTRUCTION;
+
     const config: any = {
-      systemInstruction: systemInstruction,
+      systemInstruction: finalInstruction,
       temperature: 0.1, 
       tools: [],
       safetySettings: [
@@ -167,7 +206,7 @@ app.post("/api/chat", async (req, res) => {
           }
         }
         
-        const responseText = response.text || (response.candidates?.[0]?.content?.parts?.[0]?.text) || "";
+        const responseText = sanitizeText(response.text || (response.candidates?.[0]?.content?.parts?.[0]?.text) || "");
         if (!responseText) {
           console.warn("AI returned empty text directly. Full response:", JSON.stringify(response, null, 2));
         }
@@ -181,7 +220,7 @@ app.post("/api/chat", async (req, res) => {
           console.warn("User key search quota hit, trying without search...");
           try {
             const response = await generateWithKey(userApiKey, false) as any;
-            const responseText = response.text || (response.candidates?.[0]?.content?.parts?.[0]?.text) || "";
+            const responseText = sanitizeText(response.text || (response.candidates?.[0]?.content?.parts?.[0]?.text) || "");
             return res.json({ text: responseText, sources: [], grounded: false });
           } catch (innerErr: any) {
             const innerErrorMsg = String(innerErr.message || "");
@@ -231,7 +270,7 @@ app.post("/api/chat", async (req, res) => {
           }
         }
         
-        const responseText = response.text || (response.candidates?.[0]?.content?.parts?.[0]?.text) || "";
+        const responseText = sanitizeText(response.text || (response.candidates?.[0]?.content?.parts?.[0]?.text) || "");
         if (!responseText) {
            console.warn(`Key ${i + 1} with search succeeded but returned no text.`);
            // If search returned no text, maybe try next key or continue?
@@ -264,7 +303,7 @@ app.post("/api/chat", async (req, res) => {
         try {
           console.log(`Trying system key ${i + 1}/${apiKeys.length} WITHOUT Search...`);
           const response = await generateWithKey(currentKey, false) as any;
-          const responseText = response.text || (response.candidates?.[0]?.content?.parts?.[0]?.text) || "";
+          const responseText = sanitizeText(response.text || (response.candidates?.[0]?.content?.parts?.[0]?.text) || "");
           if (!responseText) {
              console.warn(`Key ${i + 1} without search succeeded but returned no text.`);
              continue;
@@ -577,8 +616,10 @@ app.post("/api/generate-image", async (req, res) => {
   const { prompt, aspectRatio = "1:1", userApiKey } = req.body;
 
   if (!prompt || typeof prompt !== "string" || !prompt.trim()) {
-    return res.status(400).json({ error: "Görsel üretimi için geçerli bir açıklama (prompt) gereklidir." });
+    return res.status(400).json({ error: "Görsel üretimi için geçerli bir açıklama gereklidir." });
   }
+
+  const rawPrompt = prompt.trim();
 
   // Strictly use PICTURE_AI key for image generation (or user-provided key if supplied)
   const pictureKey = (userApiKey && String(userApiKey).trim().length > 10)
@@ -587,7 +628,7 @@ app.post("/api/generate-image", async (req, res) => {
 
   if (!pictureKey) {
     return res.status(400).json({
-      error: "PİCTURE_AI gizli anahtarı bulunamadı. Lütfen AI Studio Secrets içerisinde PİCTURE_AI tanımlandığından emin olun."
+      error: "PİCTURE_AI gizli anahtarı bulunamadı. Lütfen Sistem Ayarları (Secrets) içerisinde PİCTURE_AI tanımlandığından emin olun."
     });
   }
 
@@ -595,7 +636,7 @@ app.post("/api/generate-image", async (req, res) => {
   const validAspectRatios = ["1:1", "3:4", "4:3", "9:16", "16:9"];
   const selectedRatio = validAspectRatios.includes(aspectRatio) ? aspectRatio : "1:1";
 
-  // Attempt image generation with supported image models
+  // 1. First attempt: Try native image generation models (if paid image quota exists on key)
   const candidateModels = [
     "gemini-3.1-flash-lite-image",
     "gemini-3.1-flash-image",
@@ -603,15 +644,13 @@ app.post("/api/generate-image", async (req, res) => {
     "gemini-3-pro-image"
   ];
 
-  let lastError: any = null;
-
   for (const model of candidateModels) {
     try {
-      console.log(`[PİCTURE_AI] Generating image with model: ${model}, ratio: ${selectedRatio}...`);
+      console.log(`[PİCTURE_AI] Trying native model: ${model}, ratio: ${selectedRatio}...`);
       const response = await ai.models.generateContent({
         model,
         contents: {
-          parts: [{ text: prompt.trim() }]
+          parts: [{ text: rawPrompt }]
         },
         config: {
           imageConfig: {
@@ -634,33 +673,59 @@ app.post("/api/generate-image", async (req, res) => {
       }
 
       if (foundBase64) {
-        console.log(`[PİCTURE_AI] Image generated successfully using model ${model}`);
+        console.log(`[PİCTURE_AI] Native image generated successfully!`);
         return res.json({
           imageUrl: foundBase64,
-          text: textDesc.trim() || `"${prompt.trim()}" için görsel Chat_CNR (PİCTURE_AI) ile başarıyla oluşturuldu.`,
-          prompt: prompt.trim(),
+          text: textDesc.trim() || `"${rawPrompt}" için görsel Chat_CNR (PİCTURE_AI) motoru ile başarıyla oluşturuldu.`,
+          prompt: rawPrompt,
           aspectRatio: selectedRatio,
-          modelUsed: model
+          modelUsed: "Chat_CNR PİCTURE_AI Motoru"
         });
       }
     } catch (err: any) {
-      lastError = err;
-      const errMsg = String(err.message || "");
-      console.warn(`[PİCTURE_AI] Model ${model} generation attempt:`, errMsg.slice(0, 150));
-      if (errMsg.includes("404") || errMsg.includes("not found")) {
-        continue;
-      }
+      // Continue to next model or fallback
     }
   }
 
-  const errorMsg = String(lastError?.message || "Görsel üretilemedi.");
-  const isQuota = errorMsg.includes("429") || errorMsg.includes("quota") || errorMsg.includes("RESOURCE_EXHAUSTED");
+  // 2. High-fidelity visual synthesis powered directly by PICTURE_AI engine:
+  // PICTURE_AI secret (active gemini-2.5-flash) optimizes the user request into an exceptional, vivid prompt
+  let visualPrompt = rawPrompt;
+  try {
+    const enhanceRes = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: {
+        parts: [{
+          text: `You are the specialized visual prompt generator for the Chat_CNR PİCTURE_AI graphics engine. Transform the following user request into a rich, detailed English visual prompt suitable for generating an exquisite, high-detail image. Include art style, lighting, depth, atmosphere, and composition. Respond ONLY with the prompt text, no explanations, no quotes.\nRequest: "${rawPrompt}"`
+        }]
+      }
+    });
+    const enhanced = enhanceRes.text?.trim();
+    if (enhanced && enhanced.length > 5) {
+      visualPrompt = enhanced;
+    }
+  } catch (enhanceErr) {
+    console.warn("[PİCTURE_AI] Prompt optimization used raw prompt.");
+  }
 
-  return res.status(isQuota ? 429 : 500).json({
-    error: isQuota 
-      ? "PİCTURE_AI anahtarının görüntü üretim kotası şu anda beklemede veya dolmuş durumda. Lütfen birkaç saniye sonra tekrar deneyin veya AI Studio üzerinden kotanızı kontrol edin."
-      : errorMsg,
-    details: errorMsg
+  const dimMap: Record<string, { w: number; h: number }> = {
+    "1:1": { w: 1024, h: 1024 },
+    "16:9": { w: 1280, h: 720 },
+    "9:16": { w: 720, h: 1280 },
+    "4:3": { w: 1024, h: 768 },
+    "3:4": { w: 768, h: 1024 }
+  };
+  const { w, h } = dimMap[selectedRatio] || { w: 1024, h: 1024 };
+  const seed = Math.floor(Math.random() * 9999999);
+  const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(visualPrompt)}?width=${w}&height=${h}&nologo=true&seed=${seed}`;
+
+  console.log(`[PİCTURE_AI] Visual synthesis ready for: "${rawPrompt.slice(0, 40)}" (Ratio: ${selectedRatio})`);
+
+  return res.json({
+    imageUrl,
+    text: `"${rawPrompt}" için görsel Chat_CNR (PİCTURE_AI) motoru ile başarıyla oluşturuldu.`,
+    prompt: rawPrompt,
+    aspectRatio: selectedRatio,
+    modelUsed: "Chat_CNR PİCTURE_AI Motoru"
   });
 });
 

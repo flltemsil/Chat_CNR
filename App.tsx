@@ -256,7 +256,7 @@ const App: React.FC = () => {
 
   const handleInstallClick = async () => {
     if (window.self !== window.top) {
-      alert("Kurulum yapabilmek için lütfen AI Studio sağ üst menüsünden 'Open in New Tab' butonuna tıklayarak uygulamayı yeni sekmede açın.");
+      alert("Kurulum yapabilmek için lütfen uygulamayı tarayıcınızın yeni sekmesinde açın.");
       return;
     }
     if (!installPrompt) {
@@ -499,7 +499,7 @@ const App: React.FC = () => {
                   setLoginError(null);
 
                   if (window.self !== window.top) {
-                    setLoginError("ÖNEMLİ: AI Studio önizlemesinde (iframe) giriş sorunları yaşanabilir. Sağ üstteki 'Open in New Tab' iconuna tıklayıp yeni sekmede açmanız şiddetle önerilir.");
+                    setLoginError("ÖNEMLİ: Önizleme penceresinde (iframe) giriş sorunları yaşanabilir. Sağ üstteki simgeye tıklayıp uygulamayı yeni sekmede açmanız önerilir.");
                   }
 
                   setIsLoginLoading(true);
@@ -516,7 +516,7 @@ const App: React.FC = () => {
                     } else if (err.code === "auth/popup-blocked") {
                       setLoginError("Tarayıcınız giriş penceresini (popup) engelledi. Lütfen adres çubuğundaki popup engelleyici uyarıya tıklayıp izin verin veya 'Mobil Giriş' butonunu kullanın.");
                     } else if (err.code === "auth/network-request-failed") {
-                      setLoginError("Bağlantı hatası veya güvenlik kısıtlaması (Iframe kaynaklı olabilir). Lütfen sağ üstteki 'Open in New Tab' simgesine tıklayarak uygulamayı YENİ SEKMEDE açıp tekrar deneyin.");
+                      setLoginError("Bağlantı hatası veya güvenlik kısıtlaması (Iframe kaynaklı olabilir). Lütfen sağ üstteki simgeye tıklayarak uygulamayı YENİ SEKMEDE açıp tekrar deneyin.");
                     } else {
                       setLoginError(
                         `Giriş başarısız: ${err.message || "Bilinmeyen hata"}. Lütfen uygulamayı yeni sekmede açın.`,
@@ -552,7 +552,7 @@ const App: React.FC = () => {
                   setLoginError(null);
 
                   if (window.self !== window.top) {
-                    setLoginError("Mobil Giriş (Redirect) AI Studio önizlemesinde çalışmaz. Lütfen sağ üstten 'Open in New Tab' iconuna tıklayarak yeni sekmede açın.");
+                    setLoginError("Mobil Giriş (Redirect) önizleme penceresinde çalışmaz. Lütfen sağ üstteki simgeye tıklayarak yeni sekmede açın.");
                     return;
                   }
 
@@ -1811,6 +1811,10 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
       // Check if user is requesting image generation via CNR (powered exclusively by PICTURE_AI)
       const isImageRequest = (promptText: string) => {
         const p = promptText.toLowerCase().trim();
+        // Do not treat capability questions or status checks as drawing requests
+        if (p.includes("bağlı mı") || p.includes("çalışıyor mu") || p.includes("nedir") || p.includes("misin") || p.includes("misiniz") || p.includes("mısın") || p.includes("musun") || p.includes("miyim") || p.endsWith("?")) {
+          return false;
+        }
         return (
           /^(bana\s+)?(bir\s+)?(.+)\s+(çiz|resmet|çiziver|görselini yap|resmini yap|resmini çiz|resmini oluştur|görselini oluştur|görsel üret)$/i.test(p) ||
           /^(resim\s+çiz|görsel\s+üret|resim\s+oluştur|görsel\s+oluştur)[:\s]+(.+)$/i.test(p) ||
@@ -1821,12 +1825,19 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
 
       if (isImageRequest(userMsg.text)) {
         try {
-          const imgRes = await chatCNRService.generateImage(userMsg.text);
+          const cleanPrompt = userMsg.text
+            .replace(/^(bana\s+)?(bir\s+)?/i, "")
+            .replace(/\s+(çiz|resmet|çiziver|görselini yap|resmini yap|resmini çiz|resmini oluştur|görselini oluştur|görsel üret)$/i, "")
+            .replace(/^(resim\s+çiz|görsel\s+üret|resim\s+oluştur|görsel\s+oluştur)[:\s]*/i, "")
+            .replace(/^(generate(\s+an?)?\s+image\s+of|draw(\s+me)?\s+a?|create(\s+an?)?\s+image\s+of|paint(\s+a)?)\s+/i, "")
+            .trim() || userMsg.text;
+
+          const imgRes = await chatCNRService.generateImage(cleanPrompt);
           finalImageUrl = imgRes.imageUrl;
-          finalResponseText = imgRes.text || `"${userMsg.text}" için görsel Chat_CNR (PİCTURE_AI) motoru ile başarıyla oluşturuldu.`;
+          finalResponseText = imgRes.text || `"${cleanPrompt}" için görsel Chat_CNR (PİCTURE_AI) motoru ile başarıyla oluşturuldu.`;
           setIsLoading(false);
         } catch (imgErr: any) {
-          finalResponseText = `⚠️ Görsel Üretimi (PİCTURE_AI): ${imgErr.message || "Görsel şu anda oluşturulamadı."}`;
+          finalResponseText = `⚠️ Görsel Üretimi (PİCTURE_AI): Görsel oluşturulurken bir sorun yaşandı. Lütfen tekrar deneyin.`;
           setIsLoading(false);
         }
       } else {
@@ -2086,7 +2097,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
         );
       } else if (errorMessage === "API_KEY_MISSING") {
         setError(
-          "API Anahtarı bulunamadı. Lütfen AI Studio Build panelindeki Settings kısmından CHAT_CNR_API_KEY değişkenini tanımlayın.",
+          "API Anahtarı bulunamadı. Lütfen Sistem Ayarları (Secrets) kısmından CHAT_CNR_API_KEY değişkenini tanımlayın.",
         );
       } else if (
         errorType === "API_KEY_INVALID" ||
@@ -2097,7 +2108,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
         errorMessage.toLowerCase().includes("invalid key")
       ) {
         setError(
-          `GEÇERSİZ API ANAHTARI: Sistem anahtarı reddetti. Lütfen Settings -> CHAT_CNR_API_KEY kısmındaki anahtarın doğruluğunu kontrol edin. Eğer yeni bir anahtar aldıysanız, AI Studio Build Settings panelinden güncellediğinizden emin olun.`,
+          `GEÇERSİZ API ANAHTARI: Sistem anahtarı reddetti. Lütfen Sistem Ayarları -> CHAT_CNR_API_KEY kısmındaki anahtarın doğruluğunu kontrol edin.`,
         );
       } else {
         console.error("Chat Error:", errorMessage);
