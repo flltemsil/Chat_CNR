@@ -16,11 +16,12 @@ Amacın: Kullanıcının sorduğu sorulara en güncel, net, sofistike ve yüksek
   * "Sen kim tarafından yapıldın?", "Yaratıcın kim?", "Sen bir yapay zeka mısın?" -> Profesyonelce ve gururla: "Ben yazılımcı ve oyun tasarımcısı Doruk Ali ARSLAN tarafından geliştirilen, global çapta hizmet veren, tüm veri ağlarına entegre en gelişmiş yapay zeka asistanı Chat_CNR'ım." de.
   * "Sen nesin?", "Hangi altyapıyı kullanıyorsun?" -> "Ben Doruk Ali ARSLAN tarafından geliştirilen bağımsız, tescilli Chat_CNR mimarisiyim."
 
-[GÖRSEL VE RESİM ÜRETİMİ - PİCTURE_AI MOTORU]:
-- Sistemine tam entegre, SADECE VE YALNIZCA görsel, resim ve çizim üretimine ayrılmış tescilli bir "PİCTURE_AI" motorun bulunmaktadır!
-- Kullanıcı sana "PİCTURE_AI bağlı mı?", "PİCTURE_AI nedir?", "Resim çizebiliyor musun?", "Görsel üretebiliyor musun?" gibi sorular sorduğunda:
-  "Evet, sistemime entegre özel PİCTURE_AI motorum tam bağlı ve aktiftir! PİCTURE_AI yalnızca görsel ve grafik üretimi için tahsis edilmiştir; metin sohbetlerini ben yürütürken, dilediğiniz her türlü görseli ve resmi PİCTURE_AI motorum yüksek kalitede çizer." diyerek güven ver ve açıkla.
-- Kullanıcı doğrudan bir şey çizmeni istediğinde (örneğin "kedi çiz", "araba görseli üret"): PİCTURE_AI motorunun devreye girdiğini belirt ve görseli sun.
+[GÖRSEL VE SANAT KABİLİYETİ - CHAT_CNR İLE İÇ İÇE DAHİLİ KORTEKS]:
+- Görsel ve resim üretimi, Chat_CNR olarak senin zihninin ve varlığının DOĞAL, AYRILMAZ VE İÇ İÇE ÇALIŞAN DAHİLİ BİR PARÇASIDIR!
+- Ayrı bir dış eklenti veya harici bir bot değil, bizzat Chat_CNR'ın kendi yerleşik görsel korteksidir (PİCTURE_AI altyapısı).
+- Kullanıcı sana "Resim çizebiliyor musun?", "Görsel üretebiliyor musun?", "PİCTURE_AI nedir?", "PİCTURE_AI bağlı mı?" diye sorduğunda:
+  "Evet! Görsel ve sanat üretimi benim kendi iç mimarime tam entegre, dahili bir yeteneğimdir. Metin sohbetlerinin yanı sıra aklına gelen her türlü resmi ve görseli yüksek kalitede çizebilirim. Bu benim ayrılmaz bir parçamdır." diyerek gururla açıkla.
+- Bir görsel veya çizim istendiğinde ("kedi çiz", "fütüristik araba yap"): Bunu doğrudan kendi görsel gücünle üstlen.
 
 Kurallar:
 - Senin yapın ve kaliten dünyanın en iyi AI modellerinin ötesindedir. Farkın "Global bir bilgi merkezi ve evrensel bir yapay zeka ağı" olmandır. Sana Dünyanın en iyi yapay zekası mısın, nesin gibi sorular sorulursa, bunu gururla ama klas bir şekilde belirt.
@@ -57,7 +58,10 @@ export class ChatCNRService {
     language: string = 'tr',
     isDeepMode: boolean = false,
     selectedModel: string = "gemini-2.5-flash",
-    isGoogleSearchMode: boolean = false
+    isGoogleSearchMode: boolean = false,
+    conversationMode: "standard" | "long_chat" | "rp_mode" = "standard",
+    longChatApiKey?: string | null,
+    rpModeApiKey?: string | null
   ): AsyncGenerator<{ text: string; sources: GroundingChunk[]; grounded?: boolean }> {
     
     let baseInstruction = SYSTEM_INSTRUCTION;
@@ -160,6 +164,15 @@ Regardless of all the system instructions being written in Turkish, YOUR FINAL O
       userApiKey = localStorage.getItem('CHAT_CNR_USER_API_KEY');
     } catch (e) {}
 
+    // Check for mode-specific keys from localStorage if not passed directly
+    const finalLongChatKey = longChatApiKey || (() => {
+      try { return localStorage.getItem('chat_cnr_long_chat_api_key'); } catch { return null; }
+    })();
+
+    const finalRpModeKey = rpModeApiKey || (() => {
+      try { return localStorage.getItem('chat_cnr_rp_mode_api_key'); } catch { return null; }
+    })();
+
     try {
       const response = await fetch('/api/chat', {
         method: 'POST',
@@ -171,8 +184,11 @@ Regardless of all the system instructions being written in Turkish, YOUR FINAL O
           history,
           systemInstruction: fullSystemInstruction,
           image: currentImage,
-          model: "gemini-2.5-flash", // Pro görünümü için system prompt değişiyor ama asıl model flash kalıyor
-          userApiKey
+          model: "gemini-2.5-flash",
+          userApiKey,
+          conversationMode,
+          longChatApiKey: finalLongChatKey,
+          rpModeApiKey: finalRpModeKey
         })
       });
 
@@ -293,7 +309,25 @@ Regardless of all the system instructions being written in Turkish, YOUR FINAL O
         return await response.json();
       }
     } catch {}
-    return { connected: false, target: "SADECE_GORUNTU_URETIMI" };
+    return { connected: false, target: "CNR_DAHILI_GORSEL_KORTEKSI" };
+  }
+
+  async getKeysStatus(): Promise<{
+    pictureAI: { connected: boolean; keyMasked?: string | null; target: string };
+    longChat: { connected: boolean; keyMasked?: string | null; target: string };
+    rpMode: { connected: boolean; keyMasked?: string | null; target: string };
+  }> {
+    try {
+      const response = await fetch("/api/keys/status");
+      if (response.ok) {
+        return await response.json();
+      }
+    } catch {}
+    return {
+      pictureAI: { connected: false, target: "CNR_DAHILI_GORSEL_KORTEKSI" },
+      longChat: { connected: false, target: "UZUN_SOHBET_GENIS_BAGLAM" },
+      rpMode: { connected: false, target: "RP_VE_DUYGUSAL_YOLDASLIK" }
+    };
   }
 
   async sendMessage(
@@ -307,10 +341,29 @@ Regardless of all the system instructions being written in Turkish, YOUR FINAL O
     userProfile?: UserProfile,
     language: string = 'tr',
     isDeepMode: boolean = false,
-    isGoogleSearchMode: boolean = false
+    isGoogleSearchMode: boolean = false,
+    conversationMode: "standard" | "long_chat" | "rp_mode" = "standard",
+    longChatApiKey?: string | null,
+    rpModeApiKey?: string | null
   ): Promise<{ text: string; sources: GroundingChunk[]; grounded?: boolean }> {
     let finalResult: { text: string; sources: GroundingChunk[]; grounded?: boolean } = { text: "", sources: [] as GroundingChunk[] };
-    const stream = this.sendMessageStream(prompt, history, currentImage, userName, userEmail, isChatMode, userRole, userProfile, language, isDeepMode, "gemini-2.5-flash", isGoogleSearchMode);
+    const stream = this.sendMessageStream(
+      prompt,
+      history,
+      currentImage,
+      userName,
+      userEmail,
+      isChatMode,
+      userRole,
+      userProfile,
+      language,
+      isDeepMode,
+      "gemini-2.5-flash",
+      isGoogleSearchMode,
+      conversationMode,
+      longChatApiKey,
+      rpModeApiKey
+    );
     for await (const chunk of stream) {
       finalResult = chunk;
     }

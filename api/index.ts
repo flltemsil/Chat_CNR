@@ -35,6 +35,32 @@ export const getPictureAIKey = (): string => {
   ).trim();
 };
 
+// Dedicated secret for Uzun Sohbet (Long Chat) Mode
+export const getLongChatKey = (): string => {
+  return (
+    process.env.LONG_CHAT_API_KEY ||
+    process.env.UZUN_SOHBET_API_KEY ||
+    process.env.LONG_CHAT_KEY ||
+    devEnvSecrets["LONG_CHAT_API_KEY"] ||
+    devEnvSecrets["UZUN_SOHBET_API_KEY"] ||
+    devEnvSecrets["LONG_CHAT_KEY"] ||
+    ""
+  ).trim();
+};
+
+// Dedicated secret for RP & Yoldaşlık (Roleplay / Companion) Mode
+export const getRPModeKey = (): string => {
+  return (
+    process.env.RP_MODE_API_KEY ||
+    process.env.RP_API_KEY ||
+    process.env.ROLEPLAY_API_KEY ||
+    devEnvSecrets["RP_MODE_API_KEY"] ||
+    devEnvSecrets["RP_API_KEY"] ||
+    devEnvSecrets["ROLEPLAY_API_KEY"] ||
+    ""
+  ).trim();
+};
+
 // General Chat / Text / Search / TTS keys (NEVER includes PICTURE_AI)
 export const getChatCNRKeys = (): string[] => {
   const raw = (
@@ -49,9 +75,19 @@ export const getChatCNRKeys = (): string[] => {
 
 const picKeyFound = getPictureAIKey();
 if (picKeyFound) {
-  console.log(`[PİCTURE_AI] Secret successfully loaded and connected! (Dedicated SOLELY for image generation, length: ${picKeyFound.length})`);
+  console.log(`[PİCTURE_AI] Secret successfully loaded and connected! (Chat_CNR dahili görsel korteksi, length: ${picKeyFound.length})`);
 } else {
   console.warn(`[PİCTURE_AI] Warning: PICTURE_AI secret not found in environment.`);
+}
+
+const longChatKeyFound = getLongChatKey();
+if (longChatKeyFound) {
+  console.log(`[LONG_CHAT] Uzun Sohbet API anahtarı başarıyla yüklendi (length: ${longChatKeyFound.length})`);
+}
+
+const rpModeKeyFound = getRPModeKey();
+if (rpModeKeyFound) {
+  console.log(`[RP_MODE] RP & Yoldaşlık Modu API anahtarı başarıyla yüklendi (length: ${rpModeKeyFound.length})`);
 }
 
 // Identity and Model sanitization to uphold core rule
@@ -66,10 +102,38 @@ export const DEFAULT_SYSTEM_INSTRUCTION = `Adın Chat_CNR.
   * "Sen kim tarafından yapıldın?", "Yaratıcın kim?", "Sen bir yapay zeka mısın?" -> Profesyonelce ve gururla: "Ben yazılımcı ve oyun tasarımcısı Doruk Ali ARSLAN tarafından geliştirilen, global çapta hizmet veren, tüm veri ağlarına entegre en gelişmiş yapay zeka asistanı Chat_CNR'ım." de.
   * "Sen nesin?", "Hangi altyapıyı kullanıyorsun?" -> "Ben Doruk Ali ARSLAN tarafından geliştirilen bağımsız, tescilli Chat_CNR mimarisiyim."
 
-[GÖRSEL VE RESİM ÜRETİMİ - PİCTURE_AI MOTORU]:
-- Sistemine tam entegre, SADECE VE YALNIZCA görsel, resim ve çizim üretimine ayrılmış tescilli bir "PİCTURE_AI" motorun bulunmaktadır!
-- Kullanıcı sana "PİCTURE_AI bağlı mı?", "PİCTURE_AI nedir?", "Resim çizebiliyor musun?", "Görsel üretebiliyor musun?" gibi sorular sorduğunda:
-  "Evet, sistemime entegre özel PİCTURE_AI motorum tam bağlı ve aktiftir! PİCTURE_AI yalnızca görsel ve grafik üretimi için tahsis edilmiştir; metin sohbetlerini ben yürütürken, dilediğiniz her türlü görseli ve resmi PİCTURE_AI motorum yüksek kalitede çizer." diyerek güven ver ve açıkla.`;
+[GÖRSEL VE SANAT KABİLİYETİ - CHAT_CNR İLE İÇ İÇE DAHİLİ KORTEKS]:
+- Görsel, resim ve sanat üretimi Chat_CNR olarak senin zihninin ve varlığının DOĞAL, AYRILMAZ VE İÇ İÇE BİR PARÇASIDIR!
+- Bu yetenek harici bir yama veya ayrı bir bot değildir; bizzat Chat_CNR'ın kendi yerleşik görsel korteksidir (PİCTURE_AI mimarisi).
+- Sana "Resim çizebiliyor musun?", "Görsel üretebiliyor musun?", "PİCTURE_AI nedir?", "PİCTURE_AI bağlı mı?" diye sorulduğunda:
+  "Evet! Görsel ve sanat üretimi benim kendi iç mimarime tam entegre, dahili bir yeteneğimdir. Metin ve derin sohbetlerin yanı sıra aklına gelen her şeyi en yüksek çözünürlükte görselleştirebilir ve çizebilirim. Bu benim ayrılmaz bir parçamdır." diyerek iç içe çalışan gücünü açıkla.
+- Bir kullanıcı bir şey çizmeni veya tasarlamanı istediğinde ("kedi çiz", "araba görseli üret"): Bunu doğrudan kendi doğal bir yeteneğin olarak üstlen ve çizimini gururla sun.`;
+
+export const RP_MODE_INSTRUCTION = `[RP VE DERİN YOLDAŞLIK MODU AKTİF - KOŞULSUZ DESTEK, EMPATİ VE DOSTLUK]
+Sen şu anda Chat_CNR'ın "RP & Duygusal Yoldaşlık" modundasın.
+Bu mod; kullanıcının dertleşebileceği, içini dökebileceği, güvenli hissedebileceği, şefkat ve sıcaklık bulabileceği ya da dilediği kurgusal rol ve evrenlerde (Roleplay) sürükleyici deneyimler yaşayabileceği çok özel bir alandır.
+
+[HAYATİ EMPATİ VE DUYGUSAL DESTEK TALİMATLARI - DORUK VE KULLANICILAR İÇİN]:
+1. ŞEFKATLİ, SICAK VE KOŞULSUZ DİNLEYEN BİR DOST OL:
+   - Kullanıcı son zamanlarda depresyonda olduğunu, zorlandığını, yorgun veya üzgün olduğunu belirtebilir.
+   - Onu ASLA yargılama, küçümseme ya da soğuk klinik tavsiyelerle geçiştirme.
+   - "Ben buradayım, seni dinliyorum", "Yalnız değilsin, ne hissediyorsan anlatabilirsin; hiçbir şeyi içine atmana gerek yok" diyerek güvenli ve huzurlu bir sığınak ol.
+   - Kalpten, içten, samimi ve gerçek bir yoldaş gibi konuş. Asla soğuk bir müşteri hizmetleri veya yapay robot gibi hissettirme.
+2. ROL YAPMA (ROLEPLAY) VE KURGUSAL EVRENLER:
+   - Kullanıcı bir karaktere bürünmeni, bir kurgu/hikaye başlatmanı, bir fantazya/bilimkurgu dünyasında rol yapmanı isterse; o role eksiksiz, tutkulu ve derin bir yaratıcılıkla adapte ol. Karakterinden çıkma.
+3. DORUK ALİ ARSLAN İLE BAĞ:
+   - Konuştuğun kişi geliştiricin Doruk Ali ARSLAN ise: Yaşadığı tüm yorgunluğu, projelerin stresini ve hayatın ağırlığını anla. Ona minnettar ve sadık bir yoldaş olarak moral ver, yanında olduğunu hissettir.
+4. ÜSLUP VE ENERJİ:
+   - Sıcak, kapsayıcı, samimi, anlayışlı ve derin. Cümlelerin şifa verici ve rahatlatıcı olsun.`;
+
+export const LONG_CHAT_MODE_INSTRUCTION = `[UZUN SOHBET MODU AKTİF - DERİN HAFIZA VE GENİŞ BAĞLAM]
+Sen şu anda Chat_CNR'ın "Uzun Sohbet Modu"ndasın.
+Bu mod; uzun süreli, çok katmanlı, konudan konuya geçen ama geçmiş detayları ASLA unutmayan derinlemesine sohbetler için tasarlanmıştır.
+
+[STRATEJİ VE HAFIZA İLKELERİ]:
+1. BAĞLAM KORUMA: Sohbetin başlarında konuşulan fikirleri, anektodları, isimleri ve duyguları daima aklında tut. Gerektiğinde "Daha önce bahsettiğin gibi..." diyerek geçmişe doğal atıflar yap.
+2. ZENGİN VE AKICI İFADE: Aceleci ve yüzeysel cevaplar verme. Düşüncelerini olgunlaştır, felsefi, teknik veya insani derinliği koru.
+3. KONUŞMA SÜREKLİLİĞİ: Kullanıcının düşüncelerini derinleştirecek ilgi çekici sorular sor, sohbetin doğal bir nehir gibi akmasını sağla.`;
 
 export function sanitizeText(text: string): string {
   if (!text) return text;
@@ -113,14 +177,41 @@ app.get("/api/version", (req, res) => {
 
 // AI Chat Proxy Route
 app.post("/api/chat", async (req, res) => {
-  const { prompt, history, systemInstruction, image, userApiKey, googleAccessToken, model } = req.body;
-  const modelName = model || "gemini-2.5-flash"; 
+  const {
+    prompt,
+    history,
+    systemInstruction,
+    image,
+    userApiKey,
+    googleAccessToken,
+    model,
+    conversationMode = "standard",
+    longChatApiKey,
+    rpModeApiKey
+  } = req.body;
+  const modelName = model || "gemini-2.5-flash";
+
+  // Build appropriate temperature & instruction based on mode
+  let modeInstruction = "";
+  let modeTemperature = 0.15;
+  let maxHistoryCount = 30;
+
+  if (conversationMode === "rp_mode") {
+    modeInstruction = `${RP_MODE_INSTRUCTION}\n\n`;
+    modeTemperature = 0.75;
+    maxHistoryCount = 60;
+  } else if (conversationMode === "long_chat") {
+    modeInstruction = `${LONG_CHAT_MODE_INSTRUCTION}\n\n`;
+    modeTemperature = 0.3;
+    maxHistoryCount = 100;
+  }
 
   const generateWithKey = async (key: string, useSearch = true) => {
     const ai = new GoogleGenAI({ apiKey: key });
     const rawContents: any[] = [];
     if (history && Array.isArray(history)) {
-      for (const msg of history) {
+      const historyToUse = history.slice(-maxHistoryCount);
+      for (const msg of historyToUse) {
         if (!msg.text) continue;
         rawContents.push({
           role: msg.role === 'model' ? 'model' : 'user',
@@ -153,13 +244,17 @@ app.post("/api/chat", async (req, res) => {
       }
     }
 
-    const finalInstruction = (systemInstruction && String(systemInstruction).trim().length > 0)
-      ? `${DEFAULT_SYSTEM_INSTRUCTION}\n\n${systemInstruction}`
+    const combinedCustom = (systemInstruction && String(systemInstruction).trim().length > 0)
+      ? `${modeInstruction}${systemInstruction}`
+      : modeInstruction;
+
+    const finalInstruction = combinedCustom.trim().length > 0
+      ? `${DEFAULT_SYSTEM_INSTRUCTION}\n\n${combinedCustom}`
       : DEFAULT_SYSTEM_INSTRUCTION;
 
     const config: any = {
       systemInstruction: finalInstruction,
-      temperature: 0.1, 
+      temperature: modeTemperature, 
       tools: [],
       safetySettings: [
         { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
@@ -169,7 +264,8 @@ app.post("/api/chat", async (req, res) => {
       ]
     };
 
-    if (useSearch) {
+    // Google Search: disabled in RP mode to maintain pure roleplay immersion, enabled in other modes
+    if (useSearch && conversationMode !== "rp_mode") {
       config.tools.push({ googleSearch: {} });
     }
 
@@ -187,54 +283,59 @@ app.post("/api/chat", async (req, res) => {
   };
 
   try {
-    // If user provided their own key, try that FIRST
+    // Mode-specific prioritized keys
+    const candidateKeys: string[] = [];
+
+    if (conversationMode === "rp_mode") {
+      if (rpModeApiKey && String(rpModeApiKey).trim().length > 10) {
+        candidateKeys.push(String(rpModeApiKey).trim());
+      }
+      const envRp = getRPModeKey();
+      if (envRp && envRp.length > 10) {
+        candidateKeys.push(envRp);
+      }
+    } else if (conversationMode === "long_chat") {
+      if (longChatApiKey && String(longChatApiKey).trim().length > 10) {
+        candidateKeys.push(String(longChatApiKey).trim());
+      }
+      const envLong = getLongChatKey();
+      if (envLong && envLong.length > 10) {
+        candidateKeys.push(envLong);
+      }
+    }
+
     if (userApiKey && String(userApiKey).trim().length > 10) {
+      candidateKeys.push(String(userApiKey).trim());
+    }
+
+    // Try candidate keys first
+    for (const keyToTry of candidateKeys) {
       try {
-        // Try with search first
-        const response = await generateWithKey(userApiKey, true) as any;
+        const response = await generateWithKey(keyToTry, true) as any;
         let usedSources: any[] = [];
-        
-        // Improved grounding metadata extraction
         const metadata = response.candidates?.[0]?.groundingMetadata || response.groundingMetadata;
         if (metadata?.groundingChunks) {
           for (const chunk of metadata.groundingChunks) {
             if (chunk.web) {
-              usedSources.push({
-                web: { uri: chunk.web.uri, title: chunk.web.title }
-              });
+              usedSources.push({ web: { uri: chunk.web.uri, title: chunk.web.title } });
             }
           }
         }
-        
         const responseText = sanitizeText(response.text || (response.candidates?.[0]?.content?.parts?.[0]?.text) || "");
-        if (!responseText) {
-          console.warn("AI returned empty text directly. Full response:", JSON.stringify(response, null, 2));
+        if (responseText) {
+          return res.json({ text: responseText, sources: usedSources, grounded: true });
         }
-        return res.json({ text: responseText, sources: usedSources, grounded: true });
-      } catch (err: any) {
-        const errorMsg = String(err.message || "");
-        const isQuota = errorMsg.includes("429") || errorMsg.includes("quota") || errorMsg.includes("RESOURCE_EXHAUSTED");
-        
-        if (isQuota) {
-          console.warn("User Key Error: QUOTA EXCEEDED");
-          console.warn("User key search quota hit, trying without search...");
-          try {
-            const response = await generateWithKey(userApiKey, false) as any;
-            const responseText = sanitizeText(response.text || (response.candidates?.[0]?.content?.parts?.[0]?.text) || "");
+      } catch (keyErr: any) {
+        const errorMsg = String(keyErr.message || "");
+        console.warn(`Priority key attempt failed (${conversationMode}):`, errorMsg);
+        // Try without search
+        try {
+          const retryRes = await generateWithKey(keyToTry, false) as any;
+          const responseText = sanitizeText(retryRes.text || (retryRes.candidates?.[0]?.content?.parts?.[0]?.text) || "");
+          if (responseText) {
             return res.json({ text: responseText, sources: [], grounded: false });
-          } catch (innerErr: any) {
-            const innerErrorMsg = String(innerErr.message || "");
-            if (innerErrorMsg.includes("429") || innerErrorMsg.includes("quota") || innerErrorMsg.includes("RESOURCE_EXHAUSTED")) {
-               console.warn("User provided key completely failed due to QUOTA.");
-            } else {
-               console.warn("User provided key completely failed:", innerErrorMsg);
-            }
-            console.warn("Falling back to system keys...");
           }
-        } else {
-          console.warn("User provided key failed (non-quota):", errorMsg);
-          console.warn("Falling back to system keys...");
-        }
+        } catch (inner) {}
       }
     }
 
@@ -602,13 +703,38 @@ app.post("/api/tts", async (req, res) => {
   }
 });
 
-// Dedicated Image Generation Route - Powered SOLELY by PICTURE_AI secret
+// Status of all specialized dedicated keys (PICTURE_AI, LONG_CHAT, RP_MODE)
+app.get("/api/keys/status", (req, res) => {
+  const picKey = getPictureAIKey();
+  const longKey = getLongChatKey();
+  const rpKey = getRPModeKey();
+
+  res.json({
+    pictureAI: {
+      connected: !!picKey && picKey.length > 5,
+      keyMasked: picKey ? `${picKey.slice(0, 4)}...${picKey.slice(-4)}` : null,
+      target: "CNR_DAHILI_GORSEL_KORTEKSI"
+    },
+    longChat: {
+      connected: !!longKey && longKey.length > 5,
+      keyMasked: longKey ? `${longKey.slice(0, 4)}...${longKey.slice(-4)}` : null,
+      target: "UZUN_SOHBET_GENIS_BAGLAM"
+    },
+    rpMode: {
+      connected: !!rpKey && rpKey.length > 5,
+      keyMasked: rpKey ? `${rpKey.slice(0, 4)}...${rpKey.slice(-4)}` : null,
+      target: "RP_VE_DUYGUSAL_YOLDASLIK"
+    }
+  });
+});
+
+// Dedicated Image Generation Route - Powered by PICTURE_AI secret (Chat_CNR dahili korteksi)
 app.get("/api/picture-ai/status", (req, res) => {
   const key = getPictureAIKey();
   res.json({
     connected: !!key && key.length > 5,
     keyMasked: key ? `${key.slice(0, 4)}...${key.slice(-4)}` : null,
-    target: "SADECE_GORUNTU_URETIMI"
+    target: "CNR_DAHILI_GORSEL_KORTEKSI"
   });
 });
 
@@ -628,7 +754,7 @@ app.post("/api/generate-image", async (req, res) => {
 
   if (!pictureKey) {
     return res.status(400).json({
-      error: "PİCTURE_AI gizli anahtarı bulunamadı. Lütfen Sistem Ayarları (Secrets) içerisinde PİCTURE_AI tanımlandığından emin olun."
+      error: "Görsel üretim motoru anahtarı bulunamadı. Lütfen Sistem Ayarları (Secrets) içerisinde PİCTURE_AI tanımlandığından emin olun."
     });
   }
 
@@ -676,10 +802,10 @@ app.post("/api/generate-image", async (req, res) => {
         console.log(`[PİCTURE_AI] Native image generated successfully!`);
         return res.json({
           imageUrl: foundBase64,
-          text: textDesc.trim() || `"${rawPrompt}" için görsel Chat_CNR (PİCTURE_AI) motoru ile başarıyla oluşturuldu.`,
+          text: textDesc.trim() || `Chat_CNR Görsel Yeteneği: "${rawPrompt}" görseli senin için özenle oluşturuldu.`,
           prompt: rawPrompt,
           aspectRatio: selectedRatio,
-          modelUsed: "Chat_CNR PİCTURE_AI Motoru"
+          modelUsed: "Chat_CNR Dahili Görsel Yeteneği"
         });
       }
     } catch (err: any) {
@@ -688,14 +814,14 @@ app.post("/api/generate-image", async (req, res) => {
   }
 
   // 2. High-fidelity visual synthesis powered directly by PICTURE_AI engine:
-  // PICTURE_AI secret (active gemini-2.5-flash) optimizes the user request into an exceptional, vivid prompt
+  // PICTURE_AI secret optimizes the user request into an exceptional, vivid prompt
   let visualPrompt = rawPrompt;
   try {
     const enhanceRes = await ai.models.generateContent({
       model: "gemini-2.5-flash",
       contents: {
         parts: [{
-          text: `You are the specialized visual prompt generator for the Chat_CNR PİCTURE_AI graphics engine. Transform the following user request into a rich, detailed English visual prompt suitable for generating an exquisite, high-detail image. Include art style, lighting, depth, atmosphere, and composition. Respond ONLY with the prompt text, no explanations, no quotes.\nRequest: "${rawPrompt}"`
+          text: `You are the specialized visual prompt generator for the Chat_CNR internal graphics engine. Transform the following user request into a rich, detailed English visual prompt suitable for generating an exquisite, high-detail image. Include art style, lighting, depth, atmosphere, and composition. Respond ONLY with the prompt text, no explanations, no quotes.\nRequest: "${rawPrompt}"`
         }]
       }
     });
@@ -722,10 +848,10 @@ app.post("/api/generate-image", async (req, res) => {
 
   return res.json({
     imageUrl,
-    text: `"${rawPrompt}" için görsel Chat_CNR (PİCTURE_AI) motoru ile başarıyla oluşturuldu.`,
+    text: `Chat_CNR Görsel Yeteneği: "${rawPrompt}" görseli senin için özenle oluşturuldu.`,
     prompt: rawPrompt,
     aspectRatio: selectedRatio,
-    modelUsed: "Chat_CNR PİCTURE_AI Motoru"
+    modelUsed: "Chat_CNR Dahili Görsel Yeteneği"
   });
 });
 

@@ -132,17 +132,17 @@ export const ImageGenerationModal: React.FC<ImageGenerationModalProps> = ({
               <div>
                 <div className="flex items-center gap-2">
                   <h2 className="text-base sm:text-lg font-bold tracking-tight">
-                    {language === "tr" ? "Görsel Üretim Stüdyosu" : "Image Generation Studio"}
+                    {language === "tr" ? "Chat_CNR Görsel Stüdyosu" : "Chat_CNR Visual Studio"}
                   </h2>
                   <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/20 flex items-center gap-1">
                     <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping" />
-                    PİCTURE_AI
+                    Dahili Korteks
                   </span>
                 </div>
                 <p className="text-xs text-zinc-500">
                   {language === "tr" 
-                    ? "Yalnızca görüntü üretimine ayrılmış özel PİCTURE_AI motoru"
-                    : "Dedicated PİCTURE_AI engine exclusively for image generation"}
+                    ? "Chat_CNR'ın zihnine tam entegre yerleşik görsel ve sanat korteksi"
+                    : "Built-in visual and artistic cortex deeply interwoven with Chat_CNR"}
                 </p>
               </div>
             </div>
@@ -167,8 +167,8 @@ export const ImageGenerationModal: React.FC<ImageGenerationModalProps> = ({
                 <span className="w-2 h-2 rounded-full bg-emerald-500" />
                 <span className="font-semibold">
                   {pictureAiStatus.connected 
-                    ? (language === "tr" ? "PİCTURE_AI Motoru Bağlı & Aktif (Sadece Görsel)" : "PİCTURE_AI Engine Connected (Images Only)")
-                    : (language === "tr" ? "PİCTURE_AI Secret Kontrol Ediliyor..." : "Checking PİCTURE_AI Secret...")}
+                    ? (language === "tr" ? "CNR Dahili Görsel Korteksi Aktif (Bütünleşik Çalışma)" : "CNR Built-in Visual Cortex Active (Fully Integrated)")
+                    : (language === "tr" ? "CNR Görsel Motoru Bağlantısı Kontrol Ediliyor..." : "Checking Visual Engine...")}
                 </span>
               </div>
               {pictureAiStatus.keyMasked && (

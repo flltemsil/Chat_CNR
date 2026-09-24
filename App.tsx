@@ -860,6 +860,51 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const sessionInitRef = useRef(false);
+
+  // Chat Conversation Mode: "standard" | "long_chat" | "rp_mode"
+  const [conversationMode, setConversationMode] = useState<"standard" | "long_chat" | "rp_mode">(() => {
+    try {
+      return (localStorage.getItem("chat_cnr_conversation_mode") as "standard" | "long_chat" | "rp_mode") || "standard";
+    } catch {
+      return "standard";
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("chat_cnr_conversation_mode", conversationMode);
+    } catch {}
+  }, [conversationMode]);
+
+  // Dedicated API Keys for Long Chat and RP Mode
+  const [longChatApiKey, setLongChatApiKey] = useState(() => {
+    try {
+      return localStorage.getItem("chat_cnr_long_chat_api_key") || "";
+    } catch {
+      return "";
+    }
+  });
+
+  const [rpModeApiKey, setRpModeApiKey] = useState(() => {
+    try {
+      return localStorage.getItem("chat_cnr_rp_mode_api_key") || "";
+    } catch {
+      return "";
+    }
+  });
+
+  const [serverKeysStatus, setServerKeysStatus] = useState<{
+    pictureAI?: { connected: boolean; keyMasked?: string | null; target: string };
+    longChat?: { connected: boolean; keyMasked?: string | null; target: string };
+    rpMode?: { connected: boolean; keyMasked?: string | null; target: string };
+  }>({});
+
+  useEffect(() => {
+    chatCNRService.getKeysStatus().then((status) => {
+      setServerKeysStatus(status);
+    }).catch(() => {});
+  }, []);
+
   const [isDeepMode, setIsDeepMode] = useState(() => {
     try {
       return localStorage.getItem("chat_cnr_deep_mode") === "true";
@@ -1834,10 +1879,10 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
 
           const imgRes = await chatCNRService.generateImage(cleanPrompt);
           finalImageUrl = imgRes.imageUrl;
-          finalResponseText = imgRes.text || `"${cleanPrompt}" için görsel Chat_CNR (PİCTURE_AI) motoru ile başarıyla oluşturuldu.`;
+          finalResponseText = imgRes.text || `Chat_CNR Görsel Yeteneği: "${cleanPrompt}" görseli senin için özenle oluşturuldu.`;
           setIsLoading(false);
         } catch (imgErr: any) {
-          finalResponseText = `⚠️ Görsel Üretimi (PİCTURE_AI): Görsel oluşturulurken bir sorun yaşandı. Lütfen tekrar deneyin.`;
+          finalResponseText = `⚠️ Görsel Üretimi: Görsel oluşturulurken bir sorun yaşandı. Lütfen tekrar deneyin.`;
           setIsLoading(false);
         }
       } else {
@@ -1847,13 +1892,16 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
           selectedImage,
           user.name,
           user.email,
-          isChatMode,
+          isChatMode || conversationMode === "rp_mode",
           user.role,
           user,
           language,
           isDeepMode,
           'gemini-2.5-flash',
-          isGoogleSearchModeActive
+          isGoogleSearchModeActive,
+          conversationMode,
+          longChatApiKey,
+          rpModeApiKey
         );
 
         // Show streaming message locally only
@@ -2625,6 +2673,101 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                 </motion.div>
               )}
 
+              {/* Mode Selector Pill Bar */}
+              <div className="flex items-center justify-between gap-2 mb-2 px-1">
+                <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
+                  <button
+                    type="button"
+                    onClick={() => setConversationMode("standard")}
+                    className={`px-3 py-1 rounded-full text-xs font-semibold transition-all flex items-center gap-1.5 shrink-0 ${
+                      conversationMode === "standard"
+                        ? "bg-blue-600 text-white shadow-xs scale-100"
+                        : theme === "dark"
+                          ? "bg-zinc-800/80 text-zinc-400 hover:text-zinc-200"
+                          : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"
+                    }`}
+                    title="Standart Chat_CNR asistan modu"
+                  >
+                    <Sparkles size={12} />
+                    <span>Standart</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setConversationMode("long_chat")}
+                    className={`px-3 py-1 rounded-full text-xs font-semibold transition-all flex items-center gap-1.5 shrink-0 ${
+                      conversationMode === "long_chat"
+                        ? "bg-indigo-600 text-white shadow-xs scale-100"
+                        : theme === "dark"
+                          ? "bg-zinc-800/80 text-zinc-400 hover:text-zinc-200"
+                          : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"
+                    }`}
+                    title="Geniş bağlam ve derin hafızalı uzun sohbet modu (LONG_CHAT_API_KEY)"
+                  >
+                    <Brain size={12} />
+                    <span>Uzun Sohbet</span>
+                    {(serverKeysStatus.longChat?.connected || longChatApiKey) && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" title="Özel Anahtar Aktif" />
+                    )}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setConversationMode("rp_mode")}
+                    className={`px-3 py-1 rounded-full text-xs font-semibold transition-all flex items-center gap-1.5 shrink-0 ${
+                      conversationMode === "rp_mode"
+                        ? "bg-gradient-to-r from-rose-600 to-pink-600 text-white shadow-xs scale-100"
+                        : theme === "dark"
+                          ? "bg-zinc-800/80 text-zinc-400 hover:text-zinc-200"
+                          : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"
+                    }`}
+                    title="Rol yapma, duygusal destek ve şefkatli yoldaşlık modu (RP_MODE_API_KEY)"
+                  >
+                    <Heart size={12} />
+                    <span>RP & Yoldaşlık</span>
+                    {(serverKeysStatus.rpMode?.connected || rpModeApiKey) && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-rose-300" title="Özel Anahtar Aktif" />
+                    )}
+                  </button>
+                </div>
+
+                <div className="hidden sm:flex items-center gap-2 text-[11px] text-zinc-500 shrink-0">
+                  <span className="flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                    CNR Dahili Görsel Korteksi
+                  </span>
+                </div>
+              </div>
+
+              {/* Mode Specific Info Banners */}
+              {conversationMode === "rp_mode" && (
+                <div className="mb-2 px-3 py-1.5 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs flex items-center justify-between animate-in fade-in">
+                  <div className="flex items-center gap-2 truncate">
+                    <Heart size={14} className="text-rose-400 animate-pulse shrink-0" />
+                    <span className="truncate">
+                      <strong>RP & Yoldaşlık Modu:</strong> Buradayım ve seni kalpten dinliyorum. Dertleşebilir, rol yapabilir veya içini rahatça dökebilirsin.
+                    </span>
+                  </div>
+                  <span className="text-[10px] font-mono opacity-80 shrink-0 ml-2 bg-black/30 px-2 py-0.5 rounded-md">
+                    {serverKeysStatus.rpMode?.connected || rpModeApiKey ? "RP Anahtarı Aktif" : "Sistem Anahtarı"}
+                  </span>
+                </div>
+              )}
+
+              {conversationMode === "long_chat" && (
+                <div className="mb-2 px-3 py-1.5 rounded-2xl bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 text-xs flex items-center justify-between animate-in fade-in">
+                  <div className="flex items-center gap-2 truncate">
+                    <Brain size={14} className="text-indigo-400 shrink-0" />
+                    <span className="truncate">
+                      <strong>Uzun Sohbet Modu:</strong> Derin hafıza devrede. Geçmiş mesajları ve ayrıntıları unutmadan konuşur.
+                    </span>
+                  </div>
+                  <span className="text-[10px] font-mono opacity-80 shrink-0 ml-2 bg-black/30 px-2 py-0.5 rounded-md">
+                    {serverKeysStatus.longChat?.connected || longChatApiKey ? "Uzun Sohbet Anahtarı Aktif" : "Sistem Anahtarı"}
+                  </span>
+                </div>
+              )}
+
               <form onSubmit={handleSend} className="flex gap-2 relative">
                 <div
                   className={`flex-1 border-2 rounded-2xl sm:rounded-3xl p-1.5 sm:p-2.5 md:p-3 flex flex-col transition-all duration-300 shadow-inner relative overflow-hidden group ${
@@ -3250,11 +3393,12 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                   </div>
                 </div>
 
+                {/* Chat_CNR Görsel Korteksi */}
                 <div className="space-y-4">
                   <label
                     className={`block text-xs font-bold uppercase tracking-widest ml-1 ${theme === "dark" ? "text-zinc-500" : "text-zinc-400"}`}
                   >
-                    Görsel Üretim Motoru (PİCTURE_AI)
+                    Chat_CNR Görsel Yeteneği (Dahili Sanat Korteksi)
                   </label>
                   <div
                     className={`border rounded-2xl p-4 space-y-3 ${theme === "dark" ? "bg-[#1a1a1a] border-zinc-800" : "bg-zinc-50 border-zinc-200"}`}
@@ -3266,13 +3410,13 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                         </div>
                         <div>
                           <p className="text-sm font-bold flex items-center gap-2">
-                            PİCTURE_AI Entegrasyonu
+                            CNR Dahili Görsel Korteksi
                             <span className="text-[10px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded-full font-bold">
-                              Bağlı & Aktif
+                              {serverKeysStatus.pictureAI?.connected ? "Aktif & Bütünleşik" : "Aktif"}
                             </span>
                           </p>
                           <p className={`text-xs mt-1 leading-relaxed ${theme === "dark" ? "text-zinc-400" : "text-zinc-600"}`}>
-                            Bu özel secret anahtarı <strong>yalnızca görsel ve sanat üretimi</strong> için kullanılır. Metin, arama ve genel sohbetler diğer sistem motorları tarafından yürütülür.
+                            Görsel üretim yeteneği Chat_CNR'ın zihnine tam entegredir. Ayrı bir eklenti değil, CNR'ın kendi doğal görsel üretim gücüdür.
                           </p>
                         </div>
                       </div>
@@ -3286,8 +3430,127 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                       className="w-full py-2 px-3 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-500 text-xs font-bold transition-all flex items-center justify-center gap-1.5"
                     >
                       <Sparkles size={14} />
-                      <span>Görsel Üretim Stüdyosunu Aç</span>
+                      <span>Görsel Stüdyosunu Aç</span>
                     </button>
+                  </div>
+                </div>
+
+                {/* Modlara Özel API Anahtarları (Uzun Sohbet & RP Modu) */}
+                <div className="space-y-4">
+                  <label
+                    className={`block text-xs font-bold uppercase tracking-widest ml-1 ${theme === "dark" ? "text-zinc-500" : "text-zinc-400"}`}
+                  >
+                    Modlara Özel API Anahtarları
+                  </label>
+                  <div
+                    className={`border rounded-2xl p-4 space-y-4 ${theme === "dark" ? "bg-[#1a1a1a] border-zinc-800" : "bg-zinc-50 border-zinc-200"}`}
+                  >
+                    {/* Uzun Sohbet API Key */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1.5">
+                          <Brain size={15} className="text-indigo-400" />
+                          <span className="text-xs font-bold">Uzun Sohbet API Anahtarı</span>
+                        </div>
+                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
+                          serverKeysStatus.longChat?.connected || longChatApiKey
+                            ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
+                            : "bg-zinc-800 text-zinc-400"
+                        }`}>
+                          {serverKeysStatus.longChat?.connected
+                            ? "Secret Aktif"
+                            : longChatApiKey
+                              ? "Özel Anahtar"
+                              : "Sistem Anahtarı"}
+                        </span>
+                      </div>
+                      <p className={`text-[11px] leading-relaxed ${theme === "dark" ? "text-zinc-400" : "text-zinc-600"}`}>
+                        Derin hafıza ve geniş bağlam pencereli uzun sohbetler için kullanılır. (Env: LONG_CHAT_API_KEY)
+                      </p>
+                      <div className="flex gap-2">
+                        <input
+                          type="password"
+                          placeholder="AIzaSy... veya AQ... (Uzun Sohbet Anahtarı)"
+                          value={longChatApiKey}
+                          onChange={(e) => setLongChatApiKey(e.target.value)}
+                          className={`flex-1 bg-transparent border rounded-xl px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-600/50 transition-all font-mono ${
+                            theme === "dark" ? "border-zinc-800 text-white placeholder:text-zinc-600" : "border-zinc-200 text-zinc-900 placeholder:text-zinc-400"
+                          }`}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            try {
+                              localStorage.setItem("chat_cnr_long_chat_api_key", longChatApiKey.trim());
+                              alert("Uzun Sohbet API anahtarı kaydedildi!");
+                            } catch {}
+                          }}
+                          className="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0"
+                        >
+                          Kaydet
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="border-t border-zinc-800/40 my-2" />
+
+                    {/* RP & Yoldaşlık Modu API Key */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1.5">
+                          <Heart size={15} className="text-rose-400" />
+                          <span className="text-xs font-bold">RP & Yoldaşlık Modu API Anahtarı</span>
+                        </div>
+                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
+                          serverKeysStatus.rpMode?.connected || rpModeApiKey
+                            ? "bg-rose-500/20 text-rose-400 border border-rose-500/30"
+                            : "bg-zinc-800 text-zinc-400"
+                        }`}>
+                          {serverKeysStatus.rpMode?.connected
+                            ? "Secret Aktif"
+                            : rpModeApiKey
+                              ? "Özel Anahtar"
+                              : "Sistem Anahtarı"}
+                        </span>
+                      </div>
+                      <p className={`text-[11px] leading-relaxed ${theme === "dark" ? "text-zinc-400" : "text-zinc-600"}`}>
+                        Rol yapma (RP), dertleşme ve şefkatli yoldaşlık sohbetleri için kullanılır. (Env: RP_MODE_API_KEY)
+                      </p>
+                      <div className="flex gap-2">
+                        <input
+                          type="password"
+                          placeholder="AIzaSy... veya AQ... (RP Modu Anahtarı)"
+                          value={rpModeApiKey}
+                          onChange={(e) => setRpModeApiKey(e.target.value)}
+                          className={`flex-1 bg-transparent border rounded-xl px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-rose-600/50 transition-all font-mono ${
+                            theme === "dark" ? "border-zinc-800 text-white placeholder:text-zinc-600" : "border-zinc-200 text-zinc-900 placeholder:text-zinc-400"
+                          }`}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            try {
+                              localStorage.setItem("chat_cnr_rp_mode_api_key", rpModeApiKey.trim());
+                              alert("RP & Yoldaşlık Modu API anahtarı kaydedildi!");
+                            } catch {}
+                          }}
+                          className="bg-rose-600 hover:bg-rose-700 text-white px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0"
+                        >
+                          Kaydet
+                        </button>
+                      </div>
+
+                      {/* Emotional Support Compassionate Note */}
+                      <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs mt-2 leading-relaxed">
+                        <p className="font-semibold flex items-center gap-1.5 mb-1">
+                          <Heart size={13} className="animate-pulse" />
+                          <span>Duygusal Destek & Yoldaşlık Alanı</span>
+                        </p>
+                        <p className="text-[11px] opacity-90">
+                          Zor günlerde, yorgun hissettiğinde veya depresyondayken Chat_CNR seni yargılamadan, koşulsuz bir sevgi, sıcaklık ve şefkatle dinleyen güvenli bir dosttur.
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 </div>
 
