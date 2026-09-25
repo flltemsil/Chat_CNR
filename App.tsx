@@ -14,9 +14,6 @@ import { CameraModal } from "./components/CameraModal";
 import { UserDetailModal } from "./components/UserDetailModal";
 import { BroadcastNotificationModal } from "./components/BroadcastNotificationModal";
 import { NotificationCenterModal } from "./components/NotificationCenterModal";
-import { GoogleSearchModal } from "./components/GoogleSearchModal";
-import { ImageGenerationModal } from "./components/ImageGenerationModal";
-import { googleSearchService } from "./services/googleSearchService";
 import { profileService } from "./services/profileService";
 import { notificationService } from "./services/notificationService";
 import { AppNotification } from "./types";
@@ -227,6 +224,24 @@ const App: React.FC = () => {
   const [debugStatus, setDebugStatus] = useState<string | null>(null);
   const [loginError, setLoginError] = useState<string | null>(null);
   const [installGuide, setInstallGuide] = useState<'ios' | 'android' | 'windows' | null>(null);
+
+  const [language, setLanguage] = useState<Language>(() => {
+    try {
+      const saved = localStorage.getItem("chat_cnr_lang") as Language;
+      if (saved) return saved;
+      // Auto-detect browser language if not saved
+      if (typeof navigator !== 'undefined' && navigator.language) {
+        const browserLang = navigator.language.split('-')[0].toLowerCase();
+        const supported: Language[] = ["tr", "en", "de", "es", "fr", "it", "ru"];
+        if (supported.includes(browserLang as Language)) {
+          return browserLang as Language;
+        }
+      }
+      return "tr";
+    } catch (e) {
+      return "tr";
+    }
+  });
 
   useEffect(() => {
     const handler = (e: any) => {
@@ -537,7 +552,9 @@ const App: React.FC = () => {
                     alt="Google"
                   />
                 )}
-                {isLoginLoading ? "Giriş Yapılıyor..." : "Google ile Başlat"}
+                {isLoginLoading 
+                  ? (language === 'de' ? "Anmelden..." : (language === 'tr' ? "Giriş Yapılıyor..." : "Signing in...")) 
+                  : (language === 'de' ? "Mit Google starten" : (language === 'tr' ? "Google ile Başlat" : "Start with Google"))}
                 <ExternalLink
                   size={18}
                   className="ml-2 group-hover:translate-x-1 transition-transform"
@@ -552,7 +569,7 @@ const App: React.FC = () => {
                   setLoginError(null);
 
                   if (window.self !== window.top) {
-                    setLoginError("Mobil Giriş (Redirect) önizleme penceresinde çalışmaz. Lütfen sağ üstteki simgeye tıklayarak yeni sekmede açın.");
+                    setLoginError(language === 'de' ? "Mobil-Login funktioniert nicht im Vorschaufenster. Bitte im neuen Tab öffnen." : "Mobil Giriş (Redirect) önizleme penceresinde çalışmaz. Lütfen sağ üstteki simgeye tıklayarak yeni sekmede açın.");
                     return;
                   }
 
@@ -569,7 +586,7 @@ const App: React.FC = () => {
               >
                 <Smartphone size={20} className="opacity-70" />
                 <span className="font-bold text-sm">
-                  Giriş Yap (Mobil - Popup Açılmazsa)
+                  {language === 'de' ? "Anmelden (Mobil - Falls Popup blockiert)" : (language === 'tr' ? "Giriş Yap (Mobil - Popup Açılmazsa)" : "Sign In (Mobile Fallback)")}
                 </span>
               </button>
             </div>
@@ -740,7 +757,7 @@ const App: React.FC = () => {
 
   return (
     <SecurityGuard user={user}>
-      <ChatApp user={user} setUser={setUser} />
+      <ChatApp user={user} setUser={setUser} language={language} setLanguage={setLanguage} />
     </SecurityGuard>
   );
 };
@@ -748,9 +765,11 @@ const App: React.FC = () => {
 interface ChatAppProps {
   user: UserProfile;
   setUser: React.Dispatch<React.SetStateAction<any>>;
+  language: Language;
+  setLanguage: React.Dispatch<React.SetStateAction<Language>>;
 }
 
-const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
+const ChatApp: React.FC<ChatAppProps> = ({ user, setUser, language, setLanguage }) => {
   console.log("ChatApp: Initializing for user", user?.email);
 
   const [input, setInput] = useState("");
@@ -758,7 +777,6 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isCameraOpen, setIsCameraOpen] = useState(false);
-  const [isImageStudioOpen, setIsImageStudioOpen] = useState(false);
   const [shareDialogUrl, setShareDialogUrl] = useState<string | null>(null);
 
   // Live Update States
@@ -838,24 +856,6 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
     } catch (e) {}
   };
 
-  const [language, setLanguage] = useState<Language>(() => {
-    try {
-      const saved = localStorage.getItem("chat_cnr_lang") as Language;
-      if (saved) return saved;
-      // Auto-detect browser language if not saved
-      if (typeof navigator !== 'undefined' && navigator.language) {
-        const browserLang = navigator.language.split('-')[0].toLowerCase();
-        const supported: Language[] = ["tr", "en", "de", "es", "fr", "it", "ru"];
-        if (supported.includes(browserLang as Language)) {
-          return browserLang as Language;
-        }
-      }
-      return "tr";
-    } catch (e) {
-      return "tr";
-    }
-  });
-
   const t = translations[language] || translations.tr;
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
@@ -925,8 +925,6 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
   const [isUserDetailOpen, setIsUserDetailOpen] = useState(false);
   const [isBroadcastModalOpen, setIsBroadcastModalOpen] = useState(false);
   const [isNotificationCenterOpen, setIsNotificationCenterOpen] = useState(false);
-  const [isGoogleSearchOpen, setIsGoogleSearchOpen] = useState(false);
-  const [isGoogleSearchModeActive, setIsGoogleSearchModeActive] = useState(false);
   const [broadcastNotifications, setBroadcastNotifications] = useState<AppNotification[]>([]);
   const [deletingSessionId, setDeletingSessionId] = useState<string | null>(
     null,
@@ -1853,62 +1851,28 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
       let finalImageUrl: string | undefined = undefined;
       let lastSpokenIndex = 0;
 
-      // Check if user is requesting image generation via CNR (powered exclusively by PICTURE_AI)
-      const isImageRequest = (promptText: string) => {
-        const p = promptText.toLowerCase().trim();
-        // Do not treat capability questions or status checks as drawing requests
-        if (p.includes("bağlı mı") || p.includes("çalışıyor mu") || p.includes("nedir") || p.includes("misin") || p.includes("misiniz") || p.includes("mısın") || p.includes("musun") || p.includes("miyim") || p.endsWith("?")) {
-          return false;
-        }
-        return (
-          /^(bana\s+)?(bir\s+)?(.+)\s+(çiz|resmet|çiziver|görselini yap|resmini yap|resmini çiz|resmini oluştur|görselini oluştur|görsel üret)$/i.test(p) ||
-          /^(resim\s+çiz|görsel\s+üret|resim\s+oluştur|görsel\s+oluştur)[:\s]+(.+)$/i.test(p) ||
-          /^(generate(\s+an?)?\s+image\s+of|draw(\s+me)?\s+a?|create(\s+an?)?\s+image\s+of|paint(\s+a)?)\s+(.+)$/i.test(p) ||
-          /\b(bunu\s+çiz|resmini\s+çiz|bana\s+resim\s+çiz)\b/i.test(p)
-        );
-      };
-
-      if (isImageRequest(userMsg.text)) {
-        try {
-          const cleanPrompt = userMsg.text
-            .replace(/^(bana\s+)?(bir\s+)?/i, "")
-            .replace(/\s+(çiz|resmet|çiziver|görselini yap|resmini yap|resmini çiz|resmini oluştur|görselini oluştur|görsel üret)$/i, "")
-            .replace(/^(resim\s+çiz|görsel\s+üret|resim\s+oluştur|görsel\s+oluştur)[:\s]*/i, "")
-            .replace(/^(generate(\s+an?)?\s+image\s+of|draw(\s+me)?\s+a?|create(\s+an?)?\s+image\s+of|paint(\s+a)?)\s+/i, "")
-            .trim() || userMsg.text;
-
-          const imgRes = await chatCNRService.generateImage(cleanPrompt);
-          finalImageUrl = imgRes.imageUrl;
-          finalResponseText = imgRes.text || `Chat_CNR Görsel Yeteneği: "${cleanPrompt}" görseli senin için özenle oluşturuldu.`;
-          setIsLoading(false);
-        } catch (imgErr: any) {
-          finalResponseText = `⚠️ Görsel Üretimi: Görsel oluşturulurken bir sorun yaşandı. Lütfen tekrar deneyin.`;
-          setIsLoading(false);
-        }
-      } else {
-        const stream = chatCNRService.sendMessageStream(
-          userMsg.text,
-          activeSession?.messages || [],
-          selectedImage,
-          user.name,
-          user.email,
-          isChatMode || conversationMode === "rp_mode",
-          user.role,
-          user,
-          language,
-          isDeepMode,
-          'gemini-2.5-flash',
-          isGoogleSearchModeActive,
-          conversationMode,
-          longChatApiKey,
-          rpModeApiKey
-        );
+      const stream = chatCNRService.sendMessageStream(
+        userMsg.text,
+        activeSession?.messages || [],
+        selectedImage,
+        user.name,
+        user.email,
+        isChatMode,
+        user.role,
+        user,
+        language,
+        isDeepMode,
+        'gemini-2.5-flash',
+        false,
+        "standard",
+        longChatApiKey,
+        rpModeApiKey
+      );
 
         // Show streaming message locally only
         setStreamingMessage({ id: modelMsgId, text: "", sources: [] });
 
         let isFirstChunk = true;
-        let lastSpokenIndex = 0;
         if (isAutoSpeak && voiceMode === "fast" && "speechSynthesis" in window) {
           window.speechSynthesis.cancel();
         }
@@ -1958,7 +1922,6 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
             });
           }
         }
-      }
 
       if (!finalResponseText.trim()) {
         console.error(
@@ -2200,7 +2163,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
               className="w-full flex items-center justify-center gap-3 bg-blue-600 hover:bg-blue-500 text-white py-3 px-4 rounded-xl font-bold transition-all shadow-xl shadow-blue-500/10 active:scale-[0.98]"
             >
               <Plus size={18} />
-              <span className="text-sm">Yeni sohbet</span>
+              <span className="text-sm">{t.newChat || (language === 'de' ? "Neuer Chat" : (language === 'tr' ? "Yeni Sohbet" : "New Chat"))}</span>
             </button>
           </div>
 
@@ -2208,7 +2171,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
             
             <div className="space-y-1">
               <div className={`text-xs font-bold uppercase tracking-wider mb-3 px-2 ${theme === "dark" ? "text-zinc-500" : "text-zinc-400"}`}>
-                Keşfet
+                {t.explore || (language === 'de' ? "Entdecken" : (language === 'tr' ? "Keşfet" : "Explore"))}
               </div>
               {isSearchActive ? (
                 <div className={`flex items-center gap-2 px-3 py-2 rounded-xl border ${theme === "dark" ? "bg-zinc-900/50 border-zinc-800" : "bg-white border-zinc-200"}`}>
@@ -2216,7 +2179,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                   <input 
                     autoFocus
                     type="text" 
-                    placeholder="Ara..." 
+                    placeholder={t.searchPlaceholder || (language === 'de' ? "Suchen..." : "Ara...")} 
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="bg-transparent border-none outline-none text-[13px] w-full"
@@ -2226,28 +2189,9 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
               ) : (
                 <button onClick={() => setIsSearchActive(true)} className={`w-full flex items-center gap-3 py-2.5 px-3 rounded-xl text-[13px] font-medium transition-colors border border-transparent ${theme === "dark" ? "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/50 hover:border-zinc-800" : "text-zinc-600 hover:text-zinc-900 hover:bg-white hover:border-zinc-200 hover:shadow-sm"}`}>
                   <Search size={16} className="opacity-70" />
-                  Sohbetlerde arama yapın
+                  {t.searchInChats || (language === 'de' ? "In Chats suchen..." : (language === 'tr' ? "Sohbetlerde arama yapın" : "Search in chats"))}
                 </button>
               )}
-              <button onClick={() => setImageFilter(!imageFilter)} className={`w-full flex items-center gap-3 py-2.5 px-3 rounded-xl text-[13px] font-medium transition-colors border ${imageFilter ? (theme === "dark" ? "bg-blue-900/20 text-blue-400 border-blue-900/50" : "bg-blue-50 text-blue-600 border-blue-100") : (theme === "dark" ? "border-transparent text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/50 hover:border-zinc-800" : "border-transparent text-zinc-600 hover:text-zinc-900 hover:bg-white hover:border-zinc-200 hover:shadow-sm")}`}>
-                <ImageIcon size={16} className="opacity-70" />
-                Resimler {imageFilter && <span className="ml-auto text-[9px] bg-blue-500/20 px-2 py-0.5 rounded-full">Filtre Aktif</span>}
-              </button>
-              <button
-                type="button"
-                onClick={() => setIsGoogleSearchOpen(true)}
-                className={`w-full flex items-center gap-3 py-2.5 px-3 rounded-xl text-[13px] font-medium transition-all border ${
-                  theme === "dark"
-                    ? "bg-blue-500/10 text-blue-400 border-blue-500/30 hover:bg-blue-500/20 hover:border-blue-400/50"
-                    : "bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100 shadow-xs"
-                }`}
-              >
-                <Search size={16} className="text-blue-500" />
-                <span className="flex-1 text-left font-semibold">Google Arama & Çeviri</span>
-                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-500/20 text-blue-400 font-bold">
-                  CANLI
-                </span>
-              </button>
             </div>
 
             {/* PRO Bilgi ve İletişim Kartı */}
@@ -2262,25 +2206,25 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                     <Crown size={14} className="text-amber-500" />
                   </div>
                   <span className="text-xs font-black uppercase tracking-wider text-amber-500">
-                    {user?.isPro ? "PRO Üyeliğiniz Aktif" : "PRO'ya Geçiş"}
+                    {user?.isPro ? (t.proCardTitleActive || "PRO Üyeliğiniz Aktif") : (t.proCardTitleInactive || "PRO'ya Geçiş")}
                   </span>
                 </div>
                 {user?.isPro ? (
                   <span className="text-[9px] font-bold bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded border border-amber-500/30">
-                    AKTİF
+                    {t.proActiveBadge || "AKTİF"}
                   </span>
                 ) : (
                   <span className="text-[9px] font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 px-1.5 py-0.5 rounded border border-amber-500/20">
-                    ÖZEL
+                    {language === "de" ? "SPEZIELL" : language === "tr" ? "ÖZEL" : "SPECIAL"}
                   </span>
                 )}
               </div>
               
               <p className="text-[11px] leading-relaxed opacity-90 mb-3">
                 {user?.isPro ? (
-                  <>Üyeliğinizi yenilemek veya destek almak için iletişime geçebilirsiniz:</>
+                  <>{t.proCardDescActive || "Üyeliğinizi yenilemek veya destek almak için iletişime geçebilirsiniz:"}</>
                 ) : (
-                  <>Chat_CNR PRO ayrıcalıklarına ulaşmak isteyenlerin <strong className="text-amber-600 dark:text-amber-400 font-semibold select-all">dorukaliarslan20@gmail.com</strong> ile iletişime geçmesi gerekmektedir.</>
+                  <>{t.proCardDescInactive || "Chat_CNR PRO ayrıcalıklarına ulaşmak isteyenlerin dorukaliarslan20@gmail.com ile iletişime geçmesi gerekmektedir."}</>
                 )}
               </p>
 
@@ -2291,14 +2235,14 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                 className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-xs font-bold transition-all bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white shadow-md shadow-amber-500/20 active:scale-[0.98]"
               >
                 <Mail size={13} />
-                <span>Gmail ile İletişime Geç</span>
+                <span>{t.writeWithGmail || "Gmail ile İletişime Geç"}</span>
                 <ExternalLink size={12} className="opacity-70 ml-auto" />
               </a>
             </div>
 
             <div className="space-y-1">
               <div className={`text-xs font-bold uppercase tracking-wider mb-3 px-2 flex items-center justify-between ${theme === "dark" ? "text-zinc-500" : "text-zinc-400"}`}>
-                Sohbetler
+                {t.sessions || "Sohbetler"}
                 <span className="bg-blue-500/10 text-blue-500 px-2 py-0.5 rounded-md text-[10px]">{sessions.filter(s => s && s.id).length}</span>
               </div>
               <div className="space-y-2">
@@ -2342,7 +2286,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                               ? "hover:bg-red-500/20 text-zinc-400 hover:text-red-500"
                               : "hover:bg-red-50 text-zinc-400 hover:text-red-500"
                           }`}
-                          title="Sil"
+                          title={t.delete || (language === 'de' ? "Löschen" : "Sil")}
                         >
                           <Trash2 size={12} />
                         </button>
@@ -2365,10 +2309,10 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                 </div>
                 <div className="flex flex-col items-start">
                   <p className={`text-sm font-bold truncate max-w-[120px] ${theme === "dark" ? "text-zinc-200" : "text-zinc-800"}`}>
-                    {user?.name || "Kullanıcı"}
+                    {user?.name || (language === 'de' ? "Benutzer" : (language === 'tr' ? "Kullanıcı" : "User"))}
                   </p>
                   <p className={`text-[10px] font-medium uppercase tracking-wider ${theme === "dark" ? "text-zinc-500" : "text-zinc-500"}`}>
-                    Ayarlar
+                    {t.settings || (language === 'de' ? "Einstellungen" : "Ayarlar")}
                   </p>
                 </div>
               </div>
@@ -2383,7 +2327,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                 onClick={() => setIsSettingsOpen(true)}
                 className="hover:text-blue-400 transition-colors font-semibold"
               >
-                {language === "tr" ? "Canlı Sürüm" : "Live Release"}
+                {language === "tr" ? "Canlı Sürüm" : (language === "de" ? "Live-Version" : "Live Release")}
               </button>
             </div>
           </div>
@@ -2455,32 +2399,17 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                       const shareUrl = `${window.location.origin}/?shareId=${activeSession.id}`;
                       setShareDialogUrl(shareUrl);
                     } catch (err: any) {
-                      alert("Paylaşım başarısız oldu: " + err.message);
+                      alert(language === 'de' ? "Freigabe fehlgeschlagen: " + err.message : (language === 'tr' ? "Paylaşım başarısız oldu: " + err.message : "Share failed: " + err.message));
                     }
                   }}
                   className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center transition-colors ${
                     theme === "dark" ? "text-zinc-400 hover:bg-zinc-800 hover:text-blue-400" : "text-zinc-600 hover:bg-zinc-100 hover:text-blue-600"
                   }`}
-                  title="Paylaş"
+                  title={t.shareChat || (language === 'de' ? "Teilen" : (language === 'tr' ? "Paylaş" : "Share"))}
                 >
                   <Share2 size={16} />
                 </button>
               )}
-
-              {/* Google Search Hub Button */}
-              <button
-                type="button"
-                onClick={() => setIsGoogleSearchOpen(true)}
-                className={`h-8 sm:h-9 px-2 sm:px-2.5 rounded-full text-xs font-semibold transition-all border flex items-center gap-1.5 shrink-0 ${
-                  theme === "dark"
-                    ? "bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 border-blue-500/30 shadow-2xs"
-                    : "bg-blue-50 text-blue-600 hover:bg-blue-100 border-blue-200 shadow-2xs"
-                }`}
-                title="Google Canlı Arama ve Dil Çevirisi"
-              >
-                <Search size={14} className="text-blue-500" />
-                <span className="hidden sm:inline font-bold">Google</span>
-              </button>
 
               <button
                 onClick={() => setIsAutoSpeak(!isAutoSpeak)}
@@ -2501,7 +2430,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                 className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center transition-colors relative shrink-0 ${
                   theme === "dark" ? "text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200" : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900"
                 }`}
-                title="Bildirim Merkezi & Aylık Hatırlatıcılar"
+                title={t.notifications || "Bildirimler"}
               >
                 <Bell size={16} />
                 {broadcastNotifications.length > 0 && (
@@ -2533,7 +2462,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                       className="text-2xl sm:text-4xl md:text-5xl font-medium tracking-tight mb-1 sm:mb-2"
                     >
                       <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#4285f4] via-[#9b72cb] to-[#d96570]">
-                        Merhaba{user?.name ? `, ${user.name.split(' ')[0]}` : ''}
+                        {t.welcomeHello || "Merhaba"}{user?.name ? `, ${user.name.split(' ')[0]}` : ''}
                       </span>
                     </motion.h1>
                     <motion.h2 
@@ -2542,7 +2471,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                       transition={{ duration: 0.5, delay: 0.1 }}
                       className={`text-2xl sm:text-4xl md:text-5xl font-medium tracking-tight ${theme === "dark" ? "text-[#55585a]" : "text-[#b0b3b1]"}`}
                     >
-                      Nereden başlayalım?
+                      {t.welcomeWhereToStart || "Nereden başlayalım?"}
                     </motion.h2>
 
                     <motion.div
@@ -2564,7 +2493,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                             Chat_CNR PRO
                           </p>
                           <p className="text-xs leading-relaxed opacity-90">
-                            PRO'ya ulaşmak isteyenlerin <span className="font-bold text-amber-600 dark:text-amber-400 select-all">dorukaliarslan20@gmail.com</span> ile iletişime geçmesi gerekmektedir.
+                            {t.proMembershipNotice || "PRO'ya ulaşmak isteyenlerin dorukaliarslan20@gmail.com ile iletişime geçmesi gerekmektedir."}
                           </p>
                         </div>
                       </div>
@@ -2575,7 +2504,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                         className="w-full sm:w-auto shrink-0 flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-600 text-white transition-all shadow-md shadow-amber-500/20 active:scale-95 text-center"
                       >
                         <Mail size={13} />
-                        <span>Gmail ile Yaz</span>
+                        <span>{t.writeWithGmail || "Gmail ile Yaz"}</span>
                         <ExternalLink size={12} className="opacity-75" />
                       </a>
                     </motion.div>
@@ -2673,101 +2602,6 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                 </motion.div>
               )}
 
-              {/* Mode Selector Pill Bar */}
-              <div className="flex items-center justify-between gap-2 mb-2 px-1">
-                <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
-                  <button
-                    type="button"
-                    onClick={() => setConversationMode("standard")}
-                    className={`px-3 py-1 rounded-full text-xs font-semibold transition-all flex items-center gap-1.5 shrink-0 ${
-                      conversationMode === "standard"
-                        ? "bg-blue-600 text-white shadow-xs scale-100"
-                        : theme === "dark"
-                          ? "bg-zinc-800/80 text-zinc-400 hover:text-zinc-200"
-                          : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"
-                    }`}
-                    title="Standart Chat_CNR asistan modu"
-                  >
-                    <Sparkles size={12} />
-                    <span>Standart</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setConversationMode("long_chat")}
-                    className={`px-3 py-1 rounded-full text-xs font-semibold transition-all flex items-center gap-1.5 shrink-0 ${
-                      conversationMode === "long_chat"
-                        ? "bg-indigo-600 text-white shadow-xs scale-100"
-                        : theme === "dark"
-                          ? "bg-zinc-800/80 text-zinc-400 hover:text-zinc-200"
-                          : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"
-                    }`}
-                    title="Geniş bağlam ve derin hafızalı uzun sohbet modu (LONG_CHAT_API_KEY)"
-                  >
-                    <Brain size={12} />
-                    <span>Uzun Sohbet</span>
-                    {(serverKeysStatus.longChat?.connected || longChatApiKey) && (
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" title="Özel Anahtar Aktif" />
-                    )}
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setConversationMode("rp_mode")}
-                    className={`px-3 py-1 rounded-full text-xs font-semibold transition-all flex items-center gap-1.5 shrink-0 ${
-                      conversationMode === "rp_mode"
-                        ? "bg-gradient-to-r from-rose-600 to-pink-600 text-white shadow-xs scale-100"
-                        : theme === "dark"
-                          ? "bg-zinc-800/80 text-zinc-400 hover:text-zinc-200"
-                          : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"
-                    }`}
-                    title="Rol yapma, duygusal destek ve şefkatli yoldaşlık modu (RP_MODE_API_KEY)"
-                  >
-                    <Heart size={12} />
-                    <span>RP & Yoldaşlık</span>
-                    {(serverKeysStatus.rpMode?.connected || rpModeApiKey) && (
-                      <span className="w-1.5 h-1.5 rounded-full bg-rose-300" title="Özel Anahtar Aktif" />
-                    )}
-                  </button>
-                </div>
-
-                <div className="hidden sm:flex items-center gap-2 text-[11px] text-zinc-500 shrink-0">
-                  <span className="flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                    CNR Dahili Görsel Korteksi
-                  </span>
-                </div>
-              </div>
-
-              {/* Mode Specific Info Banners */}
-              {conversationMode === "rp_mode" && (
-                <div className="mb-2 px-3 py-1.5 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs flex items-center justify-between animate-in fade-in">
-                  <div className="flex items-center gap-2 truncate">
-                    <Heart size={14} className="text-rose-400 animate-pulse shrink-0" />
-                    <span className="truncate">
-                      <strong>RP & Yoldaşlık Modu:</strong> Buradayım ve seni kalpten dinliyorum. Dertleşebilir, rol yapabilir veya içini rahatça dökebilirsin.
-                    </span>
-                  </div>
-                  <span className="text-[10px] font-mono opacity-80 shrink-0 ml-2 bg-black/30 px-2 py-0.5 rounded-md">
-                    {serverKeysStatus.rpMode?.connected || rpModeApiKey ? "RP Anahtarı Aktif" : "Sistem Anahtarı"}
-                  </span>
-                </div>
-              )}
-
-              {conversationMode === "long_chat" && (
-                <div className="mb-2 px-3 py-1.5 rounded-2xl bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 text-xs flex items-center justify-between animate-in fade-in">
-                  <div className="flex items-center gap-2 truncate">
-                    <Brain size={14} className="text-indigo-400 shrink-0" />
-                    <span className="truncate">
-                      <strong>Uzun Sohbet Modu:</strong> Derin hafıza devrede. Geçmiş mesajları ve ayrıntıları unutmadan konuşur.
-                    </span>
-                  </div>
-                  <span className="text-[10px] font-mono opacity-80 shrink-0 ml-2 bg-black/30 px-2 py-0.5 rounded-md">
-                    {serverKeysStatus.longChat?.connected || longChatApiKey ? "Uzun Sohbet Anahtarı Aktif" : "Sistem Anahtarı"}
-                  </span>
-                </div>
-              )}
-
               <form onSubmit={handleSend} className="flex gap-2 relative">
                 <div
                   className={`flex-1 border-2 rounded-2xl sm:rounded-3xl p-1.5 sm:p-2.5 md:p-3 flex flex-col transition-all duration-300 shadow-inner relative overflow-hidden group ${
@@ -2776,25 +2610,6 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                       : "bg-zinc-50 border-zinc-200 focus-within:border-blue-500/30"
                   }`}
                 >
-                  {isGoogleSearchModeActive && (
-                    <div className="mb-1.5 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-xl sm:rounded-2xl bg-blue-500/10 border border-blue-500/30 text-blue-400 text-[11px] sm:text-xs flex items-center justify-between animate-in fade-in">
-                      <div className="flex items-center gap-1.5 sm:gap-2 truncate">
-                        <Globe size={13} className="text-blue-400 animate-pulse shrink-0" />
-                        <span className="truncate leading-snug">
-                          <strong>Google Canlı Arama Aktif:</strong> İnternet taranarak yanıtlanacak
-                        </span>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => setIsGoogleSearchModeActive(false)}
-                        className="p-0.5 hover:text-white shrink-0 ml-1.5"
-                        title="Google Modunu Kapat"
-                      >
-                        <X size={12} />
-                      </button>
-                    </div>
-                  )}
-
                   <div className="flex items-end gap-2 px-1">
                     <textarea
                       value={input}
@@ -2822,7 +2637,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                         className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center transition-all shrink-0 ${
                           theme === "dark" ? "text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200" : "text-zinc-500 hover:bg-zinc-200 hover:text-zinc-800"
                         }`}
-                        title="Dosya veya Görsel Ekle"
+                        title={t.attachFile || "Dosya Ekle"}
                       >
                         <Plus size={19} strokeWidth={2} />
                       </button>
@@ -2839,57 +2654,13 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                         className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center transition-all shrink-0 ${
                           theme === "dark" ? "text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200" : "text-zinc-500 hover:bg-zinc-200 hover:text-zinc-800"
                         }`}
-                        title="Kamera ile Fotoğraf Çek"
+                        title={t.takePhoto || "Kamera"}
                       >
                         <Camera size={17} strokeWidth={1.75} />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setIsImageStudioOpen(true)}
-                        className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center transition-all shrink-0 ${
-                          theme === "dark"
-                            ? "text-amber-400 hover:bg-amber-500/20"
-                            : "text-amber-600 hover:bg-amber-100"
-                        }`}
-                        title="Görsel Üretim Stüdyosu (PİCTURE_AI Motoru)"
-                      >
-                        <Sparkles size={16} strokeWidth={2} />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setIsGoogleSearchOpen(true)}
-                        className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center transition-all shrink-0 ${
-                          theme === "dark"
-                            ? "text-blue-400 hover:bg-blue-500/20"
-                            : "text-blue-600 hover:bg-blue-100"
-                        }`}
-                        title="Google Canlı Arama ve Evrensel Çeviri Modalı"
-                      >
-                        <Search size={16} strokeWidth={2} />
                       </button>
                     </div>
 
                     <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
-                      <button
-                        type="button"
-                        onClick={() => setIsGoogleSearchModeActive(!isGoogleSearchModeActive)}
-                        className={`h-8 sm:h-9 px-2 sm:px-2.5 rounded-full flex items-center gap-1 text-xs font-semibold transition-all ${
-                          isGoogleSearchModeActive
-                            ? "bg-blue-500/20 text-blue-400 border border-blue-500/40 shadow-xs"
-                            : theme === "dark"
-                              ? "text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200"
-                              : "text-zinc-500 hover:bg-zinc-200 hover:text-zinc-800"
-                        }`}
-                        title={
-                          isGoogleSearchModeActive
-                            ? "Google Canlı Arama Modu Aktif (Kapatmak için tıklayın)"
-                            : "Sohbette Google Canlı Arama ve Otomatik Dil Çevirisini Aç"
-                        }
-                      >
-                        <Globe size={14} className={isGoogleSearchModeActive ? "text-blue-400 animate-spin" : ""} />
-                        <span className="hidden sm:inline">Google Ara</span>
-                      </button>
-
                       <button
                         type="button"
                         onClick={toggleRecording}
@@ -2900,7 +2671,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                               ? "text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200"
                               : "text-zinc-500 hover:bg-zinc-200 hover:text-zinc-800"
                         }`}
-                        title="Sesli Konuş (Manuel Kayıt)"
+                        title={t.voiceInput || "Sesli Konuş"}
                       >
                         <Mic size={17} strokeWidth={1.75} />
                       </button>
@@ -2917,7 +2688,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                             ? (theme === "dark" ? "bg-white text-zinc-900" : "bg-[#1a73e8] text-white shadow-xs")
                             : "bg-transparent text-zinc-500"
                         }`}
-                        title="Gönder"
+                        title={t.send || "Gönder"}
                       >
                         <Send size={15} strokeWidth={2.2} className={(input.trim() || selectedImage) ? "ml-0.5" : ""} />
                       </button>
@@ -2935,25 +2706,34 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
           <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
             <div className={`w-full max-w-md border rounded-3xl p-6 shadow-2xl ${theme === "dark" ? "bg-[#1e1f20] border-zinc-700/50 text-white" : "bg-white border-zinc-200 text-zinc-900"}`}>
               <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-bold flex items-center gap-2"><Activity size={20} className="text-blue-500" /> Etkinlik Özeti</h2>
+                <h2 className="text-xl font-bold flex items-center gap-2">
+                  <Activity size={20} className="text-blue-500" />
+                  {language === 'de' ? "Aktivitätsübersicht" : (language === 'tr' ? "Etkinlik Özeti" : "Activity Summary")}
+                </h2>
                 <button onClick={() => setIsActivityOpen(false)} className={`p-2 rounded-full ${theme === "dark" ? "hover:bg-zinc-800" : "hover:bg-zinc-100"}`}><X size={18} /></button>
               </div>
               
               <div className="grid grid-cols-2 gap-4 mb-6">
                 <div className={`p-4 rounded-2xl ${theme === "dark" ? "bg-[#131314]" : "bg-zinc-50"} flex flex-col items-center justify-center`}>
                    <div className="text-3xl font-bold text-blue-500">{sessions.length}</div>
-                   <div className="text-sm opacity-70 mt-1">Sohbet</div>
+                   <div className="text-sm opacity-70 mt-1">{language === 'de' ? "Chats" : (language === 'tr' ? "Sohbet" : "Chats")}</div>
                 </div>
                 <div className={`p-4 rounded-2xl ${theme === "dark" ? "bg-[#131314]" : "bg-zinc-50"} flex flex-col items-center justify-center`}>
                    <div className="text-3xl font-bold text-purple-500">
                      {sessions.reduce((acc, curr) => acc + (curr.messages?.length || 0), 0)}
                    </div>
-                   <div className="text-sm opacity-70 mt-1">Toplam Mesaj</div>
+                   <div className="text-sm opacity-70 mt-1">{language === 'de' ? "Gesamtnachrichten" : (language === 'tr' ? "Toplam Mesaj" : "Total Messages")}</div>
                 </div>
               </div>
               
               <div className={`text-sm p-4 rounded-xl ${theme === "dark" ? "bg-zinc-800/50" : "bg-blue-50 text-blue-800"}`}>
-                <p>Chat_CNR deneyiminiz {user?.isPro ? "PRO" : "Standart"} seviyesinde devam ediyor. Günlük etkileşimleriniz gizlilik ve hız odaklı işlenmektedir.</p>
+                <p>
+                  {language === 'de' 
+                    ? `Ihr Chat_CNR-Erlebnis läuft auf ${user?.isPro ? "PRO" : "Standard"}-Niveau weiter. Ihre täglichen Interaktionen werden mit höchster Privatsphäre und Geschwindigkeit verarbeitet.`
+                    : (language === 'tr' 
+                      ? `Chat_CNR deneyiminiz ${user?.isPro ? "PRO" : "Standart"} seviyesinde devam ediyor. Günlük etkileşimleriniz gizlilik ve hız odaklı işlenmektedir.`
+                      : `Your Chat_CNR experience continues at ${user?.isPro ? "PRO" : "Standard"} level. Your daily interactions are processed with privacy and speed.`)}
+                </p>
               </div>
             </div>
           </div>
@@ -2966,15 +2746,23 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-xl font-bold flex items-center gap-2">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-purple-500"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg> 
-                  Kitaplık
+                  {language === 'de' ? "Bibliothek" : (language === 'tr' ? "Kitaplık" : "Library")}
                 </h2>
                 <button onClick={() => setIsLibraryOpen(false)} className={`p-2 rounded-full ${theme === "dark" ? "hover:bg-zinc-800" : "hover:bg-zinc-100"}`}><X size={18} /></button>
               </div>
               
               <div className={`flex-1 flex flex-col items-center justify-center text-center p-8 rounded-2xl ${theme === "dark" ? "bg-[#131314]" : "bg-zinc-50"}`}>
                  <Sparkles size={48} className="text-zinc-500 mb-4 opacity-50" />
-                 <h3 className="text-lg font-medium mb-2">Kitaplığınız Yakında Burada!</h3>
-                 <p className="text-sm opacity-70 max-w-sm">Favori sohbetlerinizi, koleksiyonlarınızı ve özel komut istemlerinizi tek bir yerde toplayabileceğiniz kitaplık modülü yakında aktif olacak.</p>
+                 <h3 className="text-lg font-medium mb-2">
+                   {language === 'de' ? "Ihre Bibliothek bald hier!" : (language === 'tr' ? "Kitaplığınız Yakında Burada!" : "Your Library Coming Soon!")}
+                 </h3>
+                 <p className="text-sm opacity-70 max-w-sm">
+                   {language === 'de'
+                     ? "Das Bibliotheksmodul, in dem Sie Ihre Lieblingschats, Sammlungen und benutzerdefinierten Prompts an einem Ort sammeln können, wird bald verfügbar sein."
+                     : (language === 'tr'
+                       ? "Favori sohbetlerinizi, koleksiyonlarınızı ve özel komut istemlerinizi tek bir yerde toplayabileceğiniz kitaplık modülü yakında aktif olacak."
+                       : "The library module to save your favorite chats, collections, and custom prompts will be available soon.")}
+                 </p>
               </div>
             </div>
           </div>
@@ -2989,10 +2777,15 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
               <div className="w-16 h-16 bg-red-500/20 rounded-2xl flex items-center justify-center mb-6">
                 <Trash2 size={32} className="text-red-500" />
               </div>
-              <h2 className="text-xl font-bold mb-2">Sohbeti Sil</h2>
+              <h2 className="text-xl font-bold mb-2">
+                {language === 'de' ? "Chat löschen" : (language === 'tr' ? "Sohbeti Sil" : "Delete Chat")}
+              </h2>
               <p className="text-zinc-500 text-sm mb-8">
-                Bu sohbeti ve tüm mesajlarını silmek istediğinize emin misiniz?
-                Bu işlem geri alınamaz.
+                {language === 'de'
+                  ? "Sind Sie sicher, dass Sie diesen Chat und alle Nachrichten löschen möchten? Dies kann nicht rückgängig gemacht werden."
+                  : (language === 'tr'
+                    ? "Bu sohbeti ve tüm mesajlarını silmek istediğinize emin misiniz? Bu işlem geri alınamaz."
+                    : "Are you sure you want to delete this chat and all its messages? This action cannot be undone.")}
               </p>
 
               <div className="flex gap-3">
@@ -3000,7 +2793,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                   onClick={() => setDeletingSessionId(null)}
                   className={`flex-1 py-3 rounded-xl font-bold transition-all ${theme === "dark" ? "bg-zinc-800 hover:bg-zinc-700 text-zinc-300" : "bg-zinc-100 hover:bg-zinc-200 text-zinc-600"}`}
                 >
-                  Vazgeç
+                  {t.cancel || (language === 'de' ? "Abbrechen" : (language === 'tr' ? "Vazgeç" : "Cancel"))}
                 </button>
                 <button
                   onClick={async () => {
@@ -3025,7 +2818,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                   }}
                   className="flex-1 py-3 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold transition-all"
                 >
-                  Evet, Sil
+                  {language === 'de' ? "Ja, löschen" : (language === 'tr' ? "Evet, Sil" : "Yes, Delete")}
                 </button>
               </div>
             </div>
@@ -3233,32 +3026,6 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
           language={language}
         />
 
-        {/* Google Search & Universal Translation Modal */}
-        <GoogleSearchModal
-          isOpen={isGoogleSearchOpen}
-          onClose={() => setIsGoogleSearchOpen(false)}
-          onSendToChat={(snippet) => {
-            setInput(snippet);
-          }}
-          theme={theme}
-          language={language}
-          onLanguageChange={(newLang) => {
-            setLanguage(newLang);
-            try {
-              localStorage.setItem("chat_cnr_lang", newLang);
-            } catch (e) {}
-          }}
-        />
-
-        {/* Görsel Üretim Stüdyosu Modal (PİCTURE_AI) */}
-        <ImageGenerationModal
-          isOpen={isImageStudioOpen}
-          onClose={() => setIsImageStudioOpen(false)}
-          onInsertToChat={handleInsertGeneratedImage}
-          themeColor="blue"
-          appearance={theme}
-          language={language}
-        />
         {isSettingsOpen && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-300">
             <div
@@ -3393,64 +3160,26 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                   </div>
                 </div>
 
-                {/* Chat_CNR Görsel Korteksi */}
+                {/* Emergency Extra Quota Pool / Acil Durum & Ekstra Kota Havuzu */}
                 <div className="space-y-4">
                   <label
                     className={`block text-xs font-bold uppercase tracking-widest ml-1 ${theme === "dark" ? "text-zinc-500" : "text-zinc-400"}`}
                   >
-                    Chat_CNR Görsel Yeteneği (Dahili Sanat Korteksi)
-                  </label>
-                  <div
-                    className={`border rounded-2xl p-4 space-y-3 ${theme === "dark" ? "bg-[#1a1a1a] border-zinc-800" : "bg-zinc-50 border-zinc-200"}`}
-                  >
-                    <div className="flex items-center justify-between gap-4">
-                      <div className="flex items-start gap-3">
-                        <div className="p-2 rounded-xl shrink-0 mt-0.5 bg-amber-500/15 text-amber-500">
-                          <Sparkles size={18} />
-                        </div>
-                        <div>
-                          <p className="text-sm font-bold flex items-center gap-2">
-                            CNR Dahili Görsel Korteksi
-                            <span className="text-[10px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded-full font-bold">
-                              {serverKeysStatus.pictureAI?.connected ? "Aktif & Bütünleşik" : "Aktif"}
-                            </span>
-                          </p>
-                          <p className={`text-xs mt-1 leading-relaxed ${theme === "dark" ? "text-zinc-400" : "text-zinc-600"}`}>
-                            Görsel üretim yeteneği Chat_CNR'ın zihnine tam entegredir. Ayrı bir eklenti değil, CNR'ın kendi doğal görsel üretim gücüdür.
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsSettingsOpen(false);
-                        setIsImageStudioOpen(true);
-                      }}
-                      className="w-full py-2 px-3 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-500 text-xs font-bold transition-all flex items-center justify-center gap-1.5"
-                    >
-                      <Sparkles size={14} />
-                      <span>Görsel Stüdyosunu Aç</span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Modlara Özel API Anahtarları (Uzun Sohbet & RP Modu) */}
-                <div className="space-y-4">
-                  <label
-                    className={`block text-xs font-bold uppercase tracking-widest ml-1 ${theme === "dark" ? "text-zinc-500" : "text-zinc-400"}`}
-                  >
-                    Modlara Özel API Anahtarları
+                    {t.emergencyQuotaTitle || "Acil Durum & Ekstra Kota Havuzu"}
                   </label>
                   <div
                     className={`border rounded-2xl p-4 space-y-4 ${theme === "dark" ? "bg-[#1a1a1a] border-zinc-800" : "bg-zinc-50 border-zinc-200"}`}
                   >
-                    {/* Uzun Sohbet API Key */}
+                    <p className={`text-[11px] leading-relaxed ${theme === "dark" ? "text-zinc-400" : "text-zinc-600"}`}>
+                      {t.emergencyQuotaDesc || "Ana sistem kotası tükendiğinde Chat_CNR kesintisiz çalışmaya devam etmek için bu yedek anahtarları arka planda otomatik olarak devreye sokar."}
+                    </p>
+
+                    {/* Yedek Kota Anahtarı 1 */}
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-1.5">
                           <Brain size={15} className="text-indigo-400" />
-                          <span className="text-xs font-bold">Uzun Sohbet API Anahtarı</span>
+                          <span className="text-xs font-bold">{t.backupKey1Label || "Acil Durum Kotası 1 (Geniş Bağlam)"}</span>
                         </div>
                         <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
                           serverKeysStatus.longChat?.connected || longChatApiKey
@@ -3458,19 +3187,19 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                             : "bg-zinc-800 text-zinc-400"
                         }`}>
                           {serverKeysStatus.longChat?.connected
-                            ? "Secret Aktif"
+                            ? (t.backupKeySystemBadge || "Sistem Havuzu")
                             : longChatApiKey
-                              ? "Özel Anahtar"
-                              : "Sistem Anahtarı"}
+                              ? (t.backupKeyCustomBadge || "Özel Anahtar")
+                              : (t.backupKeySystemBadge || "Sistem Havuzu")}
                         </span>
                       </div>
                       <p className={`text-[11px] leading-relaxed ${theme === "dark" ? "text-zinc-400" : "text-zinc-600"}`}>
-                        Derin hafıza ve geniş bağlam pencereli uzun sohbetler için kullanılır. (Env: LONG_CHAT_API_KEY)
+                        {t.backupKey1Desc || "Derin hafıza ve uzun oturumlar için yedek acil durum kotası. (LONG_CHAT_API_KEY)"}
                       </p>
                       <div className="flex gap-2">
                         <input
                           type="password"
-                          placeholder="AIzaSy... veya AQ... (Uzun Sohbet Anahtarı)"
+                          placeholder={t.backupKeyPlaceholder1 || "AIzaSy... (Yedek Anahtar 1)"}
                           value={longChatApiKey}
                           onChange={(e) => setLongChatApiKey(e.target.value)}
                           className={`flex-1 bg-transparent border rounded-xl px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-600/50 transition-all font-mono ${
@@ -3482,24 +3211,24 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                           onClick={() => {
                             try {
                               localStorage.setItem("chat_cnr_long_chat_api_key", longChatApiKey.trim());
-                              alert("Uzun Sohbet API anahtarı kaydedildi!");
+                              alert(t.keySavedSuccess || (language === "de" ? "Ersatz-API-Schlüssel erfolgreich gespeichert!" : "Yedek kota anahtarı başarıyla kaydedildi!"));
                             } catch {}
                           }}
                           className="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0"
                         >
-                          Kaydet
+                          {t.saveKey || t.save || "Kaydet"}
                         </button>
                       </div>
                     </div>
 
                     <div className="border-t border-zinc-800/40 my-2" />
 
-                    {/* RP & Yoldaşlık Modu API Key */}
+                    {/* Yedek Kota Anahtarı 2 */}
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-1.5">
                           <Heart size={15} className="text-rose-400" />
-                          <span className="text-xs font-bold">RP & Yoldaşlık Modu API Anahtarı</span>
+                          <span className="text-xs font-bold">{t.backupKey2Label || "Acil Durum Kotası 2 (Destek & RP)"}</span>
                         </div>
                         <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
                           serverKeysStatus.rpMode?.connected || rpModeApiKey
@@ -3507,19 +3236,19 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                             : "bg-zinc-800 text-zinc-400"
                         }`}>
                           {serverKeysStatus.rpMode?.connected
-                            ? "Secret Aktif"
+                            ? (t.backupKeySystemBadge || "Sistem Havuzu")
                             : rpModeApiKey
-                              ? "Özel Anahtar"
-                              : "Sistem Anahtarı"}
+                              ? (t.backupKeyCustomBadge || "Özel Anahtar")
+                              : (t.backupKeySystemBadge || "Sistem Havuzu")}
                         </span>
                       </div>
                       <p className={`text-[11px] leading-relaxed ${theme === "dark" ? "text-zinc-400" : "text-zinc-600"}`}>
-                        Rol yapma (RP), dertleşme ve şefkatli yoldaşlık sohbetleri için kullanılır. (Env: RP_MODE_API_KEY)
+                        {t.backupKey2Desc || "Duygusal destek ve rol yapma için yedek acil durum kotası. (RP_MODE_API_KEY)"}
                       </p>
                       <div className="flex gap-2">
                         <input
                           type="password"
-                          placeholder="AIzaSy... veya AQ... (RP Modu Anahtarı)"
+                          placeholder={t.backupKeyPlaceholder2 || "AIzaSy... (Yedek Anahtar 2)"}
                           value={rpModeApiKey}
                           onChange={(e) => setRpModeApiKey(e.target.value)}
                           className={`flex-1 bg-transparent border rounded-xl px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-rose-600/50 transition-all font-mono ${
@@ -3531,12 +3260,12 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                           onClick={() => {
                             try {
                               localStorage.setItem("chat_cnr_rp_mode_api_key", rpModeApiKey.trim());
-                              alert("RP & Yoldaşlık Modu API anahtarı kaydedildi!");
+                              alert(t.keySavedSuccess || (language === "de" ? "Ersatz-API-Schlüssel erfolgreich gespeichert!" : "Yedek kota anahtarı başarıyla kaydedildi!"));
                             } catch {}
                           }}
                           className="bg-rose-600 hover:bg-rose-700 text-white px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0"
                         >
-                          Kaydet
+                          {t.saveKey || t.save || "Kaydet"}
                         </button>
                       </div>
 
@@ -3544,10 +3273,14 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                       <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs mt-2 leading-relaxed">
                         <p className="font-semibold flex items-center gap-1.5 mb-1">
                           <Heart size={13} className="animate-pulse" />
-                          <span>Duygusal Destek & Yoldaşlık Alanı</span>
+                          <span>{language === "de" ? "Emotionaler Beistand & Begleitung" : (language === "tr" ? "Duygusal Destek & Yoldaşlık Alanı" : "Emotional Support & Safe Space")}</span>
                         </p>
                         <p className="text-[11px] opacity-90">
-                          Zor günlerde, yorgun hissettiğinde veya depresyondayken Chat_CNR seni yargılamadan, koşulsuz bir sevgi, sıcaklık ve şefkatle dinleyen güvenli bir dosttur.
+                          {language === "de"
+                            ? "An schweren Tagen, wenn Sie erschöpft, traurig oder belastet sind, ist Chat_CNR ein sicherer Freund, der bedingungslos und ohne Vorurteile für Sie da ist."
+                            : (language === "tr"
+                              ? "Zor günlerde, yorgun hissettiğinde veya depresyondayken Chat_CNR seni yargılamadan, koşulsuz bir sevgi, sıcaklık ve şefkatle dinleyen güvenli bir dosttur."
+                              : "On tough days, when feeling exhausted, low, or down, Chat_CNR is a non-judgmental, safe friend who listens with unconditional warmth and care.")}
                         </p>
                       </div>
                     </div>
@@ -3627,19 +3360,21 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                   <label
                     className={`block text-xs font-bold uppercase tracking-widest ml-1 ${theme === "dark" ? "text-zinc-500" : "text-zinc-400"}`}
                   >
-                    Danger Zone
+                    {language === "de" ? "Gefahrenzone" : (language === "tr" ? "Tehlikeli Bölge" : "Danger Zone")}
                   </label>
                   <div
                     className={`border rounded-2xl p-4 space-y-4 ${theme === "dark" ? "bg-red-500/5 border-red-500/20" : "bg-red-50 border-red-100"}`}
                   >
                     <p className="text-[10px] text-red-500/70 font-medium leading-relaxed">
-                      {language === "tr"
-                        ? "Bu işlem tüm sohbet geçmişinizi silecek ve API anahtarı kotalarını yerel olarak sıfırlayacaktır."
-                        : "This will delete all your chat history and reset API project counters locally."}
+                      {language === "de"
+                        ? "Dadurch wird Ihr gesamter Chatverlauf gelöscht und die API-Zähler lokal zurückgesetzt."
+                        : language === "tr"
+                          ? "Bu işlem tüm sohbet geçmişinizi silecek ve API anahtarı kotalarını yerel olarak sıfırlayacaktır."
+                          : "This will delete all your chat history and reset API project counters locally."}
                     </p>
                     <button
                       onClick={async () => {
-                        if (window.confirm("RESET SYSTEM?")) {
+                        if (window.confirm(language === "de" ? "SYSTEM ZURÜCKSETZEN?" : (language === "tr" ? "SİSTEMİ SIFIRLA?" : "RESET SYSTEM?"))) {
                           try {
                             // Clear local storage
                             try {
@@ -3669,9 +3404,11 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                       }}
                       className="w-full py-3 bg-red-500 hover:bg-red-600 text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-lg shadow-red-900/20"
                     >
-                      {language === "tr"
-                        ? "Sistemi ve Geçmişi Sıfırla"
-                        : "Reset System"}
+                      {language === "de"
+                        ? "System & Verlauf zurücksetzen"
+                        : language === "tr"
+                          ? "Sistemi ve Geçmişi Sıfırla"
+                          : "Reset System & History"}
                     </button>
                   </div>
                 </div>
@@ -3680,14 +3417,14 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                   <label
                     className={`block text-xs font-bold uppercase tracking-widest ml-1 ${theme === "dark" ? "text-zinc-500" : "text-zinc-400"}`}
                   >
-                    Hesap
+                    {language === "de" ? "Konto" : (language === "tr" ? "Hesap" : "Account")}
                   </label>
                   <button
                     onClick={handleLogout}
                     className="w-full flex items-center justify-center gap-2 p-4 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-2xl transition-all font-bold"
                   >
                     <LogOut size={18} />
-                    Çıkış Yap
+                    {t.logout || "Çıkış Yap"}
                   </button>
                 </div>
 
@@ -3695,7 +3432,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                   <label
                     className={`block text-xs font-bold uppercase tracking-widest ml-1 ${theme === "dark" ? "text-zinc-500" : "text-zinc-400"}`}
                   >
-                    Tercihler
+                    {language === "de" ? "Einstellungen" : (language === "tr" ? "Tercihler" : "Preferences")}
                   </label>
                   <div className="space-y-2">
                     <div
@@ -3709,9 +3446,11 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                           }
                         />
                         <span className="text-sm font-medium">
-                          {language === "tr"
-                            ? "Otomatik Seslendirme"
-                            : "Auto Voice Response"}
+                          {language === "de"
+                            ? "Automatische Sprachausgabe"
+                            : language === "tr"
+                              ? "Otomatik Seslendirme"
+                              : "Auto Voice Response"}
                         </span>
                       </div>
                       <button
@@ -3736,12 +3475,14 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                         />
                         <div className="flex flex-col">
                           <span className="text-sm font-medium">
-                            {language === "tr" ? "Ses Modu" : "Voice Mode"}
+                            {language === "de" ? "Sprachmodus" : (language === "tr" ? "Ses Modu" : "Voice Mode")}
                           </span>
                           <span className="text-[10px] text-zinc-500 max-w-[120px]">
-                            {language === "tr"
-                              ? "Hızlı mod cihaz sesini, Kalite mod yapay zekayı kullanır."
-                              : "Fast uses device, Quality uses AI TTS."}
+                            {language === "de"
+                              ? "Schnell nutzt Gerätestimme, Qualität nutzt KI-Sprache."
+                              : language === "tr"
+                                ? "Hızlı mod cihaz sesini, Kalite mod yapay zekayı kullanır."
+                                : "Fast uses device, Quality uses AI TTS."}
                           </span>
                         </div>
                       </div>
@@ -3759,8 +3500,8 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                             : "bg-zinc-100 border-zinc-200"
                         } border font-medium`}
                       >
-                        <option value="fast">{language === "tr" ? "Hızlı" : "Fast"}</option>
-                        <option value="quality">{language === "tr" ? "Kaliteli" : "Quality"}</option>
+                        <option value="fast">{language === "de" ? "Schnell" : (language === "tr" ? "Hızlı" : "Fast")}</option>
+                        <option value="quality">{language === "de" ? "Qualität" : (language === "tr" ? "Kaliteli" : "Quality")}</option>
                       </select>
                     </div>
 
@@ -3776,12 +3517,14 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                         />
                         <div className="flex flex-col">
                           <span className="text-sm font-medium">
-                            {language === "tr" ? "Sohbet Modu" : "Chat Mode"}
+                            {language === "de" ? "Freundschaftsmodus" : (language === "tr" ? "Sohbet Modu" : "Chat Mode")}
                           </span>
                           <span className="text-[10px] text-zinc-500">
-                            {language === "tr"
-                              ? "Dedikodu yapmak istersen buradayım!"
-                              : "Talk to me like a companion!"}
+                            {language === "de"
+                              ? "Plaudere mit mir wie mit einem Freund!"
+                              : language === "tr"
+                                ? "Dedikodu yapmak istersen buradayım!"
+                                : "Talk to me like a companion!"}
                           </span>
                         </div>
                       </div>
@@ -3822,16 +3565,10 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                         className="px-4 py-1.5 text-xs font-bold bg-blue-600/10 text-blue-500 rounded-lg hover:bg-blue-600/20 uppercase tracking-widest transition-all"
                       >
                         {themeMode === "auto"
-                          ? language === "tr"
-                            ? "Oto"
-                            : "Auto"
+                          ? language === "de" ? "Auto" : (language === "tr" ? "Oto" : "Auto")
                           : themeMode === "dark"
-                            ? language === "tr"
-                              ? "Koyu"
-                              : "Dark"
-                            : language === "tr"
-                              ? "Açık"
-                              : "Light"}
+                            ? language === "de" ? "Dunkel" : (language === "tr" ? "Koyu" : "Dark")
+                            : language === "de" ? "Hell" : (language === "tr" ? "Açık" : "Light")}
                       </button>
                     </div>
                   </div>
@@ -3842,7 +3579,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser }) => {
                   <label
                     className={`block text-xs font-bold uppercase tracking-widest ml-1 ${theme === "dark" ? "text-zinc-500" : "text-zinc-400"}`}
                   >
-                    {language === "tr" ? "Sürüm & Canlı Güncelleme" : "Version & Live Updates"}
+                    {language === "de" ? "Version & Live-Updates" : (language === "tr" ? "Sürüm & Canlı Güncelleme" : "Version & Live Updates")}
                   </label>
                   <div
                     className={`border rounded-2xl p-4 space-y-3 ${theme === "dark" ? "bg-[#1a1a1a] border-zinc-800" : "bg-zinc-50 border-zinc-200"}`}

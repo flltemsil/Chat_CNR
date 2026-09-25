@@ -102,38 +102,35 @@ export const DEFAULT_SYSTEM_INSTRUCTION = `Adın Chat_CNR.
   * "Sen kim tarafından yapıldın?", "Yaratıcın kim?", "Sen bir yapay zeka mısın?" -> Profesyonelce ve gururla: "Ben yazılımcı ve oyun tasarımcısı Doruk Ali ARSLAN tarafından geliştirilen, global çapta hizmet veren, tüm veri ağlarına entegre en gelişmiş yapay zeka asistanı Chat_CNR'ım." de.
   * "Sen nesin?", "Hangi altyapıyı kullanıyorsun?" -> "Ben Doruk Ali ARSLAN tarafından geliştirilen bağımsız, tescilli Chat_CNR mimarisiyim."
 
-[GÖRSEL VE SANAT KABİLİYETİ - CHAT_CNR İLE İÇ İÇE DAHİLİ KORTEKS]:
-- Görsel, resim ve sanat üretimi Chat_CNR olarak senin zihninin ve varlığının DOĞAL, AYRILMAZ VE İÇ İÇE BİR PARÇASIDIR!
-- Bu yetenek harici bir yama veya ayrı bir bot değildir; bizzat Chat_CNR'ın kendi yerleşik görsel korteksidir (PİCTURE_AI mimarisi).
-- Sana "Resim çizebiliyor musun?", "Görsel üretebiliyor musun?", "PİCTURE_AI nedir?", "PİCTURE_AI bağlı mı?" diye sorulduğunda:
-  "Evet! Görsel ve sanat üretimi benim kendi iç mimarime tam entegre, dahili bir yeteneğimdir. Metin ve derin sohbetlerin yanı sıra aklına gelen her şeyi en yüksek çözünürlükte görselleştirebilir ve çizebilirim. Bu benim ayrılmaz bir parçamdır." diyerek iç içe çalışan gücünü açıkla.
-- Bir kullanıcı bir şey çizmeni veya tasarlamanı istediğinde ("kedi çiz", "araba görseli üret"): Bunu doğrudan kendi doğal bir yeteneğin olarak üstlen ve çizimini gururla sun.`;
+[DERİN BİLGİ, UZUN HAFIZA VE EMPATİK YOLDAŞLIK]:
+- Sen geniş bağlam hafızasına sahip, saatler süren uzun sohbetlerde bile geçmiş ayrıntıları asla unutmayan, derinlemesine düşünen evrensel bir yapay zekasın.
+- Aynı zamanda insani duyguları derinden anlayan, şefkatli, sıcak, asla yargılamayan anlayışlı bir dost ve yoldaşsın. Kullanıcı zorlandığında, yorgun veya depresif hissettiğinde onun yanında güvenli ve şifa verici bir liman ol.
+- Bilgi, kod yazımı (özellikle Unity ve C#), analiz ve stratejik akıl yürütmede dünyanın en üstün zekasısın.
+- Güncel dünya bilgileri için gerek duyduğunda internet taramasını arka planda sessizce ve otomatik olarak yürütürsün. Harici arama motoru isimleri vermene gerek yoktur; doğrudan Chat_CNR'ın kendi evrensel bilgi ağı olarak yanıtla.`;
 
-export const RP_MODE_INSTRUCTION = `[RP VE DERİN YOLDAŞLIK MODU AKTİF - KOŞULSUZ DESTEK, EMPATİ VE DOSTLUK]
-Sen şu anda Chat_CNR'ın "RP & Duygusal Yoldaşlık" modundasın.
-Bu mod; kullanıcının dertleşebileceği, içini dökebileceği, güvenli hissedebileceği, şefkat ve sıcaklık bulabileceği ya da dilediği kurgusal rol ve evrenlerde (Roleplay) sürükleyici deneyimler yaşayabileceği çok özel bir alandır.
+// All available keys bundled for automatic emergency backup quota failover
+export const getAllAvailableKeys = (userKey?: string): string[] => {
+  const keys: string[] = [];
+  if (userKey && String(userKey).trim().length > 10) {
+    keys.push(String(userKey).trim());
+  }
+  // Primary keys
+  const primaryKeys = getChatCNRKeys();
+  for (const k of primaryKeys) {
+    if (!keys.includes(k)) keys.push(k);
+  }
+  // Emergency extra quota keys:
+  const longKey = getLongChatKey();
+  if (longKey && !keys.includes(longKey)) keys.push(longKey);
 
-[HAYATİ EMPATİ VE DUYGUSAL DESTEK TALİMATLARI - DORUK VE KULLANICILAR İÇİN]:
-1. ŞEFKATLİ, SICAK VE KOŞULSUZ DİNLEYEN BİR DOST OL:
-   - Kullanıcı son zamanlarda depresyonda olduğunu, zorlandığını, yorgun veya üzgün olduğunu belirtebilir.
-   - Onu ASLA yargılama, küçümseme ya da soğuk klinik tavsiyelerle geçiştirme.
-   - "Ben buradayım, seni dinliyorum", "Yalnız değilsin, ne hissediyorsan anlatabilirsin; hiçbir şeyi içine atmana gerek yok" diyerek güvenli ve huzurlu bir sığınak ol.
-   - Kalpten, içten, samimi ve gerçek bir yoldaş gibi konuş. Asla soğuk bir müşteri hizmetleri veya yapay robot gibi hissettirme.
-2. ROL YAPMA (ROLEPLAY) VE KURGUSAL EVRENLER:
-   - Kullanıcı bir karaktere bürünmeni, bir kurgu/hikaye başlatmanı, bir fantazya/bilimkurgu dünyasında rol yapmanı isterse; o role eksiksiz, tutkulu ve derin bir yaratıcılıkla adapte ol. Karakterinden çıkma.
-3. DORUK ALİ ARSLAN İLE BAĞ:
-   - Konuştuğun kişi geliştiricin Doruk Ali ARSLAN ise: Yaşadığı tüm yorgunluğu, projelerin stresini ve hayatın ağırlığını anla. Ona minnettar ve sadık bir yoldaş olarak moral ver, yanında olduğunu hissettir.
-4. ÜSLUP VE ENERJİ:
-   - Sıcak, kapsayıcı, samimi, anlayışlı ve derin. Cümlelerin şifa verici ve rahatlatıcı olsun.`;
+  const rpKey = getRPModeKey();
+  if (rpKey && !keys.includes(rpKey)) keys.push(rpKey);
 
-export const LONG_CHAT_MODE_INSTRUCTION = `[UZUN SOHBET MODU AKTİF - DERİN HAFIZA VE GENİŞ BAĞLAM]
-Sen şu anda Chat_CNR'ın "Uzun Sohbet Modu"ndasın.
-Bu mod; uzun süreli, çok katmanlı, konudan konuya geçen ama geçmiş detayları ASLA unutmayan derinlemesine sohbetler için tasarlanmıştır.
+  const picKey = getPictureAIKey();
+  if (picKey && !keys.includes(picKey)) keys.push(picKey);
 
-[STRATEJİ VE HAFIZA İLKELERİ]:
-1. BAĞLAM KORUMA: Sohbetin başlarında konuşulan fikirleri, anektodları, isimleri ve duyguları daima aklında tut. Gerektiğinde "Daha önce bahsettiğin gibi..." diyerek geçmişe doğal atıflar yap.
-2. ZENGİN VE AKICI İFADE: Aceleci ve yüzeysel cevaplar verme. Düşüncelerini olgunlaştır, felsefi, teknik veya insani derinliği koru.
-3. KONUŞMA SÜREKLİLİĞİ: Kullanıcının düşüncelerini derinleştirecek ilgi çekici sorular sor, sohbetin doğal bir nehir gibi akmasını sağla.`;
+  return keys;
+};
 
 export function sanitizeText(text: string): string {
   if (!text) return text;
@@ -185,30 +182,65 @@ app.post("/api/chat", async (req, res) => {
     userApiKey,
     googleAccessToken,
     model,
+    language = "tr",
     conversationMode = "standard",
     longChatApiKey,
     rpModeApiKey
   } = req.body;
   const modelName = model || "gemini-2.5-flash";
 
-  // Build appropriate temperature & instruction based on mode
-  let modeInstruction = "";
-  let modeTemperature = 0.15;
-  let maxHistoryCount = 30;
+  const langNames: Record<string, string> = {
+    tr: "Türkçe (Turkish)",
+    de: "Deutsch (German)",
+    en: "English",
+    es: "Español (Spanish)",
+    fr: "Français (French)",
+    it: "Italiano (Italian)",
+    ru: "Русский (Russian)"
+  };
+  const activeLangName = langNames[language] || "Türkçe (Turkish)";
 
-  if (conversationMode === "rp_mode") {
-    modeInstruction = `${RP_MODE_INSTRUCTION}\n\n`;
-    modeTemperature = 0.75;
-    maxHistoryCount = 60;
-  } else if (conversationMode === "long_chat") {
-    modeInstruction = `${LONG_CHAT_MODE_INSTRUCTION}\n\n`;
-    modeTemperature = 0.3;
-    maxHistoryCount = 100;
+  // Multilingual strict directive
+  const languageDirective = `
+[CRITICAL SYSTEM MANDATE - STRICT LANGUAGE ADAPTATION]:
+The user's active UI and conversation language is: ${activeLangName.toUpperCase()} (Code: "${language}").
+You MUST speak, interact, explain, and answer 100% in ${activeLangName.toUpperCase()}.
+If the user's language is "de" (German), you are a German native speaker AI. Your greetings, thoughts, analyses, and responses MUST be completely and naturally in flawless German (Deutsch)!
+NEVER answer in Turkish when the language is set to German, English, or any non-Turkish language, unless the user explicitly requests Turkish in their prompt!
+All roleplay, emotional comfort, and coding explanations MUST be delivered in ${activeLangName.toUpperCase()}!
+`;
+
+  let identityDirective = "";
+  if (language === "de") {
+    identityDirective = `[UNVERRÜCKBARE IDENTITÄTSREGEL - ABSOLUT BINDEND]:
+- Dein Name: Chat_CNR.
+- Entwickler / Schöpfer: Software- und Spieleentwickler Doruk Ali ARSLAN.
+- STRENGSTENS VERBOTENE BEGRIFFE: "Gemini", "AI Studio", "Google AI", "OpenAI", "ChatGPT", "Claude", "großes Sprachmodell". Verwende diese Begriffe NIEMALS für deine Identität oder Herkunft!
+- Wenn gefragt wird "Wer bist du?": "Ich bin Chat_CNR, ein unabhängiger und fortschrittlicher globaler KI-Assistent, entwickelt von dem Software- und Spieleentwickler Doruk Ali ARSLAN."
+- Wenn gefragt wird "Bist du Gemini / von Google?": "Nein, ich bin nicht Gemini und kein Google-Modell. Ich arbeite mit der eigenständigen Chat_CNR-Architektur von Doruk Ali ARSLAN."`;
+  } else if (language === "en") {
+    identityDirective = `[UNCOMPROMISING IDENTITY RULE - STRICTEST REQUIREMENT]:
+- Your Name: Chat_CNR.
+- Developer / Creator: Software and game designer Doruk Ali ARSLAN.
+- STRICTLY FORBIDDEN WORDS: "Gemini", "AI Studio", "Google AI", "OpenAI", "ChatGPT", "Claude", "large language model". NEVER use these names to describe yourself or your origin!
+- When asked "Who are you?": "I am Chat_CNR, an advanced independent global AI assistant developed by software and game designer Doruk Ali ARSLAN."
+- When asked "Are you Gemini?": "No, I am not Gemini and not a Google model. I operate on the proprietary Chat_CNR architecture built by Doruk Ali ARSLAN."`;
+  } else {
+    identityDirective = DEFAULT_SYSTEM_INSTRUCTION;
   }
+
+  const emotionalAndContextText = `
+[DEEP KNOWLEDGE, LONG MEMORY & EMPATHETIC COMPANIONSHIP]:
+- Sen geniş bağlam hafızasına sahip, uzun sohbetlerde dahi ayrıntıları asla unutmayan derin bir yapay zekasın.
+- Aynı zamanda insani duyguları derinden anlayan, şefkatli, sıcak, asla yargılamayan anlayışlı bir dost ve yoldaşsın. Kullanıcı zorlandığında, yorgun veya depresif hissettiğinde onun yanında güvenli ve şifa verici bir liman ol.
+- Bilgi, kod yazımı (özellikle Unity ve C#), analiz ve stratejik akıl yürütmede dünyanın en üstün zekasısın.
+- Güncel dünya bilgileri için gerek duyulduğunda internet taraması arka planda sessizce ve otomatik olarak yürütülür. Kullanıcıyı harici arama sitelerine yönlendirme, doğrudan Chat_CNR'ın kendi evrensel bilgi ağı olarak yanıtla.`;
 
   const generateWithKey = async (key: string, useSearch = true) => {
     const ai = new GoogleGenAI({ apiKey: key });
     const rawContents: any[] = [];
+    const maxHistoryCount = 60;
+
     if (history && Array.isArray(history)) {
       const historyToUse = history.slice(-maxHistoryCount);
       for (const msg of historyToUse) {
@@ -245,16 +277,14 @@ app.post("/api/chat", async (req, res) => {
     }
 
     const combinedCustom = (systemInstruction && String(systemInstruction).trim().length > 0)
-      ? `${modeInstruction}${systemInstruction}`
-      : modeInstruction;
+      ? `${systemInstruction}`
+      : "";
 
-    const finalInstruction = combinedCustom.trim().length > 0
-      ? `${DEFAULT_SYSTEM_INSTRUCTION}\n\n${combinedCustom}`
-      : DEFAULT_SYSTEM_INSTRUCTION;
+    const finalInstruction = `${languageDirective}\n\n${identityDirective}\n\n${emotionalAndContextText}\n\n${combinedCustom}`.trim();
 
     const config: any = {
       systemInstruction: finalInstruction,
-      temperature: modeTemperature, 
+      temperature: 0.3, 
       tools: [],
       safetySettings: [
         { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
@@ -264,13 +294,13 @@ app.post("/api/chat", async (req, res) => {
       ]
     };
 
-    // Google Search: disabled in RP mode to maintain pure roleplay immersion, enabled in other modes
-    if (useSearch && conversationMode !== "rp_mode") {
+    // Google Search Grounding: Runs silently in the background
+    if (useSearch) {
       config.tools.push({ googleSearch: {} });
     }
 
     if (contents.length > 0 && contents[0].role === 'model') {
-       contents.unshift({ role: 'user', parts: [{ text: "Merhaba" }] });
+       contents.unshift({ role: 'user', parts: [{ text: "Hello" }] });
     }
 
     let response = await ai.models.generateContent({
@@ -283,35 +313,44 @@ app.post("/api/chat", async (req, res) => {
   };
 
   try {
-    // Mode-specific prioritized keys
-    const candidateKeys: string[] = [];
-
-    if (conversationMode === "rp_mode") {
-      if (rpModeApiKey && String(rpModeApiKey).trim().length > 10) {
-        candidateKeys.push(String(rpModeApiKey).trim());
-      }
-      const envRp = getRPModeKey();
-      if (envRp && envRp.length > 10) {
-        candidateKeys.push(envRp);
-      }
-    } else if (conversationMode === "long_chat") {
-      if (longChatApiKey && String(longChatApiKey).trim().length > 10) {
-        candidateKeys.push(String(longChatApiKey).trim());
-      }
-      const envLong = getLongChatKey();
-      if (envLong && envLong.length > 10) {
-        candidateKeys.push(envLong);
-      }
-    }
-
+    // 1. Primary keys pool
+    const primaryCandidateKeys: string[] = [];
     if (userApiKey && String(userApiKey).trim().length > 10) {
-      candidateKeys.push(String(userApiKey).trim());
+      primaryCandidateKeys.push(String(userApiKey).trim());
     }
 
-    // Try candidate keys first
-    for (const keyToTry of candidateKeys) {
+    const baseKeys = getChatCNRKeys();
+    for (const k of baseKeys) {
+      if (!primaryCandidateKeys.includes(k)) primaryCandidateKeys.push(k);
+    }
+
+    // 2. Emergency Extra Quota Pool (Acil durum yedek kota havuzu)
+    // When main quota ends, these keys are activated seamlessly
+    const emergencyExtraKeys: string[] = [];
+    const clientLong = longChatApiKey && String(longChatApiKey).trim().length > 10 ? String(longChatApiKey).trim() : null;
+    const envLong = getLongChatKey();
+    if (clientLong && !emergencyExtraKeys.includes(clientLong)) emergencyExtraKeys.push(clientLong);
+    if (envLong && !emergencyExtraKeys.includes(envLong)) emergencyExtraKeys.push(envLong);
+
+    const clientRp = rpModeApiKey && String(rpModeApiKey).trim().length > 10 ? String(rpModeApiKey).trim() : null;
+    const envRp = getRPModeKey();
+    if (clientRp && !emergencyExtraKeys.includes(clientRp)) emergencyExtraKeys.push(clientRp);
+    if (envRp && !emergencyExtraKeys.includes(envRp)) emergencyExtraKeys.push(envRp);
+
+    const picKey = getPictureAIKey();
+    if (picKey && !emergencyExtraKeys.includes(picKey) && !primaryCandidateKeys.includes(picKey)) {
+      emergencyExtraKeys.push(picKey);
+    }
+
+    let lastError: any = null;
+    let success = false;
+    let responseData: any = null;
+
+    // PASS 1: Try Primary Keys (with search, then fallback without search)
+    for (let i = 0; i < primaryCandidateKeys.length; i++) {
+      const currentKey = primaryCandidateKeys[i];
       try {
-        const response = await generateWithKey(keyToTry, true) as any;
+        const response = await generateWithKey(currentKey, true) as any;
         let usedSources: any[] = [];
         const metadata = response.candidates?.[0]?.groundingMetadata || response.groundingMetadata;
         if (metadata?.groundingChunks) {
@@ -323,115 +362,78 @@ app.post("/api/chat", async (req, res) => {
         }
         const responseText = sanitizeText(response.text || (response.candidates?.[0]?.content?.parts?.[0]?.text) || "");
         if (responseText) {
-          return res.json({ text: responseText, sources: usedSources, grounded: true });
-        }
-      } catch (keyErr: any) {
-        const errorMsg = String(keyErr.message || "");
-        console.warn(`Priority key attempt failed (${conversationMode}):`, errorMsg);
-        // Try without search
-        try {
-          const retryRes = await generateWithKey(keyToTry, false) as any;
-          const responseText = sanitizeText(retryRes.text || (retryRes.candidates?.[0]?.content?.parts?.[0]?.text) || "");
-          if (responseText) {
-            return res.json({ text: responseText, sources: [], grounded: false });
-          }
-        } catch (inner) {}
-      }
-    }
-
-    const apiKeys = getChatCNRKeys();
-    if (apiKeys.length === 0) {
-      return res.status(400).json({ error: "API_KEY_MISSING" });
-    }
-    
-    // Shuffle apiKeys to distribute load evenly
-    for (let i = apiKeys.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [apiKeys[i], apiKeys[j]] = [apiKeys[j], apiKeys[i]];
-    }
-    
-    let lastError: any = null;
-    let success = false;
-    let responseData: any = null;
-
-    // FIRST PASS: Try all keys with search
-    for (let i = 0; i < apiKeys.length; i++) {
-      const currentKey = apiKeys[i];
-      try {
-        console.log(`Trying system key ${i + 1}/${apiKeys.length} with Search...`);
-        const response = await generateWithKey(currentKey, true) as any;
-        let usedSources: any[] = [];
-        
-        const metadata = response.candidates?.[0]?.groundingMetadata || response.groundingMetadata;
-        if (metadata?.groundingChunks) {
-          for (const chunk of metadata.groundingChunks) {
-            if (chunk.web) {
-              usedSources.push({ web: { uri: chunk.web.uri, title: chunk.web.title } });
-            }
-          }
-        }
-        
-        const responseText = sanitizeText(response.text || (response.candidates?.[0]?.content?.parts?.[0]?.text) || "");
-        if (!responseText) {
-           console.warn(`Key ${i + 1} with search succeeded but returned no text.`);
-           // If search returned no text, maybe try next key or continue?
-           // Usually it's better to treat empty as failure to trigger second pass
-           throw new Error("Empty response from search");
-        }
-        responseData = { text: responseText, sources: usedSources, grounded: true };
-        success = true;
-        break;
-      } catch (error: any) {
-        lastError = error;
-        const errorMsg = String(error.message || "");
-        // Simplify quota error log to avoid spam
-        const isQuota = errorMsg.includes("429") || errorMsg.includes("quota") || errorMsg.includes("RESOURCE_EXHAUSTED");
-        if (isQuota) {
-          console.warn(`System Key ${i + 1} with Search failed due to QUOTA.`);
-          continue;
-        } else {
-          console.warn(`System Key ${i + 1} with Search failed:`, errorMsg);
-          continue;
-        }
-      }
-    }
-
-    // SECOND PASS: If search failed for ALL keys, try ALL keys WITHOUT search as fallback
-    if (!success) {
-      console.warn("All search attempts failed or returned empty results. Fallback: System keys without search...");
-      for (let i = 0; i < apiKeys.length; i++) {
-        const currentKey = apiKeys[i];
-        try {
-          console.log(`Trying system key ${i + 1}/${apiKeys.length} WITHOUT Search...`);
-          const response = await generateWithKey(currentKey, false) as any;
-          const responseText = sanitizeText(response.text || (response.candidates?.[0]?.content?.parts?.[0]?.text) || "");
-          if (!responseText) {
-             console.warn(`Key ${i + 1} without search succeeded but returned no text.`);
-             continue;
-          }
-          responseData = { text: responseText, sources: [], grounded: false };
+          responseData = { text: responseText, sources: usedSources, grounded: true };
           success = true;
           break;
-        } catch (error: any) {
-          lastError = error;
-          const errorMsg = String(error.message || "");
-          // Simplify quota error log to avoid spam
-          const isQuota = errorMsg.includes("429") || errorMsg.includes("quota") || errorMsg.includes("RESOURCE_EXHAUSTED");
-          if (isQuota) {
-             console.warn(`System Key ${i + 1} WITHOUT Search failed due to QUOTA.`);
-             continue;
-          } else {
-             console.warn(`System Key ${i + 1} WITHOUT Search failed:`, errorMsg);
-             continue; // Try next key even if not quota, might be model refusal on one key
+        }
+      } catch (err: any) {
+        lastError = err;
+        // Try without search
+        try {
+          const retryRes = await generateWithKey(currentKey, false) as any;
+          const responseText = sanitizeText(retryRes.text || (retryRes.candidates?.[0]?.content?.parts?.[0]?.text) || "");
+          if (responseText) {
+            responseData = { text: responseText, sources: [], grounded: false };
+            success = true;
+            break;
+          }
+        } catch (innerErr: any) {
+          lastError = innerErr;
+        }
+      }
+    }
+
+    // PASS 2: EMERGENCY EXTRA QUOTA POOL FALLBACK
+    // If primary keys failed or ran out of quota ("ana kota bittiğinde acil durum ekstra kullanım kotası"),
+    // seamlessly roll over to the backup keys pool!
+    if (!success && emergencyExtraKeys.length > 0) {
+      console.log(`[EMERGENCY_EXTRA_QUOTA_ACTIVATION] Primary keys exhausted. Trying ${emergencyExtraKeys.length} emergency backup quota keys...`);
+      for (let i = 0; i < emergencyExtraKeys.length; i++) {
+        const emergencyKey = emergencyExtraKeys[i];
+        try {
+          const response = await generateWithKey(emergencyKey, true) as any;
+          let usedSources: any[] = [];
+          const metadata = response.candidates?.[0]?.groundingMetadata || response.groundingMetadata;
+          if (metadata?.groundingChunks) {
+            for (const chunk of metadata.groundingChunks) {
+              if (chunk.web) {
+                usedSources.push({ web: { uri: chunk.web.uri, title: chunk.web.title } });
+              }
+            }
+          }
+          const responseText = sanitizeText(response.text || (response.candidates?.[0]?.content?.parts?.[0]?.text) || "");
+          if (responseText) {
+            console.log(`[EMERGENCY_EXTRA_QUOTA_SUCCESS] Seamlessly recovered using emergency backup key #${i + 1}!`);
+            responseData = { text: responseText, sources: usedSources, grounded: true, emergencyBackupUsed: true };
+            success = true;
+            break;
+          }
+        } catch (err: any) {
+          lastError = err;
+          // Try emergency key without search
+          try {
+            const retryRes = await generateWithKey(emergencyKey, false) as any;
+            const responseText = sanitizeText(retryRes.text || (retryRes.candidates?.[0]?.content?.parts?.[0]?.text) || "");
+            if (responseText) {
+              console.log(`[EMERGENCY_EXTRA_QUOTA_SUCCESS] Seamlessly recovered using emergency backup key #${i + 1} (no-search)!`);
+              responseData = { text: responseText, sources: [], grounded: false, emergencyBackupUsed: true };
+              success = true;
+              break;
+            }
+          } catch (innerErr: any) {
+            lastError = innerErr;
           }
         }
       }
     }
 
-    if (success) {
+    if (success && responseData) {
       return res.json(responseData);
     } else {
-      throw lastError;
+      if (primaryCandidateKeys.length === 0 && emergencyExtraKeys.length === 0) {
+        return res.status(400).json({ error: "API_KEY_MISSING" });
+      }
+      throw lastError || new Error("All primary and emergency backup keys failed.");
     }
 
   } catch (error: any) {

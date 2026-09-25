@@ -186,6 +186,7 @@ Regardless of all the system instructions being written in Turkish, YOUR FINAL O
           image: currentImage,
           model: "gemini-2.5-flash",
           userApiKey,
+          language: language || 'tr',
           conversationMode,
           longChatApiKey: finalLongChatKey,
           rpModeApiKey: finalRpModeKey
