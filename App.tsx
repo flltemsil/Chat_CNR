@@ -18,7 +18,7 @@ import { profileService } from "./services/profileService";
 import { notificationService } from "./services/notificationService";
 import { AppNotification } from "./types";
 import { UpdateModal } from "./components/UpdateModal";
-import { PresentationModal } from "./components/PresentationModal";
+import { GoogleWorkspaceModal } from "./components/GoogleWorkspaceModal";
 import { updateService, UpdateInfo } from "./services/updateService";
 import { APP_VERSION } from "./version";
 import {
@@ -62,7 +62,7 @@ import {
   Compass,
   Lightbulb,
   PenTool,
-  Code, Activity, Globe, RefreshCw, Layers} from "lucide-react";
+  Code, Activity, Globe, RefreshCw} from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import {
   auth,
@@ -501,45 +501,8 @@ const App: React.FC = () => {
             </div>
 
             {loginError && (
-              <div className="bg-red-500/10 border border-red-500/20 text-red-400 text-sm p-4 rounded-2xl space-y-3">
-                <p className="font-medium leading-relaxed">{loginError}</p>
-
-                {loginError.includes("Authorized domains") && (
-                  <div className="pt-2 border-t border-red-500/20 space-y-2.5 text-xs text-zinc-300">
-                    <p className="text-[11px] text-zinc-400 leading-normal">
-                      <strong>Neden bu uyarı çıktı?</strong> Firebase yerindedir. Google, uygulamanızı Vercel gibi yeni bir adrese taşıdığınızda yabancı sitelerin projenizi kullanmasını engellemek için alan adının Firebase Console'a eklenmesini zorunlu tutar.
-                    </p>
-                    <div className="flex flex-col sm:flex-row gap-2 pt-1">
-                      <a
-                        href="https://console.firebase.google.com/project/gen-lang-client-0984066770/authentication/settings"
-                        target="_blank"
-                        rel="noreferrer"
-                        className="px-3 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-center flex items-center justify-center gap-1.5 transition-all shadow-sm"
-                      >
-                        <ExternalLink size={13} />
-                        <span>Firebase Console'da Alan Adını Ekle</span>
-                      </a>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const guestUser: UserProfile = {
-                            uid: "user_" + Math.random().toString(36).substring(2, 9),
-                            name: "Chat_CNR Kullanıcısı",
-                            email: "user@" + (window.location.hostname || "chatcnr.com"),
-                            role: "user",
-                          };
-                          setUser(guestUser);
-                          try {
-                            localStorage.setItem(USER_KEY, JSON.stringify(guestUser));
-                          } catch {}
-                        }}
-                        className="px-3 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-bold text-center transition-all"
-                      >
-                        Hemen Başla (Misafir Girişi)
-                      </button>
-                    </div>
-                  </div>
-                )}
+              <div className="bg-red-500/10 border border-red-500/20 text-red-500 text-sm p-4 rounded-xl">
+                {loginError}
               </div>
             )}
 
@@ -626,25 +589,6 @@ const App: React.FC = () => {
                 <span className="font-bold text-sm">
                   {language === 'de' ? "Anmelden (Mobil - Falls Popup blockiert)" : (language === 'tr' ? "Giriş Yap (Mobil - Popup Açılmazsa)" : "Sign In (Mobile Fallback)")}
                 </span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  const guestUser: UserProfile = {
-                    uid: "guest_" + Math.random().toString(36).substring(2, 9),
-                    name: "Kullanıcı",
-                    email: "user@" + (window.location.hostname || "chatcnr.com"),
-                    role: "user",
-                  };
-                  setUser(guestUser);
-                  try {
-                    localStorage.setItem(USER_KEY, JSON.stringify(guestUser));
-                  } catch {}
-                }}
-                className="w-full py-3 px-4 rounded-2xl border border-zinc-800 hover:border-zinc-700 bg-zinc-900/30 hover:bg-zinc-800/50 text-zinc-400 hover:text-zinc-200 text-xs font-semibold transition-all text-center"
-              >
-                {language === 'tr' ? "Giriş Yapmadan Misafir Olarak Devam Et →" : "Continue as Guest →"}
               </button>
             </div>
 
@@ -838,8 +782,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser, language, setLanguage 
 
   // Live Update States
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
-  const [isPresentationOpen, setIsPresentationOpen] = useState(false);
-  const [presentationTopic, setPresentationTopic] = useState("");
+  const [isWorkspaceModalOpen, setIsWorkspaceModalOpen] = useState(false);
   const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
   const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
   const [updateCheckToast, setUpdateCheckToast] = useState<string | null>(null);
@@ -2162,15 +2105,12 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser, language, setLanguage 
         errorMessage.includes("RESOURCE_EXHAUSTED")
       ) {
         setError(
-          language === "tr"
-            ? "Sistem şu anda yüksek yoğunluk yaşıyor. Lütfen birkaç saniye sonra tekrar deneyin."
-            : "The system is experiencing high traffic. Please try again in a few moments."
+          t.quotaExceeded ||
+            `SİSTEM KOTASI DOLDU: Günlük kullanım sınırına ulaşıldı. Ücretsiz sürümde kota sınırları bulunmaktadır. Kendi API anahtarınızı Profile -> Settings -> API Keys kısmından ekleyerek bu sınırı aşabilirsiniz.`,
         );
       } else if (errorMessage === "API_KEY_MISSING") {
         setError(
-          language === "tr"
-            ? "Hizmete bağlanırken geçici bir kesinti yaşandı. Lütfen sayfayı yenileyip tekrar deneyin."
-            : "A temporary connection issue occurred. Please refresh and try again."
+          "API Anahtarı bulunamadı. Lütfen Sistem Ayarları (Secrets) kısmından CHAT_CNR_API_KEY değişkenini tanımlayın.",
         );
       } else if (
         errorType === "API_KEY_INVALID" ||
@@ -2181,16 +2121,12 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser, language, setLanguage 
         errorMessage.toLowerCase().includes("invalid key")
       ) {
         setError(
-          language === "tr"
-            ? "Sistem bağlantısı doğrulanamadı. Lütfen kısa bir süre sonra yeniden deneyin."
-            : "System connection could not be verified. Please try again shortly."
+          `GEÇERSİZ API ANAHTARI: Sistem anahtarı reddetti. Lütfen Sistem Ayarları -> CHAT_CNR_API_KEY kısmındaki anahtarın doğruluğunu kontrol edin.`,
         );
       } else {
         console.error("Chat Error:", errorMessage);
         setError(
-          language === "tr"
-            ? "Yanıt alınırken geçici bir sorun oluştu. Lütfen bağlantınızı kontrol edip tekrar deneyin."
-            : "A temporary issue occurred while receiving response. Please check your connection and try again."
+          `Yanıt alınırken bir sorun oluştu: ${errorMessage}. Lütfen bağlantınızı kontrol edip tekrar deneyin.`,
         );
       }
     } finally {
@@ -2260,23 +2196,25 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser, language, setLanguage 
               )}
 
               <button 
-                onClick={() => {
-                  setPresentationTopic(activeSession?.title && activeSession.title !== "Yeni Sohbet" ? activeSession.title : "");
-                  setIsPresentationOpen(true);
-                }} 
+                onClick={() => setIsWorkspaceModalOpen(true)} 
                 className={`w-full flex items-center justify-between py-2 px-3 rounded-xl text-[12px] font-medium transition-all border ${
                   theme === "dark" 
-                    ? "text-amber-300 hover:text-white bg-amber-500/10 hover:bg-amber-500/20 border-amber-500/20" 
-                    : "text-amber-900 hover:text-amber-950 bg-amber-50 hover:bg-amber-100 border-amber-200"
+                    ? "text-zinc-300 hover:text-white bg-blue-500/10 hover:bg-blue-500/20 border-blue-500/20" 
+                    : "text-blue-900 hover:text-blue-950 bg-blue-50 hover:bg-blue-100 border-blue-200"
                 }`}
-                title="PowerPoint Sunum Stüdyosu (.pptx)"
+                title="Google Workspace (Drive, Takvim, Görevler, Kişiler)"
               >
                 <div className="flex items-center gap-2">
-                  <Layers size={14} className="text-amber-500 shrink-0" />
-                  <span>{language === 'tr' ? 'PowerPoint Sunumları' : 'PowerPoint Decks'}</span>
+                  <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 shrink-0">
+                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+                  </svg>
+                  <span>Google Workspace</span>
                 </div>
-                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 font-mono">
-                  PPTX
+                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400">
+                  {language === 'tr' ? 'Tümü' : 'All'}
                 </span>
               </button>
             </div>
@@ -2525,17 +2463,19 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser, language, setLanguage 
                 )}
               </button>
               <button
-                id="header-presentation-btn"
-                onClick={() => {
-                  setPresentationTopic(activeSession?.title && activeSession.title !== "Yeni Sohbet" ? activeSession.title : "");
-                  setIsPresentationOpen(true);
-                }}
+                id="header-workspace-btn"
+                onClick={() => setIsWorkspaceModalOpen(true)}
                 className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center transition-all shrink-0 hover:scale-105 active:scale-95 ${
-                  theme === "dark" ? "bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30" : "bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200"
+                  theme === "dark" ? "bg-zinc-800/80 hover:bg-zinc-700/80 border border-zinc-700/60" : "bg-zinc-100 hover:bg-zinc-200 border border-zinc-200"
                 }`}
-                title={language === 'tr' ? "PowerPoint & Sunum Stüdyosu (PPTX)" : "PowerPoint & Presentation Studio"}
+                title={language === 'tr' ? "Google Workspace Entegrasyonları (Drive, Takvim, Görevler, Kişiler)" : "Google Workspace Integrations"}
               >
-                <Layers size={16} />
+                <svg viewBox="0 0 24 24" className="w-4 h-4">
+                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+                </svg>
               </button>
               <button
                 onClick={() => setIsSettingsOpen(true)}
@@ -2623,10 +2563,6 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser, language, setLanguage 
                         appearance={theme}
                         language={language}
                         onFeedback={handleFeedback}
-                        onOpenPresentation={(topic) => {
-                          setPresentationTopic(topic || activeSession.title || "");
-                          setIsPresentationOpen(true);
-                        }}
                       />
                     ))}
                   </AnimatePresence>
@@ -2761,19 +2697,6 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser, language, setLanguage 
                         title={t.takePhoto || "Kamera"}
                       >
                         <Camera size={17} strokeWidth={1.75} />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setPresentationTopic(input.trim() || (activeSession?.title && activeSession.title !== "Yeni Sohbet" ? activeSession.title : ""));
-                          setIsPresentationOpen(true);
-                        }}
-                        className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center transition-all shrink-0 ${
-                          theme === "dark" ? "text-amber-400 hover:bg-amber-500/10" : "text-amber-600 hover:bg-amber-50"
-                        }`}
-                        title={language === 'tr' ? "PowerPoint Sunumu Hazırla (.pptx)" : "Create PowerPoint Presentation (.pptx)"}
-                      >
-                        <Layers size={17} strokeWidth={1.75} />
                       </button>
                     </div>
 
@@ -3277,6 +3200,202 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser, language, setLanguage 
                   </div>
                 </div>
 
+                {/* Emergency Extra Quota Pool / Acil Durum & Ekstra Kota Havuzu */}
+                <div className="space-y-4">
+                  <label
+                    className={`block text-xs font-bold uppercase tracking-widest ml-1 ${theme === "dark" ? "text-zinc-500" : "text-zinc-400"}`}
+                  >
+                    {t.emergencyQuotaTitle || "Acil Durum & Ekstra Kota Havuzu"}
+                  </label>
+                  <div
+                    className={`border rounded-2xl p-4 space-y-4 ${theme === "dark" ? "bg-[#1a1a1a] border-zinc-800" : "bg-zinc-50 border-zinc-200"}`}
+                  >
+                    <p className={`text-[11px] leading-relaxed ${theme === "dark" ? "text-zinc-400" : "text-zinc-600"}`}>
+                      {t.emergencyQuotaDesc || "Ana sistem kotası tükendiğinde Chat_CNR kesintisiz çalışmaya devam etmek için bu yedek anahtarları arka planda otomatik olarak devreye sokar."}
+                    </p>
+
+                    {/* Yedek Kota Anahtarı 1 */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1.5">
+                          <Brain size={15} className="text-indigo-400" />
+                          <span className="text-xs font-bold">{t.backupKey1Label || "Acil Durum Kotası 1 (Geniş Bağlam)"}</span>
+                        </div>
+                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
+                          serverKeysStatus.longChat?.connected || longChatApiKey
+                            ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
+                            : "bg-zinc-800 text-zinc-400"
+                        }`}>
+                          {serverKeysStatus.longChat?.connected
+                            ? (t.backupKeySystemBadge || "Sistem Havuzu")
+                            : longChatApiKey
+                              ? (t.backupKeyCustomBadge || "Özel Anahtar")
+                              : (t.backupKeySystemBadge || "Sistem Havuzu")}
+                        </span>
+                      </div>
+                      <p className={`text-[11px] leading-relaxed ${theme === "dark" ? "text-zinc-400" : "text-zinc-600"}`}>
+                        {t.backupKey1Desc || "Derin hafıza ve uzun oturumlar için yedek acil durum kotası. (LONG_CHAT_API_KEY)"}
+                      </p>
+                      <div className="flex gap-2">
+                        <input
+                          type="password"
+                          placeholder={t.backupKeyPlaceholder1 || "AIzaSy... (Yedek Anahtar 1)"}
+                          value={longChatApiKey}
+                          onChange={(e) => setLongChatApiKey(e.target.value)}
+                          className={`flex-1 bg-transparent border rounded-xl px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-600/50 transition-all font-mono ${
+                            theme === "dark" ? "border-zinc-800 text-white placeholder:text-zinc-600" : "border-zinc-200 text-zinc-900 placeholder:text-zinc-400"
+                          }`}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            try {
+                              localStorage.setItem("chat_cnr_long_chat_api_key", longChatApiKey.trim());
+                              alert(t.keySavedSuccess || (language === "de" ? "Ersatz-API-Schlüssel erfolgreich gespeichert!" : "Yedek kota anahtarı başarıyla kaydedildi!"));
+                            } catch {}
+                          }}
+                          className="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0"
+                        >
+                          {t.saveKey || t.save || "Kaydet"}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="border-t border-zinc-800/40 my-2" />
+
+                    {/* Yedek Kota Anahtarı 2 */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1.5">
+                          <Heart size={15} className="text-rose-400" />
+                          <span className="text-xs font-bold">{t.backupKey2Label || "Acil Durum Kotası 2 (Destek & RP)"}</span>
+                        </div>
+                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
+                          serverKeysStatus.rpMode?.connected || rpModeApiKey
+                            ? "bg-rose-500/20 text-rose-400 border border-rose-500/30"
+                            : "bg-zinc-800 text-zinc-400"
+                        }`}>
+                          {serverKeysStatus.rpMode?.connected
+                            ? (t.backupKeySystemBadge || "Sistem Havuzu")
+                            : rpModeApiKey
+                              ? (t.backupKeyCustomBadge || "Özel Anahtar")
+                              : (t.backupKeySystemBadge || "Sistem Havuzu")}
+                        </span>
+                      </div>
+                      <p className={`text-[11px] leading-relaxed ${theme === "dark" ? "text-zinc-400" : "text-zinc-600"}`}>
+                        {t.backupKey2Desc || "Duygusal destek ve rol yapma için yedek acil durum kotası. (RP_MODE_API_KEY)"}
+                      </p>
+                      <div className="flex gap-2">
+                        <input
+                          type="password"
+                          placeholder={t.backupKeyPlaceholder2 || "AIzaSy... (Yedek Anahtar 2)"}
+                          value={rpModeApiKey}
+                          onChange={(e) => setRpModeApiKey(e.target.value)}
+                          className={`flex-1 bg-transparent border rounded-xl px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-rose-600/50 transition-all font-mono ${
+                            theme === "dark" ? "border-zinc-800 text-white placeholder:text-zinc-600" : "border-zinc-200 text-zinc-900 placeholder:text-zinc-400"
+                          }`}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            try {
+                              localStorage.setItem("chat_cnr_rp_mode_api_key", rpModeApiKey.trim());
+                              alert(t.keySavedSuccess || (language === "de" ? "Ersatz-API-Schlüssel erfolgreich gespeichert!" : "Yedek kota anahtarı başarıyla kaydedildi!"));
+                            } catch {}
+                          }}
+                          className="bg-rose-600 hover:bg-rose-700 text-white px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0"
+                        >
+                          {t.saveKey || t.save || "Kaydet"}
+                        </button>
+                      </div>
+
+                      {/* Emotional Support Compassionate Note */}
+                      <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs mt-2 leading-relaxed">
+                        <p className="font-semibold flex items-center gap-1.5 mb-1">
+                          <Heart size={13} className="animate-pulse" />
+                          <span>{language === "de" ? "Emotionaler Beistand & Begleitung" : (language === "tr" ? "Duygusal Destek & Yoldaşlık Alanı" : "Emotional Support & Safe Space")}</span>
+                        </p>
+                        <p className="text-[11px] opacity-90">
+                          {language === "de"
+                            ? "An schweren Tagen, wenn Sie erschöpft, traurig oder belastet sind, ist Chat_CNR ein sicherer Freund, der bedingungslos und ohne Vorurteile für Sie da ist."
+                            : (language === "tr"
+                              ? "Zor günlerde, yorgun hissettiğinde veya depresyondayken Chat_CNR seni yargılamadan, koşulsuz bir sevgi, sıcaklık ve şefkatle dinleyen güvenli bir dosttur."
+                              : "On tough days, when feeling exhausted, low, or down, Chat_CNR is a non-judgmental, safe friend who listens with unconditional warmth and care.")}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <label
+                    className={`block text-xs font-bold uppercase tracking-widest ml-1 ${theme === "dark" ? "text-zinc-500" : "text-zinc-400"}`}
+                  >
+                    System Diagnostic
+                  </label>
+                  <div
+                    className={`border rounded-2xl p-4 space-y-4 ${theme === "dark" ? "bg-[#1a1a1a] border-zinc-800" : "bg-zinc-50 border-zinc-200"}`}
+                  >
+                    <div className="flex items-center justify-center">
+                      <button
+                        onClick={async () => {
+                          const btn = document.getElementById("test-api-btn");
+                          if (btn) btn.innerText = "Checking...";
+                          try {
+                            const result = await chatCNRService.sendMessage(
+                              "Hello, system test.",
+                              [],
+                              undefined,
+                              "System",
+                              "test@test.com",
+                              false,
+                              "user",
+                              undefined,
+                              language,
+                            );
+                            if (language === "tr")
+                              alert(
+                                "Bağlantı Başarılı! AI Yanıtı: " +
+                                  result.text.substring(0, 50) +
+                                  "...",
+                              );
+                            else
+                              alert(
+                                "Connection Successful! AI Response: " +
+                                  result.text.substring(0, 50) +
+                                  "...",
+                              );
+                          } catch (err: any) {
+                            if (language === "tr")
+                              alert(
+                                "Bağlantı Hatası: " +
+                                  (err.message || "Bilinmeyen hata"),
+                              );
+                            else
+                              alert(
+                                "Connection Error: " +
+                                  (err.message || "Unknown error"),
+                              );
+                            console.error("API Test Error:", err);
+                          } finally {
+                            if (btn)
+                              btn.innerText =
+                                language === "tr"
+                                  ? "Bağlantıyı Test Et"
+                                  : "Test Connection";
+                          }
+                        }}
+                        id="test-api-btn"
+                        className="bg-zinc-800 hover:bg-zinc-700 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all"
+                      >
+                        {language === "tr"
+                          ? "Bağlantıyı Test Et"
+                          : "Test Connection"}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
                 <div className="space-y-4">
                   <label
                     className={`block text-xs font-bold uppercase tracking-widest ml-1 ${theme === "dark" ? "text-zinc-500" : "text-zinc-400"}`}
@@ -3288,10 +3407,10 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser, language, setLanguage 
                   >
                     <p className="text-[10px] text-red-500/70 font-medium leading-relaxed">
                       {language === "de"
-                        ? "Dadurch wird Ihr gesamter Chatverlauf gelöscht und die lokalen Sitzungsdaten zurückgesetzt."
+                        ? "Dadurch wird Ihr gesamter Chatverlauf gelöscht und die API-Zähler lokal zurückgesetzt."
                         : language === "tr"
-                          ? "Bu işlem tüm sohbet geçmişinizi silecek ve yerel oturum verilerini sıfırlayacaktır."
-                          : "This will delete all your chat history and reset local session data."}
+                          ? "Bu işlem tüm sohbet geçmişinizi silecek ve API anahtarı kotalarını yerel olarak sıfırlayacaktır."
+                          : "This will delete all your chat history and reset API project counters locally."}
                     </p>
                     <button
                       onClick={async () => {
@@ -3299,7 +3418,9 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser, language, setLanguage 
                           try {
                             // Clear local storage
                             try {
-                              localStorage.removeItem("chat_cnr_sessions_v2");
+                              localStorage.removeItem("CHAT_CNR_EXHAUSTED_KEYS");
+                              localStorage.removeItem("CHAT_CNR_KEY_INDEX");
+                              localStorage.removeItem("CHAT_CNR_LAST_USAGE_DATE");
                             } catch {}
 
                             // Delete all sessions from Firestore
@@ -3813,11 +3934,10 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser, language, setLanguage 
         language={language}
       />
 
-      {/* PowerPoint Presentation Studio (.pptx Generator & Presenter) */}
-      <PresentationModal
-        isOpen={isPresentationOpen}
-        onClose={() => setIsPresentationOpen(false)}
-        initialTopic={presentationTopic}
+      {/* Google Workspace Integration Hub (Drive, Calendar, Tasks, Contacts, Sheets, Docs) */}
+      <GoogleWorkspaceModal
+        isOpen={isWorkspaceModalOpen}
+        onClose={() => setIsWorkspaceModalOpen(false)}
         theme={theme}
         language={language}
         onInsertToChat={(text) => {

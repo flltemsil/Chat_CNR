@@ -20,6 +20,13 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ user, isOpen, onClose, onUp
   const [phone, setPhone] = useState(user.phone || '');
   const [interestInput, setInterestInput] = useState('');
   const [interests, setInterests] = useState<string[]>(user.interests || []);
+  const [personalApiKey, setPersonalApiKey] = useState(() => {
+    try {
+      return localStorage.getItem('CHAT_CNR_USER_API_KEY') || '';
+    } catch (e) {
+      return '';
+    }
+  });
   const [isSaving, setIsSaving] = useState(false);
   const [manualFact, setManualFact] = useState('');
 
@@ -62,6 +69,9 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ user, isOpen, onClose, onUp
   const handleSave = async () => {
     setIsSaving(true);
     try {
+      // Save personal API key to local storage
+      localStorage.setItem('CHAT_CNR_USER_API_KEY', personalApiKey.trim());
+      
       const updates = {
         name,
         bio,
@@ -160,6 +170,28 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ user, isOpen, onClose, onUp
               className="w-full bg-[#111111] border-2 border-zinc-800/80 rounded-2xl px-5 py-4 text-[14px] font-medium text-white focus:outline-none focus:border-blue-600/50 transition-all shadow-inner resize-none leading-relaxed"
               placeholder={t.visionPlaceholder}
             />
+          </div>
+
+          {/* Personal API Key */}
+          <div className="space-y-3">
+            <label className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.25em] flex items-center gap-2 px-1">
+              <Key size={12} className="text-yellow-500" /> {t.personalApiKey}
+            </label>
+            <div className="relative group/key">
+              <input 
+                type="password"
+                value={personalApiKey}
+                onChange={(e) => setPersonalApiKey(e.target.value)}
+                className="w-full bg-[#111111] border-2 border-zinc-800/80 rounded-2xl px-5 py-4 pr-12 text-[14px] font-mono text-white focus:outline-none focus:border-yellow-600/50 transition-all shadow-inner"
+                placeholder="AIzaSy..."
+              />
+              <div className="absolute inset-y-0 right-4 flex items-center h-full pointer-events-none">
+                 <ShieldCheck size={16} className="text-zinc-600 group-focus-within/key:text-yellow-500 transition-colors" />
+              </div>
+            </div>
+            <p className="text-[10px] text-zinc-500 px-1 leading-relaxed">
+              {t.personalApiKeyDesc}
+            </p>
           </div>
 
           {/* Installation Guide */}
