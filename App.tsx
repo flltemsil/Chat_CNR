@@ -502,8 +502,45 @@ const App: React.FC = () => {
             </div>
 
             {loginError && (
-              <div className="bg-red-500/10 border border-red-500/20 text-red-500 text-sm p-4 rounded-xl">
-                {loginError}
+              <div className="bg-red-500/10 border border-red-500/20 text-red-400 text-sm p-4 rounded-2xl space-y-3">
+                <p className="font-medium leading-relaxed">{loginError}</p>
+
+                {loginError.includes("Authorized domains") && (
+                  <div className="pt-2 border-t border-red-500/20 space-y-2.5 text-xs text-zinc-300">
+                    <p className="text-[11px] text-zinc-400 leading-normal">
+                      <strong>Neden bu uyarı çıktı?</strong> Firebase yerindedir. Google, uygulamanızı Vercel gibi yeni bir adrese taşıdığınızda yabancı sitelerin projenizi kullanmasını engellemek için alan adının Firebase Console'a eklenmesini zorunlu tutar.
+                    </p>
+                    <div className="flex flex-col sm:flex-row gap-2 pt-1">
+                      <a
+                        href="https://console.firebase.google.com/project/gen-lang-client-0984066770/authentication/settings"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="px-3 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-center flex items-center justify-center gap-1.5 transition-all shadow-sm"
+                      >
+                        <ExternalLink size={13} />
+                        <span>Firebase Console'da Alan Adını Ekle</span>
+                      </a>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const guestUser: UserProfile = {
+                            uid: "user_" + Math.random().toString(36).substring(2, 9),
+                            name: "Chat_CNR Kullanıcısı",
+                            email: "user@" + (window.location.hostname || "chatcnr.com"),
+                            role: "user",
+                          };
+                          setUser(guestUser);
+                          try {
+                            localStorage.setItem(USER_KEY, JSON.stringify(guestUser));
+                          } catch {}
+                        }}
+                        className="px-3 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-bold text-center transition-all"
+                      >
+                        Hemen Başla (Misafir Girişi)
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
@@ -590,6 +627,25 @@ const App: React.FC = () => {
                 <span className="font-bold text-sm">
                   {language === 'de' ? "Anmelden (Mobil - Falls Popup blockiert)" : (language === 'tr' ? "Giriş Yap (Mobil - Popup Açılmazsa)" : "Sign In (Mobile Fallback)")}
                 </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  const guestUser: UserProfile = {
+                    uid: "guest_" + Math.random().toString(36).substring(2, 9),
+                    name: "Kullanıcı",
+                    email: "user@" + (window.location.hostname || "chatcnr.com"),
+                    role: "user",
+                  };
+                  setUser(guestUser);
+                  try {
+                    localStorage.setItem(USER_KEY, JSON.stringify(guestUser));
+                  } catch {}
+                }}
+                className="w-full py-3 px-4 rounded-2xl border border-zinc-800 hover:border-zinc-700 bg-zinc-900/30 hover:bg-zinc-800/50 text-zinc-400 hover:text-zinc-200 text-xs font-semibold transition-all text-center"
+              >
+                {language === 'tr' ? "Giriş Yapmadan Misafir Olarak Devam Et →" : "Continue as Guest →"}
               </button>
             </div>
 
