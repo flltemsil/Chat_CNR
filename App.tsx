@@ -87,7 +87,6 @@ import {
   serverTimestamp,
   updateDoc,
 } from "./firebase";
-import firebaseConfig from "./firebase-applet-config.json";
 import { UserProfile } from "./types";
 
 const OWNER_EMAIL = "dorukaliarslan20@gmail.com";
