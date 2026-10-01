@@ -12,6 +12,20 @@ dist
 dist-ssr
 *.local
 
+# Environment variables and secrets
+.env
+.env.local
+.env.*.local
+*.env
+.dev.env.json
+firebase-applet-config.json
+
+# Temporary scripts & outputs
+*.py
+*.cjs
+*.txt
+patch.txt
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

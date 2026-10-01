@@ -2,7 +2,6 @@ import express from "express";
 import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
-import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -936,6 +935,7 @@ async function startLocalServer() {
   const PORT = 3000;
   
   if (process.env.NODE_ENV !== "production") {
+    const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
