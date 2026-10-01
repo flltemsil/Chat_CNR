@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Message, ThemeColor, AppearanceMode, Language } from '../types';
-import { Search, User, Cpu, Volume2, Download, ExternalLink, Brain, ThumbsUp, ThumbsDown, RefreshCcw } from 'lucide-react';
+import { Search, User, Cpu, Volume2, Download, ExternalLink, Brain, ThumbsUp, ThumbsDown, RefreshCcw, Layers } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { translations } from '../translations';
 
@@ -15,9 +15,10 @@ interface MessageItemProps {
   onSpeak?: (text: string) => void;
   language?: Language;
   onFeedback?: (messageId: string, feedback: 'useful' | 'wrong' | 'improve') => void;
+  onOpenPresentation?: (topic?: string) => void;
 }
 
-const MessageItem: React.FC<MessageItemProps> = React.memo(({ message, themeColor, appearance, isStreaming, onSpeak, language = 'tr', onFeedback }) => {
+const MessageItem: React.FC<MessageItemProps> = React.memo(({ message, themeColor, appearance, isStreaming, onSpeak, language = 'tr', onFeedback, onOpenPresentation }) => {
   const t = translations[language] || translations.tr;
   const isUser = message.role === 'user';
   const isDark = appearance === 'dark';
@@ -165,6 +166,33 @@ const MessageItem: React.FC<MessageItemProps> = React.memo(({ message, themeColo
                       </a>
                     )
                   ))}
+                </div>
+              </div>
+            )}
+
+            {!isUser && onOpenPresentation && /slayt|sunum|powerpoint|presentation|deck|\.pptx/i.test(message.text) && (
+              <div className={`mt-4 pt-3 border-t ${isDark ? 'border-zinc-800' : 'border-zinc-200'}`}>
+                <div className={`p-3 rounded-2xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+                  isDark ? 'bg-amber-500/10 border-amber-500/20 text-amber-300' : 'bg-amber-50 border-amber-200 text-amber-950'
+                }`}>
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0">
+                      <Layers size={17} />
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold">{language === 'tr' ? 'PowerPoint Sunumu Olarak Aç' : 'Open as PowerPoint Presentation'}</p>
+                      <p className="text-[10px] opacity-80">{language === 'tr' ? 'Slayt Stüdyosunda inceleyin, düzenleyin ve .pptx indirin' : 'Review in Slide Studio, edit and download .pptx'}</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => {
+                      const firstLine = message.text.split('\n')[0].replace(/[#*`_]/g, '').trim();
+                      onOpenPresentation(firstLine || 'Yeni Sunum');
+                    }}
+                    className="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-400 text-black transition-all shadow-sm shrink-0 self-end sm:self-auto active:scale-95"
+                  >
+                    {language === 'tr' ? 'Slaytları Görüntüle' : 'View Slides'}
+                  </button>
                 </div>
               </div>
             )}

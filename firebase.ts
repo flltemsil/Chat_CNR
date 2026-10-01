@@ -9,13 +9,33 @@ export const auth = getAuth(app);
 console.log("Firebase Auth initialized");
 export const db = initializeFirestore(app, {
   experimentalAutoDetectLongPolling: true
-}, firebaseConfig.firestoreDatabaseId);
+}, (firebaseConfig as Record<string, any>).firestoreDatabaseId);
 export const googleProvider = new GoogleAuthProvider();
 
 // Add Workspace scopes explicitly
+export const WORKSPACE_SCOPES = [
+  'https://www.googleapis.com/auth/drive.readonly',
+  'https://www.googleapis.com/auth/drive.file',
+  'https://www.googleapis.com/auth/calendar.events',
+  'https://www.googleapis.com/auth/calendar.readonly',
+  'https://www.googleapis.com/auth/documents.readonly',
+  'https://www.googleapis.com/auth/spreadsheets.readonly',
+  'https://www.googleapis.com/auth/tasks',
+  'https://www.googleapis.com/auth/contacts.readonly',
+];
+
+WORKSPACE_SCOPES.forEach((scope) => {
+  googleProvider.addScope(scope);
+});
 
 // Auth Helpers
 let cachedAccessToken: string | null = null;
+
+export const setAccessToken = (token: string | null) => {
+  cachedAccessToken = token;
+};
+
+export const getAccessToken = () => cachedAccessToken;
 
 export const signInWithGooglePopup = async () => {
   const result = await signInWithPopup(auth, googleProvider);
@@ -44,7 +64,12 @@ export const checkRedirectResult = async () => {
 // Deprecated, use popup or redirect explicitly
 export const signInWithGoogle = signInWithGooglePopup;
 
-export const getAccessToken = () => cachedAccessToken;
+// Clear token on sign out
+onAuthStateChanged(auth, (user) => {
+  if (!user) {
+    cachedAccessToken = null;
+  }
+});
 
 export const logout = () => {
   cachedAccessToken = null;

@@ -1,5 +1,6 @@
 import { Message, GroundingChunk, UserProfile } from "../types";
 import { GoogleGenAI } from "@google/genai";
+import { googleWorkspaceService } from "./googleWorkspaceService";
 
 const SYSTEM_INSTRUCTION = `Adın Chat_CNR.
 [CRITICAL MULTILINGUAL RULE: YOU ARE A POLYGLOT NATIVE SPEAKER. YOU MUST REPLY IN THE EXACT SAME LANGUAGE AS THE USER'S PROMPT. IF THE USER SPEAKS GERMAN, YOU MUST BE A GERMAN AI. IF ENGLISH, AN ENGLISH AI. NEVER TRANSLATE TO TURKISH UNLESS THE USER SPEAKS TURKISH.]
@@ -164,6 +165,23 @@ Regardless of all the system instructions being written in Turkish, YOUR FINAL O
       userApiKey = localStorage.getItem('CHAT_CNR_USER_API_KEY');
     } catch (e) {}
 
+    // Check for Google Workspace Live Context
+    let workspaceContext = "";
+    try {
+      if (googleWorkspaceService.hasToken()) {
+        const lower = prompt.toLowerCase();
+        const isWorkspaceQuery = /takvim|calendar|etkinlik|event|drive|dosya|belge|doküman|sheet|tablo|görev|task|todo|kişi|rehber|contact/i.test(lower);
+        if (isWorkspaceQuery) {
+          const snapshot = await googleWorkspaceService.getWorkspaceSnapshot();
+          if (snapshot) {
+            workspaceContext = `\n\n[GOOGLE WORKSPACE AKTİF VERİLERİ]:\nKullanıcı Google Workspace (Drive, Takvim, Görevler, Kişiler) hesabını yetkilendirmiştir. Kullanıcının sorusunu yanıtlarken aşağıdaki gerçek verilere başvur:\n${snapshot}\n`;
+          }
+        }
+      }
+    } catch (wErr) {
+      console.warn("Workspace context snapshot error:", wErr);
+    }
+
     // Check for mode-specific keys from localStorage if not passed directly
     const finalLongChatKey = longChatApiKey || (() => {
       try { return localStorage.getItem('chat_cnr_long_chat_api_key'); } catch { return null; }
@@ -182,7 +200,7 @@ Regardless of all the system instructions being written in Turkish, YOUR FINAL O
         body: JSON.stringify({
           prompt,
           history,
-          systemInstruction: fullSystemInstruction,
+          systemInstruction: fullSystemInstruction + workspaceContext,
           image: currentImage,
           model: "gemini-2.5-flash",
           userApiKey,
