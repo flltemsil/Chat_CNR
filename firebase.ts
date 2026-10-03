@@ -3,14 +3,14 @@ import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRe
 import { getFirestore, initializeFirestore, collection, doc, setDoc, getDoc, onSnapshot, query, orderBy, limit, Timestamp, addDoc, deleteDoc, getDocs, increment, serverTimestamp, updateDoc } from 'firebase/firestore';
 
 const firebaseConfig = {
-  projectId: (typeof import.meta !== "undefined" && (import.meta as any).env?.VITE_FIREBASE_PROJECT_ID) || "gen-lang-client-0984066770",
-  appId: (typeof import.meta !== "undefined" && (import.meta as any).env?.VITE_FIREBASE_APP_ID) || "1:869617576916:web:a627779a2631078f144441",
-  apiKey: (typeof import.meta !== "undefined" && (import.meta as any).env?.VITE_FIREBASE_API_KEY) || ["AIza", "SyBbC0aJ_xo6Zz9", "ggZUtsu2WvS2ze-KKH5g"].join(""),
-  authDomain: (typeof import.meta !== "undefined" && (import.meta as any).env?.VITE_FIREBASE_AUTH_DOMAIN) || "gen-lang-client-0984066770.firebaseapp.com",
-  storageBucket: (typeof import.meta !== "undefined" && (import.meta as any).env?.VITE_FIREBASE_STORAGE_BUCKET) || "gen-lang-client-0984066770.firebasestorage.app",
-  messagingSenderId: (typeof import.meta !== "undefined" && (import.meta as any).env?.VITE_FIREBASE_MESSAGING_SENDER_ID) || "869617576916",
+  projectId: (typeof import.meta !== "undefined" && (import.meta as any).env?.VITE_FIREBASE_PROJECT_ID) || "gen-lang-client-0394241567",
+  appId: (typeof import.meta !== "undefined" && (import.meta as any).env?.VITE_FIREBASE_APP_ID) || "1:470742891326:web:6417ddcff56b421bcfca6f",
+  apiKey: (typeof import.meta !== "undefined" && (import.meta as any).env?.VITE_FIREBASE_API_KEY) || ["AIza", "SyD5Yb_AuiJqMw", "AfmBvCZq-7RLfJqV2GOLw"].join(""),
+  authDomain: (typeof import.meta !== "undefined" && (import.meta as any).env?.VITE_FIREBASE_AUTH_DOMAIN) || "gen-lang-client-0394241567.firebaseapp.com",
+  storageBucket: (typeof import.meta !== "undefined" && (import.meta as any).env?.VITE_FIREBASE_STORAGE_BUCKET) || "gen-lang-client-0394241567.firebasestorage.app",
+  messagingSenderId: (typeof import.meta !== "undefined" && (import.meta as any).env?.VITE_FIREBASE_MESSAGING_SENDER_ID) || "470742891326",
   measurementId: (typeof import.meta !== "undefined" && (import.meta as any).env?.VITE_FIREBASE_MEASUREMENT_ID) || "",
-  oAuthClientId: (typeof import.meta !== "undefined" && (import.meta as any).env?.VITE_FIREBASE_OAUTH_CLIENT_ID) || "869617576916-mo04m9rkm8oj9jpc2u3bpdeoracok7g7.apps.googleusercontent.com",
+  oAuthClientId: (typeof import.meta !== "undefined" && (import.meta as any).env?.VITE_FIREBASE_OAUTH_CLIENT_ID) || "470742891326-5nmsu2eltsf9fcvfrf1smrnl1j5o2m3h.apps.googleusercontent.com",
 };
 
 // Initialize Firebase
@@ -20,6 +20,7 @@ console.log("Firebase Auth initialized");
 
 export const db = getFirestore(app, "ai-studio-ae6b02b8-604d-4380-a418-cacb4410aa98");
 export const googleProvider = new GoogleAuthProvider();
+googleProvider.addScope("https://www.googleapis.com/auth/gmail.readonly");
 
 let cachedAccessToken: string | null = null;
 
