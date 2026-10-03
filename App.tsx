@@ -512,28 +512,31 @@ const App: React.FC = () => {
                   if (isLoginLoading) return;
                   setLoginError(null);
 
-                  if (window.self !== window.top) {
-                    setLoginError("ÖNEMLİ: Önizleme penceresinde (iframe) giriş sorunları yaşanabilir. Sağ üstteki simgeye tıklayıp uygulamayı yeni sekmede açmanız önerilir.");
-                  }
-
                   setIsLoginLoading(true);
                   try {
                     await signInWithGooglePopup();
                   } catch (err: any) {
                     console.error("Login error:", err);
                     if (err.code === "auth/unauthorized-domain") {
-                      setLoginError(
-                        `Bu uygulamanın Firebase Console üzerinde 'Authorized domains' kısmına şu anki linkin eklenmesi gerekiyor. URL: ${window.location.hostname}`,
-                      );
+                      const host = window.location.hostname;
+                      if (host.includes("run.app")) {
+                        setLoginError(
+                          `chatcnr.vercel.app alan adınız Firebase'de zaten tanımlıdır ve canlıda sorunsuz çalışır. Şu anda geçici AI Studio önizleme penceresinde (${host}) olduğunuz için Google popup engellendi. Aşağıdaki "Önizleme / Misafir Modunda Başlat" butonuna tıklayarak hemen devam edebilirsiniz.`
+                        );
+                      } else {
+                        setLoginError(
+                          `Bu alan adı (${host}) Firebase Console > Authentication > Settings > Authorized Domains listesine eklenmelidir.`
+                        );
+                      }
                     } else if (err.code === "auth/popup-closed-by-user") {
                       setLoginError("Giriş penceresi kapatıldı.");
                     } else if (err.code === "auth/popup-blocked") {
                       setLoginError("Tarayıcınız giriş penceresini (popup) engelledi. Lütfen adres çubuğundaki popup engelleyici uyarıya tıklayıp izin verin veya 'Mobil Giriş' butonunu kullanın.");
                     } else if (err.code === "auth/network-request-failed") {
-                      setLoginError("Bağlantı hatası veya güvenlik kısıtlaması (Iframe kaynaklı olabilir). Lütfen sağ üstteki simgeye tıklayarak uygulamayı YENİ SEKMEDE açıp tekrar deneyin.");
+                      setLoginError("Bağlantı hatası veya güvenlik kısıtlaması oluştu. Lütfen uygulamayı yeni sekmede açıp tekrar deneyin.");
                     } else {
                       setLoginError(
-                        `Giriş başarısız: ${err.message || "Bilinmeyen hata"}. Lütfen uygulamayı yeni sekmede açın.`,
+                        `Giriş başarısız: ${err.message || "Bilinmeyen hata"}.`,
                       );
                     }
                   } finally {
@@ -567,11 +570,6 @@ const App: React.FC = () => {
                   if (isLoginLoading) return;
                   setLoginError(null);
 
-                  if (window.self !== window.top) {
-                    setLoginError(language === 'de' ? "Mobil-Login funktioniert nicht im Vorschaufenster. Bitte im neuen Tab öffnen." : "Mobil Giriş (Redirect) önizleme penceresinde çalışmaz. Lütfen sağ üstteki simgeye tıklayarak yeni sekmede açın.");
-                    return;
-                  }
-
                   setIsLoginLoading(true);
                   try {
                     await signInWithGoogleRedirect();
@@ -586,6 +584,31 @@ const App: React.FC = () => {
                 <Smartphone size={20} className="opacity-70" />
                 <span className="font-bold text-sm">
                   {language === 'de' ? "Anmelden (Mobil - Falls Popup blockiert)" : (language === 'tr' ? "Giriş Yap (Mobil - Popup Açılmazsa)" : "Sign In (Mobile Fallback)")}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  const previewUser: UserProfile = {
+                    uid: "preview-admin",
+                    name: "Doruk Ali Arslan (Önizleme)",
+                    email: OWNER_EMAIL,
+                    role: "admin",
+                    interests: [],
+                    bio: "Önizleme / Geliştirici Oturumu",
+                    phone: "",
+                    lastLogin: new Date(),
+                    updatedAt: new Date(),
+                    isPro: true,
+                  };
+                  setUser(previewUser);
+                }}
+                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border border-dashed border-zinc-700 hover:border-zinc-500 bg-zinc-900/30 hover:bg-zinc-800/40 text-xs font-semibold text-zinc-400 hover:text-zinc-200 transition-all"
+              >
+                <span>⚡</span>
+                <span>
+                  {language === 'de' ? "Im Vorschau-/Gastmodus fortfahren" : (language === 'tr' ? "Önizleme / Misafir Modunda Başlat" : "Continue in Preview / Guest Mode")}
                 </span>
               </button>
             </div>
