@@ -20,6 +20,7 @@ import { AppNotification } from "./types";
 import { UpdateModal } from "./components/UpdateModal";
 import { updateService, UpdateInfo } from "./services/updateService";
 import { APP_VERSION } from "./version";
+import { locationService, UserLocation } from "./services/locationService";
 import {
   Menu,
   Plus,
@@ -835,6 +836,27 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser, language, setLanguage 
   const [isActivityOpen, setIsActivityOpen] = useState(false);
   const [isLibraryOpen, setIsLibraryOpen] = useState(false);
 
+  // Internal Geolocation & Location Awareness (Seamless background support)
+  const [currentLocation, setCurrentLocation] = useState<UserLocation | null>(() => locationService.getCachedLocation());
+
+  useEffect(() => {
+    // Cache pending shareId from URL immediately on boot
+    try {
+      const urlParams = new URLSearchParams(window.location.search);
+      const shareId = urlParams.get("shareId");
+      if (shareId) {
+        sessionStorage.setItem("pending_share_id", shareId);
+      }
+    } catch (e) {}
+
+    // Seamlessly pre-warm location in background
+    if (navigator.geolocation && !currentLocation) {
+      locationService.getCurrentLocation(false).then((loc) => {
+        setCurrentLocation(loc);
+      }).catch(() => {});
+    }
+  }, []);
+
   const [themeMode, setThemeMode] = useState<"auto" | "light" | "dark">(() => {
     try {
       return (
@@ -1217,7 +1239,13 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser, language, setLanguage 
     const fetchSessions = async () => {
       let importedSharedId: string | null = null;
       const urlParams = new URLSearchParams(window.location.search);
-      const shareId = urlParams.get("shareId");
+      let shareId = urlParams.get("shareId");
+      if (!shareId) {
+        try {
+          shareId = sessionStorage.getItem("pending_share_id");
+          if (shareId) sessionStorage.removeItem("pending_share_id");
+        } catch (e) {}
+      }
 
       if (shareId) {
         window.history.replaceState({}, document.title, window.location.pathname);
@@ -1867,6 +1895,16 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser, language, setLanguage 
 
       await incrementUsage("messages");
 
+      // Seamless automatic location detection for location-related questions
+      let locationToPass = currentLocation;
+      const isLocationQuery = /neredeyim|nerede|konum|neresi|nereye|yakın|eczane|hava durumu|hastane|kafe|restoran|harita|bölge/i.test(text);
+      if (isLocationQuery && !locationToPass && typeof navigator !== "undefined" && navigator.geolocation) {
+        try {
+          locationToPass = await locationService.getCurrentLocation(false);
+          setCurrentLocation(locationToPass);
+        } catch (e) {}
+      }
+
       let finalResponseText = "";
       let finalSources: any[] = [];
       let finalGrounded = false;
@@ -1888,7 +1926,8 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser, language, setLanguage 
         false,
         "standard",
         longChatApiKey,
-        rpModeApiKey
+        rpModeApiKey,
+        locationToPass
       );
 
         // Show streaming message locally only
@@ -2418,9 +2457,48 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser, language, setLanguage 
                 <button
                   onClick={async () => {
                     try {
+                      let msgs = activeSession.messages || [];
+                      if (!msgs.length) {
+                        try {
+                          const q = query(
+                            collection(db, "users", user.uid, "sessions", activeSession.id, "messages"),
+                            orderBy("timestamp", "asc")
+                          );
+                          const snap = await getDocs(q);
+                          msgs = snap.docs.map(d => ({ id: d.id, ...d.data() })) as any;
+                        } catch (e) {
+                          console.warn("Could not fetch messages for share:", e);
+                        }
+                      }
+
+                      // Save to shared_sessions in Firestore
+                      const cleanMessages = msgs.map(m => ({
+                        id: m.id || String(Date.now()) + Math.random().toString(36).substring(7),
+                        role: (m as any).role || (m as any).sender || "user",
+                        text: m.text || "",
+                        timestamp: m.timestamp instanceof Date 
+                          ? m.timestamp.toISOString() 
+                          : (typeof m.timestamp === 'object' && (m.timestamp as any)?.toDate 
+                              ? (m.timestamp as any).toDate().toISOString() 
+                              : String(m.timestamp || new Date().toISOString())),
+                        imageUrl: m.imageUrl || null,
+                        sources: m.sources || [],
+                        grounded: !!m.grounded
+                      }));
+
+                      await setDoc(doc(db, "shared_sessions", activeSession.id), {
+                        id: activeSession.id,
+                        title: activeSession.title || "Sohbet",
+                        creatorEmail: user?.email || "",
+                        creatorName: user?.name || "Kullanıcı",
+                        createdAt: serverTimestamp(),
+                        messages: cleanMessages
+                      });
+
                       const shareUrl = `${window.location.origin}/?shareId=${activeSession.id}`;
                       setShareDialogUrl(shareUrl);
                     } catch (err: any) {
+                      console.error("Share error:", err);
                       alert(language === 'de' ? "Freigabe fehlgeschlagen: " + err.message : (language === 'tr' ? "Paylaşım başarısız oldu: " + err.message : "Share failed: " + err.message));
                     }
                   }}

@@ -66,7 +66,8 @@ export class ChatCNRService {
     isGoogleSearchMode: boolean = false,
     conversationMode: "standard" | "long_chat" | "rp_mode" = "standard",
     longChatApiKey?: string | null,
-    rpModeApiKey?: string | null
+    rpModeApiKey?: string | null,
+    userLocation?: { latitude: number; longitude: number; formattedAddress?: string } | null
   ): AsyncGenerator<{ text: string; sources: GroundingChunk[]; grounded?: boolean }> {
     
     let baseInstruction = SYSTEM_INSTRUCTION;
@@ -138,6 +139,13 @@ Do NOT default to Turkish just because this system prompt is in Turkish. Your re
       if (userProfile.bio) {
         identityInstruction += `SOHBET HAFIZASI: ${userProfile.bio}. Kullanıcının anılarını ve tercihlerini, SADECE konuyla ilgiliyse doğal bir dille sohbete yedir. Her cümlede hafızayı zorlama, çok kısa ve öz yanıtlar ver! `;
       }
+    }
+
+    if (userLocation) {
+      identityInstruction += `\n[KULLANICININ ANLIK CANLI COĞRAFİ KONUMU (GPS & GOOGLE MAPS)]:
+- Kullanıcının şu anki koordinatları: Enlem ${userLocation.latitude}, Boylam ${userLocation.longitude}.
+- Açık Bölge/Adres: ${userLocation.formattedAddress || 'Bölge tespit edildi'}.
+- Kullanıcı hava durumu, "neredeyim", "yakınımdaki yerler", "eczane", "kafe", "yol tarifi", "restoran" veya yerel bir konu sorduğunda bu anlık konum bilgisini baz al ve gerekirse Google Maps linki ver. `;
     }
 
     const now = new Date();
