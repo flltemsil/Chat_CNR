@@ -20,23 +20,12 @@ console.log("Firebase Auth initialized");
 
 export const db = getFirestore(app, "ai-studio-ae6b02b8-604d-4380-a418-cacb4410aa98");
 export const googleProvider = new GoogleAuthProvider();
-googleProvider.addScope("https://www.googleapis.com/auth/gmail.readonly");
-
-let cachedAccessToken: string | null = null;
-
-export const setAccessToken = (token: string | null) => {
-  cachedAccessToken = token;
-};
-
-export const getAccessToken = () => cachedAccessToken;
+googleProvider.setCustomParameters({
+  prompt: 'select_account'
+});
 
 export const signInWithGooglePopup = async () => {
-  const result = await signInWithPopup(auth, googleProvider);
-  const credential = GoogleAuthProvider.credentialFromResult(result);
-  if (credential?.accessToken) {
-    cachedAccessToken = credential.accessToken;
-  }
-  return result;
+  return await signInWithPopup(auth, googleProvider);
 };
 
 export const signInWithGoogleRedirect = async () => {
@@ -44,28 +33,13 @@ export const signInWithGoogleRedirect = async () => {
 };
 
 export const checkRedirectResult = async () => {
-  const result = await getRedirectResult(auth);
-  if (result) {
-    const credential = GoogleAuthProvider.credentialFromResult(result);
-    if (credential?.accessToken) {
-      cachedAccessToken = credential.accessToken;
-    }
-  }
-  return result;
+  return await getRedirectResult(auth);
 };
 
 // Deprecated, use popup or redirect explicitly
 export const signInWithGoogle = signInWithGooglePopup;
 
-// Clear token on sign out
-onAuthStateChanged(auth, (user) => {
-  if (!user) {
-    cachedAccessToken = null;
-  }
-});
-
 export const logout = () => {
-  cachedAccessToken = null;
   return auth.signOut();
 };
 
