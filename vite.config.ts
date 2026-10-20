@@ -87,7 +87,7 @@ export default defineConfig(({ mode }) => {
             clientsClaim: true,
             skipWaiting: true,
             globPatterns: ['**/*.{js,css,ico,png,svg,woff2}'],
-            navigateFallbackDenylist: [/^\/api/],
+            navigateFallbackDenylist: [/^\/api/, /^\/__/],
             runtimeCaching: [
               {
                 urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,

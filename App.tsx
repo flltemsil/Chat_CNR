@@ -3,8 +3,6 @@ import { chatCNRService } from "./services/chatCNRService";
 import {
   Message,
   ChatSession,
-  ThemeColor,
-  AppearanceMode,
   Language,
 } from "./types";
 import { translations } from "./translations";
@@ -29,7 +27,6 @@ import {
   MessageSquare,
   Settings,
   Mic,
-  MicOff,
   Volume2,
   VolumeX,
   Camera,
@@ -38,9 +35,7 @@ import {
   LogOut,
   Shield,
   Users,
-  Image as ImageIcon,
   Sparkles,
-  Key,
   Check,
   ExternalLink,
   Heart,
@@ -48,21 +43,19 @@ import {
   Download,
   Smartphone,
   Brain,
-  Microscope,
   Sun,
   Moon,
-  Monitor, AlertTriangle,
-  Network,
+  Monitor,
+  AlertTriangle,
   Bell,
   Share2,
   Zap,
   Search,
   Mail,
   Crown,
-  Compass,
-  Lightbulb,
-  PenTool,
-  Code, Activity, Globe, RefreshCw} from "lucide-react";
+  Activity,
+  RefreshCw,
+} from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import {
   auth,
@@ -80,10 +73,8 @@ import {
   query,
   orderBy,
   Timestamp,
-  addDoc,
   deleteDoc,
   getDocs,
-  FirebaseUser,
   increment,
   serverTimestamp,
   updateDoc,
@@ -301,14 +292,10 @@ const App: React.FC = () => {
 
     // Check redirect result first (useful for mobile)
     checkRedirectResult().catch((err) => {
-      console.error("Redirect check error:", err);
+      console.warn("Redirect check result info:", err);
       if (err.code === "auth/unauthorized-domain") {
         setLoginError(
-          `Bu uygulamanın Firebase Console üzerinde 'Authorized domains' kısmına URL'yi eklemeniz gerekiyor: ${window.location.hostname}`,
-        );
-      } else {
-        setLoginError(
-          `Yönlendirme girişi başarısız: ${err.message || "Bilinmeyen hata"}`,
+          `Bu alan adı (${window.location.hostname}) Firebase Console > Authentication > Settings > Authorized Domains listesine eklenmelidir.`
         );
       }
     });
@@ -518,15 +505,20 @@ const App: React.FC = () => {
                     await signInWithGooglePopup();
                   } catch (err: any) {
                     console.error("Login error:", err);
-                    if (err.code === "auth/unauthorized-domain") {
-                      const host = window.location.hostname;
+                    if (err.code === "auth/popup-blocked") {
+                      try {
+                        await signInWithGoogleRedirect();
+                        return;
+                      } catch (redirectErr: any) {
+                        setLoginError(`Giriş başlatılamadı: ${redirectErr.message}`);
+                      }
+                    } else if (err.code === "auth/unauthorized-domain") {
+                      const currentHost = window.location.hostname;
                       setLoginError(
-                        `Bu alan adı (${host}) Firebase Console > Authentication > Settings > Authorized Domains listesine eklenmelidir.`
+                        `Bu alan adı (${currentHost}) Firebase Console > Authentication > Settings > Authorized Domains listesine eklenmelidir.`
                       );
                     } else if (err.code === "auth/popup-closed-by-user") {
                       setLoginError("Giriş penceresi kapatıldı.");
-                    } else if (err.code === "auth/popup-blocked") {
-                      setLoginError("Tarayıcınız giriş penceresini (popup) engelledi. Lütfen adres çubuğundaki popup engelleyici uyarıya tıklayıp izin verin veya aşağıdaki 'Giriş Yap (Mobil)' butonunu kullanın.");
                     } else if (err.code === "auth/network-request-failed") {
                       setLoginError("Bağlantı hatası veya güvenlik kısıtlaması oluştu. Lütfen bağlantınızı kontrol edip tekrar deneyin.");
                     } else {
