@@ -3,12 +3,43 @@ import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
 import { GoogleGenAI } from "@google/genai";
+import { cert, getApps, initializeApp } from "firebase-admin/app";
+import { getAuth } from "firebase-admin/auth";
+import type { Request, Response, NextFunction } from "express";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
 app.use(express.json({ limit: '12mb' }));
+
+// Firebase ID-token verification for user-facing API routes.
+let cachedFirebaseAdminAuth: ReturnType<typeof getAuth> | null = null;
+function getFirebaseAdminAuth() {
+  if (cachedFirebaseAdminAuth) return cachedFirebaseAdminAuth;
+  const raw = process.env.FIREBASE_SERVICE_ACCOUNT_JSON || process.env.FIREBASE_SERVICE_ACCOUNT;
+  if (!raw) return null;
+  const serviceAccount = JSON.parse(raw);
+  const adminApp = getApps().find((item) => item.name === 'chat-cnr-admin') || initializeApp({ credential: cert(serviceAccount) }, 'chat-cnr-admin');
+  cachedFirebaseAdminAuth = getAuth(adminApp);
+  return cachedFirebaseAdminAuth;
+}
+
+async function requireFirebaseAuth(req: Request, res: Response, next: NextFunction) {
+  const authorization = req.header('authorization') || '';
+  const match = authorization.match(/^Bearer\\s+(.+)$/i);
+  if (!match) return res.status(401).json({ error: 'AUTH_REQUIRED' });
+  try {
+    const adminAuth = getFirebaseAdminAuth();
+    if (!adminAuth) return res.status(503).json({ error: 'AUTH_SERVICE_NOT_CONFIGURED' });
+    const decoded = await adminAuth.verifyIdToken(match[1], true);
+    res.locals.firebaseUser = { uid: decoded.uid, email: decoded.email || null, admin: decoded.admin === true };
+    return next();
+  } catch (error) {
+    console.error('Firebase ID token verification failed.');
+    return res.status(401).json({ error: 'INVALID_AUTH_TOKEN' });
+  }
+}
 
 // Auto-load secrets from /app/.dev.env.json if available
 let devEnvSecrets: Record<string, string> = {};
@@ -125,7 +156,7 @@ app.get("/api/version", (req, res) => {
 });
 
 // AI Chat Proxy Route
-app.post("/api/chat", async (req, res) => {
+app.post("/api/chat", requireFirebaseAuth, async (req, res) => {
   const {
     prompt,
     history,
@@ -358,7 +389,7 @@ Do not claim that you have a proprietary neural architecture, a one-million-toke
 });
 
 // Dedicated Google Search & Universal Language Translation Route
-app.post("/api/google-search", async (req, res) => {
+app.post("/api/google-search", requireFirebaseAuth, async (req, res) => {
   const { query, userLanguage, targetLanguage, userApiKey } = req.body;
   if (!query || typeof query !== "string" || !query.trim()) {
     return res.status(400).json({ error: "Arama sorgusu belirtilmelidir." });
@@ -507,7 +538,7 @@ Asla yabancı dilde çevrilmemiş cümle veya anlaşılmaz yabancı terim bırak
 
 
 // Text to Speech Proxy Route
-app.post("/api/tts", async (req, res) => {
+app.post("/api/tts", requireFirebaseAuth, async (req, res) => {
   const { text, userApiKey, language } = req.body;
   const modelName = "gemini-3.1-flash-tts-preview";
 
@@ -591,7 +622,7 @@ app.post("/api/tts", async (req, res) => {
 });
 
 // Status of all specialized dedicated keys (PICTURE_AI, LONG_CHAT, RP_MODE)
-app.get("/api/keys/status", (req, res) => {
+app.get("/api/keys/status", requireFirebaseAuth, (req, res) => {
   const picKey = getPictureAIKey();
   const longKey = getLongChatKey();
   const rpKey = getRPModeKey();
@@ -616,7 +647,7 @@ app.get("/api/keys/status", (req, res) => {
 });
 
 // Dedicated Image Generation Route - Powered by PICTURE_AI secret (Chat_CNR dahili korteksi)
-app.get("/api/picture-ai/status", (req, res) => {
+app.get("/api/picture-ai/status", requireFirebaseAuth, (req, res) => {
   const key = getPictureAIKey();
   res.json({
     connected: !!key && key.length > 5,
@@ -625,7 +656,7 @@ app.get("/api/picture-ai/status", (req, res) => {
   });
 });
 
-app.post("/api/generate-image", async (req, res) => {
+app.post("/api/generate-image", requireFirebaseAuth, async (req, res) => {
   const { prompt, aspectRatio = "1:1", userApiKey } = req.body;
 
   if (!prompt || typeof prompt !== "string" || !prompt.trim()) {
@@ -742,7 +773,7 @@ app.post("/api/generate-image", async (req, res) => {
   });
 });
 
-app.post("/api/analyze-preferences", async (req, res) => {
+app.post("/api/analyze-preferences", requireFirebaseAuth, async (req, res) => {
   const { history, currentBio, currentInterests, userApiKey } = req.body;
   if (!history || history.length === 0) return res.json({});
 
