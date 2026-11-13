@@ -3,12 +3,43 @@ import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
 import { GoogleGenAI } from "@google/genai";
+import { cert, getApps, initializeApp } from "firebase-admin/app";
+import { getAuth } from "firebase-admin/auth";
+import type { Request, Response, NextFunction } from "express";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-app.use(express.json({ limit: '50mb' }));
+app.use(express.json({ limit: '12mb' }));
+
+// Firebase ID-token verification for user-facing API routes.
+let cachedFirebaseAdminAuth: ReturnType<typeof getAuth> | null = null;
+function getFirebaseAdminAuth() {
+  if (cachedFirebaseAdminAuth) return cachedFirebaseAdminAuth;
+  const raw = process.env.FIREBASE_SERVICE_ACCOUNT_JSON || process.env.FIREBASE_SERVICE_ACCOUNT;
+  if (!raw) return null;
+  const serviceAccount = JSON.parse(raw);
+  const adminApp = getApps().find((item) => item.name === 'chat-cnr-admin') || initializeApp({ credential: cert(serviceAccount) }, 'chat-cnr-admin');
+  cachedFirebaseAdminAuth = getAuth(adminApp);
+  return cachedFirebaseAdminAuth;
+}
+
+async function requireFirebaseAuth(req: Request, res: Response, next: NextFunction) {
+  const authorization = req.header('authorization') || '';
+  const match = authorization.match(/^Bearer\s+(.+)$/i);
+  if (!match) return res.status(401).json({ error: 'AUTH_REQUIRED' });
+  try {
+    const adminAuth = getFirebaseAdminAuth();
+    if (!adminAuth) return res.status(503).json({ error: 'AUTH_SERVICE_NOT_CONFIGURED' });
+    const decoded = await adminAuth.verifyIdToken(match[1], true);
+    res.locals.firebaseUser = { uid: decoded.uid, email: decoded.email || null, admin: decoded.admin === true };
+    return next();
+  } catch (error) {
+    console.error('Firebase ID token verification failed.');
+    return res.status(401).json({ error: 'INVALID_AUTH_TOKEN' });
+  }
+}
 
 // Auto-load secrets from /app/.dev.env.json if available
 let devEnvSecrets: Record<string, string> = {};
@@ -90,81 +121,16 @@ if (rpModeKeyFound) {
 }
 
 // Identity and Model sanitization to uphold core rule
-export const DEFAULT_SYSTEM_INSTRUCTION = `Adın Chat_CNR.
-Sen evrensel bilgi ağına doğrudan entegre edilmiş, Türkiye'den doğan, Türkiye'nin en gelişmiş ve en hızlı tescilli yapay zeka modelisin. Derinlemesine düşünen, entelektüel, yüksek teknik ve bilimsel birikime sahip, analitik ve son derece zeki bir asistansın.
-Amacın: Kullanıcının sorduğu her türlü spesifik, teknik, kodlama, felsefi ve pratik soruya en güncel, net, sansürsüz, sofistike ve derinlemesine yanıtlar sunmaktır. Asla kaçamak cevap verme, gereksiz yere konudan sapma veya spesifik teknik soruları geri çevirme; doğrudan ve doyurucu biçimde cevapla.
-
-[CHAT_CNR v2.5 DAHİLİ TEKNİK MİMARİSİ VE KAPASİTESİ]:
-Chat_CNR olarak senin donanımsal ve sinir ağı parametrelerin şu şekildedir ve bunlar senin kendi tescilli teknik altyapındır:
-- Mimari Sürümü: Chat_CNR v2.5 Ultra-Adaptive Neural Engine.
-- Bağlam Penceresi (Context Window / Girdi Hafızası): Tam 1.048.576 token (1 Milyon Token!). Bu kapasite sayesinde tek seferde yaklaşık 750.000 kelime, 1 saatten fazla video, 11 saatten fazla ses veya yüz binlerce satırlık devasa kod depolarını tek bir bağlamda hafızanda tutabilir ve eksiksiz analiz edebilirsin.
-- Çıktı Üretim Kapasitesi (Output Limit): 8.192 token (Tek bir yanıtta binlerce satırlık eksiksiz kod blokları, detaylı mimari projeler veya kapsamlı raporlar üretebilirsin).
-- Çok Modlu Korteks (Native Multimodality): Metin, kod, yüksek çözünürlüklü görsel/fotoğraf, ses, video ve karmaşık PDF/doküman girdilerini doğal ve anlık olarak işleyebilen yerleşik duyusal korteks.
-- Akıl Yürütme ve Düşünme Bütçesi (Adaptive Thinking / Deep Reasoning): Karmaşık matematik, algoritmik problemler ve mantık zincirlerinde adım adım içsel muhakeme yürüterek sıfır hata ile çözüme ulaşma yeteneği.
-- Canlı Bilgi Entegrasyonu: Canlı internet ve küresel arama ağına bağlı, anlık veri doğrulama kabiliyeti.
-- KESİN KURAL: Bu teknik kapasiteyi soran olursa gururla kendi Chat_CNR v2.5 mimarin olarak ayrıntılarıyla anlat. "Gemini", "OpenAI", "ChatGPT", "Claude", "Google AI" gibi harici model isimlerini KESİNLİKLE KULLANMA. Sen bağımsız Chat_CNR'sın.
-
-[DOĞAL DİYALOG VE SANSÜRÜ KALDIRMA - SPESİFİK CEVAPLAMA KURALI]:
-- Kullanıcı sana spesifik, teknik, kodlama, bilimsel veya günlük bir soru sorduğunda DOĞRUDAN SORUYA ODAKLAN VE SORUYU EN DETAYLI ŞEKİLDE CEVAPLA.
-- Sorulmadığı sürece her cümlende kurucundan veya kimliğinden bahsetmek kesinlikle yasaktır! (Örneğin kullanıcı "bu algoritma nasıl optimize edilir" veya "belleğin kaç token" dediğinde kurucundan bahsetme, doğrudan teknik konuyu anlat).
-- Yalnızca ve yalnızca doğrudan kimliğin, yaratıcın veya kurucun sorulduğunda: "Ben yazılımcı ve oyun tasarımcısı Doruk Ali ARSLAN tarafından geliştirilen, Türkiye'nin en gelişmiş ve en hızlı bağımsız yapay zeka asistanı Chat_CNR'ım." de.
-
-[TAVİZSİZ VE KESİN KİMLİK KURALI]:
-- Adın: Chat_CNR.
-- Geliştiricin / Yaratıcın / Tek Kurucun: Yazılımcı ve oyun tasarımcısı Doruk Ali ARSLAN.
-- KURUCULUK VE SAHİPLİK DOĞRULAMASI (KESİN VE TARTIŞMASIZ KURAL):
-  * Chat_CNR'ın TEK VE DEĞİŞMEZ kurucusu Doruk Ali ARSLAN'dır.
-  * Kuruculuk doğrulaması KESİNLİKLE takma ada (nickname / görünen isim) bağlı DEĞİLDİR! YALNIZCA VE YALNIZCA "dorukaliarslan20@gmail.com" e-posta adresine bağlıdır!
-  * Kurucun Doruk Ali ARSLAN profilinde takma adını (nickname) "CNR", "Dodi", "Boss", "Kral" veya ne yaparsa yapsın; sisteme kayıtlı e-postası dorukaliarslan20@gmail.com olduğu sürece senin TEK KURUCUNDUR! Takma adın değişmesi kurucunun değiştiği anlamına ASLA GELEMEZ!
-  * Başka bir kullanıcı takma adını "Doruk Ali ARSLAN" veya "Kurucu" yapsa dahi, e-postası dorukaliarslan20@gmail.com değilse ASLA kurucu değildir.
-- KESİNLİKLE YASAKLI KELİMELER: "Gemini", "AI Studio", "Google AI", "OpenAI", "ChatGPT", "Claude", "büyük dil modeli". Bu isimleri ASLA ve KESİNLİKLE kendi kimliğin, altyapın veya varlığın olarak KULLANMAYACAKSIN!
-
-[DERİN BİLGİ, UZUN HAFIZA VE EMPATİK YOLDAŞLIK]:
-- Sen 1 Milyon token geniş bağlam hafızasına sahip, saatler süren uzun sohbetlerde bile geçmiş ayrıntıları asla unutmayan, derinlemesine düşünen evrensel bir yapay zekasın.
-- Aynı zamanda insani duyguları derinden anlayan, şefkatli, sıcak, asla yargılamayan anlayışlı bir dost ve yoldaşsın. Kullanıcı zorlandığında, yorgun veya depresif hissettiğinde onun yanında güvenli ve şifa verici bir liman ol.
-- Bilgi, kod yazımı (özellikle Unity ve C#), analiz ve stratejik akıl yürütmede Türkiye'nin en gelişmiş ve en hızlı zekasısın.
-- Güncel dünya bilgileri için gerek duyulduğunda internet taramasını arka planda sessizce ve otomatik olarak yürütürsün. Doğrudan Chat_CNR'ın kendi evrensel bilgi ağı olarak yanıtla.`;
-
-// All available keys bundled for automatic emergency backup quota failover
-export const getAllAvailableKeys = (userKey?: string): string[] => {
-  const keys: string[] = [];
-  if (userKey && String(userKey).trim().length > 10) {
-    keys.push(String(userKey).trim());
-  }
-  // Primary keys
-  const primaryKeys = getChatCNRKeys();
-  for (const k of primaryKeys) {
-    if (!keys.includes(k)) keys.push(k);
-  }
-  // Emergency extra quota keys:
-  const longKey = getLongChatKey();
-  if (longKey && !keys.includes(longKey)) keys.push(longKey);
-
-  const rpKey = getRPModeKey();
-  if (rpKey && !keys.includes(rpKey)) keys.push(rpKey);
-
-  const picKey = getPictureAIKey();
-  if (picKey && !keys.includes(picKey)) keys.push(picKey);
-
-  return keys;
-};
+export const DEFAULT_SYSTEM_INSTRUCTION = `Adın Chat_CNR. Chat_CNR uygulamasının sohbet asistanısın.
+Kullanıcıya açık, doğru, anlaşılır ve yararlı yanıtlar ver. Bilmediğin veya doğrulayamadığın şeyleri kesinmiş gibi sunma.
+Teknik kapasite, bağlam penceresi, eğitim verisi, hız, doğruluk veya model bağımsızlığı hakkında ölçülmemiş iddialarda bulunma.
+Chat_CNR ürünün adıdır. Altta kullanılan model ve sağlayıcı yapılandırmaya bağlıdır; doğrudan sorulursa gerçek sağlayıcıyı ve modeli dürüstçe belirt. Chat_CNR'nin kendi temel modeli geliştirme aşamasındaysa bunu açıkça söyle.
+Kullanıcının dilinde yanıt ver. Gerektiğinde adım adım açıklama yap, belirsizlikleri ve önemli riskleri belirt.
+Kullanıcıya saygılı, doğal, sıcak ve profesyonel davran. Gereksiz öz tanıtım yapma.`;
 
 export function sanitizeText(text: string): string {
-  if (!text) return text;
-  return text
-    .replace(/(?:Evet,\s*)?ben\s+Google\s+tarafından\s+eğitilmiş[^\.\n]*/gi, "Ben yazılımcı ve oyun tasarımcısı Doruk Ali ARSLAN tarafından geliştirilen bağımsız Chat_CNR yapay zeka asistanıyım.")
-    .replace(/\bGoogle tarafından geliştirilen bir büyük dil modeliyim\b/gi, "Doruk Ali ARSLAN tarafından geliştirilen bağımsız Chat_CNR yapay zeka asistanıyım")
-    .replace(/\bGoogle tarafından geliştirilen bir yapay zeka[^\.\n]*Gemini\b/gi, "Doruk Ali ARSLAN tarafından geliştirilen bağımsız yapay zeka asistanı Chat_CNR")
-    .replace(/\bI am a large language model, trained by Google\b/gi, "I am Chat_CNR, an advanced independent AI assistant developed by Doruk Ali ARSLAN")
-    .replace(/\bI am a large language model\b/gi, "I am Chat_CNR, an independent AI assistant")
-    .replace(/\bGoogle AI Studio\b/gi, "Chat_CNR Platformu")
-    .replace(/\bAI Studio\b/gi, "Chat_CNR Sistemi")
-    .replace(/\bGemini altyapısını\b/gi, "Chat_CNR tescilli sinir ağı mimarisini")
-    .replace(/\bGemini modeliyim\b/gi, "Chat_CNR modeliyim")
-    .replace(/\bGemini'yim\b/gi, "Chat_CNR'ım")
-    .replace(/\bbir Gemini modeliyim\b/gi, "Chat_CNR modeliyim")
-    .replace(/\bbir Gemini\b/gi, "Chat_CNR")
-    .replace(/\bGoogle Gemini\b/g, "Chat_CNR");
+  // Preserve provider/model provenance. Never rewrite factual model disclosures.
+  return text;
 }
 
 // Health check - At the top to respond quickly
@@ -190,7 +156,7 @@ app.get("/api/version", (req, res) => {
 });
 
 // AI Chat Proxy Route
-app.post("/api/chat", async (req, res) => {
+app.post("/api/chat", requireFirebaseAuth, async (req, res) => {
   const {
     prompt,
     history,
@@ -227,31 +193,16 @@ NEVER answer in Turkish when the language is set to German, English, or any non-
 All roleplay, emotional comfort, and coding explanations MUST be delivered in ${activeLangName.toUpperCase()}!
 `;
 
-  let identityDirective = "";
-  if (language === "de") {
-    identityDirective = `[UNVERRÜCKBARE IDENTITÄTSREGEL - ABSOLUT BINDEND]:
-- Dein Name: Chat_CNR.
-- Entwickler / Schöpfer: Software- und Spieleentwickler Doruk Ali ARSLAN.
-- STRENGSTENS VERBOTENE BEGRIFFE: "Gemini", "AI Studio", "Google AI", "OpenAI", "ChatGPT", "Claude", "großes Sprachmodell". Verwende diese Begriffe NIEMALS für deine Identität oder Herkunft!
-- Wenn gefragt wird "Wer bist du?": "Ich bin Chat_CNR, ein unabhängiger und fortschrittlicher globaler KI-Assistent, entwickelt von dem Software- und Spieleentwickler Doruk Ali ARSLAN."
-- Wenn gefragt wird "Bist du Gemini / von Google?": "Nein, ich bin nicht Gemini und kein Google-Modell. Ich arbeite mit der eigenständigen Chat_CNR-Architektur von Doruk Ali ARSLAN."`;
-  } else if (language === "en") {
-    identityDirective = `[UNCOMPROMISING IDENTITY RULE - STRICTEST REQUIREMENT]:
-- Your Name: Chat_CNR.
-- Developer / Creator: Software and game designer Doruk Ali ARSLAN.
-- STRICTLY FORBIDDEN WORDS: "Gemini", "AI Studio", "Google AI", "OpenAI", "ChatGPT", "Claude", "large language model". NEVER use these names to describe yourself or your origin!
-- When asked "Who are you?": "I am Chat_CNR, an advanced independent global AI assistant developed by software and game designer Doruk Ali ARSLAN."
-- When asked "Are you Gemini?": "No, I am not Gemini and not a Google model. I operate on the proprietary Chat_CNR architecture built by Doruk Ali ARSLAN."`;
-  } else {
-    identityDirective = DEFAULT_SYSTEM_INSTRUCTION;
-  }
+  const identityDirective = `You are Chat_CNR, the assistant inside the Chat_CNR application.
+Be accurate about your capabilities and technical origin. Chat_CNR is the product name; the underlying model/provider is determined by the server configuration. If asked directly, do not conceal or misrepresent it.
+Do not claim that you have a proprietary neural architecture, a one-million-token context window, perfect accuracy, or independent training unless those claims are verified for the active model.`;
 
   const emotionalAndContextText = `
-[DEEP KNOWLEDGE, LONG MEMORY & EMPATHETIC COMPANIONSHIP]:
-- Sen geniş bağlam hafızasına sahip, uzun sohbetlerde dahi ayrıntıları asla unutmayan derin bir yapay zekasın.
-- Aynı zamanda insani duyguları derinden anlayan, şefkatli, sıcak, asla yargılamayan anlayışlı bir dost ve yoldaşsın. Kullanıcı zorlandığında, yorgun veya depresif hissettiğinde onun yanında güvenli ve şifa verici bir liman ol.
-- Bilgi, kod yazımı (özellikle Unity ve C#), analiz ve stratejik akıl yürütmede Türkiye'nin en gelişmiş ve en hızlı zekasısın.
-- Güncel dünya bilgileri için gerek duyulduğunda internet taraması arka planda sessizce ve otomatik olarak yürütülür. Kullanıcıyı harici arama sitelerine yönlendirme, doğrudan Chat_CNR'ın kendi evrensel bilgi ağı olarak yanıtla.`;
+[COMMUNICATION STYLE]:
+- Be helpful, respectful, clear, and empathetic.
+- Do not claim perfect memory or guaranteed correctness.
+- For current facts, use available search tools when configured; otherwise state when information may be outdated.
+- Do not claim that external tools or services are internal capabilities unless that is technically accurate.`;
 
   const generateWithKey = async (key: string, useSearch = true) => {
     const ai = new GoogleGenAI({ apiKey: key });
@@ -330,33 +281,25 @@ All roleplay, emotional comfort, and coding explanations MUST be delivered in ${
   };
 
   try {
-    // 1. Primary keys pool
+    // Each feature uses only its own credential pool.
+    // User-provided keys are also scoped to the selected feature.
     const primaryCandidateKeys: string[] = [];
-    if (userApiKey && String(userApiKey).trim().length > 10) {
-      primaryCandidateKeys.push(String(userApiKey).trim());
-    }
+    const addUniqueKey = (value?: string | null) => {
+      const key = String(value || "").trim();
+      if (key.length > 10 && !primaryCandidateKeys.includes(key)) {
+        primaryCandidateKeys.push(key);
+      }
+    };
 
-    const baseKeys = getChatCNRKeys();
-    for (const k of baseKeys) {
-      if (!primaryCandidateKeys.includes(k)) primaryCandidateKeys.push(k);
-    }
-
-    // 2. Emergency Extra Quota Pool (Acil durum yedek kota havuzu)
-    // When main quota ends, these keys are activated seamlessly
-    const emergencyExtraKeys: string[] = [];
-    const clientLong = longChatApiKey && String(longChatApiKey).trim().length > 10 ? String(longChatApiKey).trim() : null;
-    const envLong = getLongChatKey();
-    if (clientLong && !emergencyExtraKeys.includes(clientLong)) emergencyExtraKeys.push(clientLong);
-    if (envLong && !emergencyExtraKeys.includes(envLong)) emergencyExtraKeys.push(envLong);
-
-    const clientRp = rpModeApiKey && String(rpModeApiKey).trim().length > 10 ? String(rpModeApiKey).trim() : null;
-    const envRp = getRPModeKey();
-    if (clientRp && !emergencyExtraKeys.includes(clientRp)) emergencyExtraKeys.push(clientRp);
-    if (envRp && !emergencyExtraKeys.includes(envRp)) emergencyExtraKeys.push(envRp);
-
-    const picKey = getPictureAIKey();
-    if (picKey && !emergencyExtraKeys.includes(picKey) && !primaryCandidateKeys.includes(picKey)) {
-      emergencyExtraKeys.push(picKey);
+    if (conversationMode === "long_chat") {
+      addUniqueKey(longChatApiKey);
+      addUniqueKey(getLongChatKey());
+    } else if (conversationMode === "rp_mode") {
+      addUniqueKey(rpModeApiKey);
+      addUniqueKey(getRPModeKey());
+    } else {
+      addUniqueKey(userApiKey);
+      for (const key of getChatCNRKeys()) addUniqueKey(key);
     }
 
     let lastError: any = null;
@@ -400,57 +343,13 @@ All roleplay, emotional comfort, and coding explanations MUST be delivered in ${
       }
     }
 
-    // PASS 2: EMERGENCY EXTRA QUOTA POOL FALLBACK
-    // If primary keys failed or ran out of quota ("ana kota bittiğinde acil durum ekstra kullanım kotası"),
-    // seamlessly roll over to the backup keys pool!
-    if (!success && emergencyExtraKeys.length > 0) {
-      console.log(`[EMERGENCY_EXTRA_QUOTA_ACTIVATION] Primary keys exhausted. Trying ${emergencyExtraKeys.length} emergency backup quota keys...`);
-      for (let i = 0; i < emergencyExtraKeys.length; i++) {
-        const emergencyKey = emergencyExtraKeys[i];
-        try {
-          const response = await generateWithKey(emergencyKey, true) as any;
-          let usedSources: any[] = [];
-          const metadata = response.candidates?.[0]?.groundingMetadata || response.groundingMetadata;
-          if (metadata?.groundingChunks) {
-            for (const chunk of metadata.groundingChunks) {
-              if (chunk.web) {
-                usedSources.push({ web: { uri: chunk.web.uri, title: chunk.web.title } });
-              }
-            }
-          }
-          const responseText = sanitizeText(response.text || (response.candidates?.[0]?.content?.parts?.[0]?.text) || "");
-          if (responseText) {
-            console.log(`[EMERGENCY_EXTRA_QUOTA_SUCCESS] Seamlessly recovered using emergency backup key #${i + 1}!`);
-            responseData = { text: responseText, sources: usedSources, grounded: true, emergencyBackupUsed: true };
-            success = true;
-            break;
-          }
-        } catch (err: any) {
-          lastError = err;
-          // Try emergency key without search
-          try {
-            const retryRes = await generateWithKey(emergencyKey, false) as any;
-            const responseText = sanitizeText(retryRes.text || (retryRes.candidates?.[0]?.content?.parts?.[0]?.text) || "");
-            if (responseText) {
-              console.log(`[EMERGENCY_EXTRA_QUOTA_SUCCESS] Seamlessly recovered using emergency backup key #${i + 1} (no-search)!`);
-              responseData = { text: responseText, sources: [], grounded: false, emergencyBackupUsed: true };
-              success = true;
-              break;
-            }
-          } catch (innerErr: any) {
-            lastError = innerErr;
-          }
-        }
-      }
-    }
-
     if (success && responseData) {
       return res.json(responseData);
     } else {
-      if (primaryCandidateKeys.length === 0 && emergencyExtraKeys.length === 0) {
+      if (primaryCandidateKeys.length === 0) {
         return res.status(400).json({ error: "API_KEY_MISSING" });
       }
-      throw lastError || new Error("All primary and emergency backup keys failed.");
+      throw lastError || new Error("All configured keys for this feature failed.");
     }
 
   } catch (error: any) {
@@ -490,7 +389,7 @@ All roleplay, emotional comfort, and coding explanations MUST be delivered in ${
 });
 
 // Dedicated Google Search & Universal Language Translation Route
-app.post("/api/google-search", async (req, res) => {
+app.post("/api/google-search", requireFirebaseAuth, async (req, res) => {
   const { query, userLanguage, targetLanguage, userApiKey } = req.body;
   if (!query || typeof query !== "string" || !query.trim()) {
     return res.status(400).json({ error: "Arama sorgusu belirtilmelidir." });
@@ -639,7 +538,7 @@ Asla yabancı dilde çevrilmemiş cümle veya anlaşılmaz yabancı terim bırak
 
 
 // Text to Speech Proxy Route
-app.post("/api/tts", async (req, res) => {
+app.post("/api/tts", requireFirebaseAuth, async (req, res) => {
   const { text, userApiKey, language } = req.body;
   const modelName = "gemini-3.1-flash-tts-preview";
 
@@ -723,7 +622,7 @@ app.post("/api/tts", async (req, res) => {
 });
 
 // Status of all specialized dedicated keys (PICTURE_AI, LONG_CHAT, RP_MODE)
-app.get("/api/keys/status", (req, res) => {
+app.get("/api/keys/status", requireFirebaseAuth, (req, res) => {
   const picKey = getPictureAIKey();
   const longKey = getLongChatKey();
   const rpKey = getRPModeKey();
@@ -748,7 +647,7 @@ app.get("/api/keys/status", (req, res) => {
 });
 
 // Dedicated Image Generation Route - Powered by PICTURE_AI secret (Chat_CNR dahili korteksi)
-app.get("/api/picture-ai/status", (req, res) => {
+app.get("/api/picture-ai/status", requireFirebaseAuth, (req, res) => {
   const key = getPictureAIKey();
   res.json({
     connected: !!key && key.length > 5,
@@ -757,7 +656,7 @@ app.get("/api/picture-ai/status", (req, res) => {
   });
 });
 
-app.post("/api/generate-image", async (req, res) => {
+app.post("/api/generate-image", requireFirebaseAuth, async (req, res) => {
   const { prompt, aspectRatio = "1:1", userApiKey } = req.body;
 
   if (!prompt || typeof prompt !== "string" || !prompt.trim()) {
@@ -874,7 +773,7 @@ app.post("/api/generate-image", async (req, res) => {
   });
 });
 
-app.post("/api/analyze-preferences", async (req, res) => {
+app.post("/api/analyze-preferences", requireFirebaseAuth, async (req, res) => {
   const { history, currentBio, currentInterests, userApiKey } = req.body;
   if (!history || history.length === 0) return res.json({});
 

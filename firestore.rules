@@ -1,8 +1,133 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return signedIn() && request.auth.uid == userId;
+    }
+
+    // Set this custom claim only from a trusted Admin SDK environment.
+    // A profile field such as users/{uid}.role is never an authority source.
+    function isAdmin() {
+      return signedIn() && request.auth.token.admin == true;
+    }
+
+    function validProfileUpdate() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+        'name',
+        'bio',
+        'interests',
+        'phone',
+        'updatedAt',
+        'lastLogin',
+        'notificationsEnabled',
+        'isOnline',
+        'lastActive',
+        'dailyVisits',
+        'todayVisits',
+        'lastVisitDate',
+        'totalVisits',
+        'lastMonthlyNotification'
+      ])
+      && request.resource.data.role == resource.data.role
+      && request.resource.data.isPro == resource.data.isPro
+      && request.resource.data.proExpiresAt == resource.data.proExpiresAt
+      && request.resource.data.uid == resource.data.uid
+      && request.resource.data.email == resource.data.email;
+    }
+
+    match /users/{userId} {
+      allow get: if isOwner(userId) || isAdmin();
+      allow list: if isAdmin();
+
+      allow create: if isOwner(userId)
+        && request.resource.data.uid == userId
+        && request.resource.data.role == (isAdmin() ? 'admin' : 'user')
+        && (!('isPro' in request.resource.data) || request.resource.data.isPro == false);
+
+      allow update: if isAdmin() || (isOwner(userId) && validProfileUpdate());
+      allow delete: if isAdmin();
+
+      match /usage/{dateId} {
+        allow get, list: if isOwner(userId) || isAdmin();
+
+        // Clients may only increment their own counters by one.
+        // They cannot lower counters or change another user's usage.
+        allow create: if isOwner(userId)
+          && request.resource.data.keys().hasOnly(['messages', 'images', 'updatedAt'])
+          && (
+            (request.resource.data.get('messages', 0) == 1
+              && request.resource.data.get('images', 0) == 0)
+            ||
+            (request.resource.data.get('images', 0) == 1
+              && request.resource.data.get('messages', 0) == 0)
+          );
+
+        allow update: if isOwner(userId)
+          && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['messages', 'images', 'updatedAt'])
+          && (
+            (
+              request.resource.data.diff(resource.data).affectedKeys().hasOnly(['messages', 'updatedAt'])
+              && request.resource.data.get('messages', 0) == resource.data.get('messages', 0) + 1
+            )
+            ||
+            (
+              request.resource.data.diff(resource.data).affectedKeys().hasOnly(['images', 'updatedAt'])
+              && request.resource.data.get('images', 0) == resource.data.get('images', 0) + 1
+            )
+          );
+
+        allow delete: if isAdmin();
+      }
+
+      match /sessions/{sessionId} {
+        allow read, delete: if isOwner(userId) || isAdmin();
+        allow create: if isOwner(userId)
+          && (!('userId' in request.resource.data) || request.resource.data.userId == userId);
+        allow update: if isAdmin() || (
+          isOwner(userId)
+          && (!('userId' in request.resource.data) || request.resource.data.userId == userId)
+          && (!('userId' in resource.data) || request.resource.data.userId == resource.data.userId)
+        );
+
+        match /messages/{messageId} {
+          allow read, write: if isOwner(userId) || isAdmin();
+        }
+      }
+    }
+
+    match /shared_sessions/{shareId} {
+      // Share links are intentionally public to read, but not enumerable.
+      allow get: if true;
+      allow list: if false;
+      allow create: if signedIn()
+        && request.resource.data.creatorEmail == request.auth.token.email;
+      allow update, delete: if signedIn()
+        && resource.data.creatorEmail == request.auth.token.email
+        && request.resource.data.creatorEmail == request.auth.token.email;
+    }
+
+    match /broadcast_notifications/{notificationId} {
+      allow get, list: if isAdmin()
+        || (signedIn() && (
+          resource.data.targetUid == request.auth.uid
+          || resource.data.targetUid == 'all'
+        ));
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /system/{configId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Deny every collection/path not explicitly covered above.
     match /{document=**} {
-      allow read, write: if true;
+      allow read, write: if false;
     }
   }
 }
