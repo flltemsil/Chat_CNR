@@ -25,7 +25,12 @@ service cloud.firestore {
         'lastLogin',
         'notificationsEnabled',
         'isOnline',
-        'lastActive'
+        'lastActive',
+        'dailyVisits',
+        'todayVisits',
+        'lastVisitDate',
+        'totalVisits',
+        'lastMonthlyNotification'
       ])
       && request.resource.data.role == resource.data.role
       && request.resource.data.isPro == resource.data.isPro
