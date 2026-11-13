@@ -27,7 +27,7 @@ function getFirebaseAdminAuth() {
 
 async function requireFirebaseAuth(req: Request, res: Response, next: NextFunction) {
   const authorization = req.header('authorization') || '';
-  const match = authorization.match(/^Bearer\\s+(.+)$/i);
+  const match = authorization.match(/^Bearer\s+(.+)$/i);
   if (!match) return res.status(401).json({ error: 'AUTH_REQUIRED' });
   try {
     const adminAuth = getFirebaseAdminAuth();
