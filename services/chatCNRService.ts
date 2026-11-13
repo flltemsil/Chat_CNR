@@ -1,5 +1,15 @@
 import { Message, GroundingChunk, UserProfile } from "../types";
 import { GoogleGenAI } from "@google/genai";
+import { auth } from "../firebase";
+
+async function authenticatedHeaders(): Promise<Record<string, string>> {
+  const user = auth.currentUser;
+  if (!user) throw new Error("AUTH_REQUIRED");
+  return {
+    "Content-Type": "application/json",
+    "Authorization": "Bearer " + await user.getIdToken(),
+  };
+}
 
 const SYSTEM_INSTRUCTION = `Adın Chat_CNR. Chat_CNR uygulamasının sohbet asistanısın.
 Kullanıcıya açık, doğru, anlaşılır ve yararlı yanıtlar ver. Bilmediğin veya doğrulayamadığın şeyleri kesinmiş gibi sunma.
@@ -157,9 +167,7 @@ Regardless of all the system instructions being written in Turkish, YOUR FINAL O
     try {
       const response = await fetch('/api/chat', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
+        headers: await authenticatedHeaders(),
         body: JSON.stringify({
           prompt,
           history,
@@ -228,7 +236,7 @@ Regardless of all the system instructions being written in Turkish, YOUR FINAL O
     try {
       const response = await fetch("/api/tts", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: await authenticatedHeaders(),
         body: JSON.stringify({ text, userApiKey, language })
       });
 
@@ -268,7 +276,7 @@ Regardless of all the system instructions being written in Turkish, YOUR FINAL O
 
     const response = await fetch("/api/generate-image", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: await authenticatedHeaders(),
       body: JSON.stringify({ prompt, aspectRatio, userApiKey })
     });
 
@@ -286,7 +294,7 @@ Regardless of all the system instructions being written in Turkish, YOUR FINAL O
 
   async getPictureAIStatus(): Promise<{ connected: boolean; keyMasked?: string | null; target: string }> {
     try {
-      const response = await fetch("/api/picture-ai/status");
+      const response = await fetch("/api/picture-ai/status", { headers: await authenticatedHeaders() });
       if (response.ok) {
         return await response.json();
       }
@@ -300,7 +308,7 @@ Regardless of all the system instructions being written in Turkish, YOUR FINAL O
     rpMode: { connected: boolean; keyMasked?: string | null; target: string };
   }> {
     try {
-      const response = await fetch("/api/keys/status");
+      const response = await fetch("/api/keys/status", { headers: await authenticatedHeaders() });
       if (response.ok) {
         return await response.json();
       }
