@@ -2023,7 +2023,10 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser, language, setLanguage 
             ];
             const res = await fetch("/api/analyze-preferences", {
               method: "POST",
-              headers: { "Content-Type": "application/json" },
+              headers: {
+                "Content-Type": "application/json",
+                "Authorization": "Bearer " + (await auth.currentUser?.getIdToken() || ""),
+              },
               body: JSON.stringify({
                 history: combinedHistory,
                 currentBio: user.bio,
