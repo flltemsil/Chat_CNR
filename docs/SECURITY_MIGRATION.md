@@ -30,3 +30,16 @@ Script mevcut custom claim'leri korur ve yalnızca belirtilen UID'ye `admin: tru
 ## 3. Geri dönüş
 
 Canlıya geçişten önce mevcut kuralları Firebase Console'dan dışa aktarın ve saklayın. Dağıtım sonrası sorun çıkarsa önceki kurallara geri dönün; güvenlik kurallarını geçici olarak herkese açık yapmayın.
+
+
+## 4. API kimlik doğrulaması (Vercel)
+
+Kullanıcıya açık API uçları artık Firebase Authentication ID token'ı doğrular. Bunun için Vercel sunucusunda Firebase Admin SDK servis hesabı gerekir.
+
+1. Firebase Console'da, Vercel web uygulamasının kullandığı **aynı Firebase projesi** için bir servis hesabı oluşturun veya mevcut güvenli servis hesabını kullanın.
+2. Servis hesabı JSON anahtarını kimseyle paylaşmayın ve GitHub'a yüklemeyin.
+3. Vercel → Project → Settings → Environment Variables bölümünde `FIREBASE_SERVICE_ACCOUNT_JSON` adında bir değişken oluşturun. Değer olarak servis hesabının tüm JSON içeriğini girin.
+4. Önce yalnızca Preview ortamına ekleyin ve `hardening/phase-1-security` dalının yeni preview dağıtımını oluşturun. Testler tamamlandıktan sonra Production ortamına ayrıca eklenir.
+5. Yeni deployment oluşturun; ortam değişkenleri mevcut deployment'lara geriye dönük uygulanmaz.
+
+Bu değişken eksikse korumalı API uçları güvenli biçimde `503 AUTH_SERVICE_NOT_CONFIGURED` döndürür. Bu nedenle servis hesabı ayarlanmadan bu PR'ı canlıya birleştirmeyin.
