@@ -1149,7 +1149,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser, language, setLanguage 
     notificationService.checkAndTriggerMonthlyNotification(user).catch(console.warn);
 
     // Subscribe to broadcast announcements
-    const unsubscribe = notificationService.subscribeToBroadcasts((notifs) => {
+    const unsubscribe = notificationService.subscribeToBroadcasts(user.uid, (notifs) => {
       setBroadcastNotifications(notifs);
     });
 
