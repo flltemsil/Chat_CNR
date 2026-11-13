@@ -97,30 +97,6 @@ Chat_CNR ürünün adıdır. Altta kullanılan model ve sağlayıcı yapılandı
 Kullanıcının dilinde yanıt ver. Gerektiğinde adım adım açıklama yap, belirsizlikleri ve önemli riskleri belirt.
 Kullanıcıya saygılı, doğal, sıcak ve profesyonel davran. Gereksiz öz tanıtım yapma.`;
 
-// All available keys bundled for automatic emergency backup quota failover
-export const getAllAvailableKeys = (userKey?: string): string[] => {
-  const keys: string[] = [];
-  if (userKey && String(userKey).trim().length > 10) {
-    keys.push(String(userKey).trim());
-  }
-  // Primary keys
-  const primaryKeys = getChatCNRKeys();
-  for (const k of primaryKeys) {
-    if (!keys.includes(k)) keys.push(k);
-  }
-  // Emergency extra quota keys:
-  const longKey = getLongChatKey();
-  if (longKey && !keys.includes(longKey)) keys.push(longKey);
-
-  const rpKey = getRPModeKey();
-  if (rpKey && !keys.includes(rpKey)) keys.push(rpKey);
-
-  const picKey = getPictureAIKey();
-  if (picKey && !keys.includes(picKey)) keys.push(picKey);
-
-  return keys;
-};
-
 export function sanitizeText(text: string): string {
   // Preserve provider/model provenance. Never rewrite factual model disclosures.
   return text;
@@ -274,8 +250,8 @@ Do not claim that you have a proprietary neural architecture, a one-million-toke
   };
 
   try {
-    // Use keys only for the selected feature. Never borrow credentials from
-    // image generation, roleplay, or long-chat services for standard chat.
+    // Each feature uses only its own credential pool.
+    // User-provided keys are also scoped to the selected feature.
     const primaryCandidateKeys: string[] = [];
     const addUniqueKey = (value?: string | null) => {
       const key = String(value || "").trim();
@@ -284,7 +260,6 @@ Do not claim that you have a proprietary neural architecture, a one-million-toke
       }
     };
 
-    addUniqueKey(userApiKey);
     if (conversationMode === "long_chat") {
       addUniqueKey(longChatApiKey);
       addUniqueKey(getLongChatKey());
@@ -292,6 +267,7 @@ Do not claim that you have a proprietary neural architecture, a one-million-toke
       addUniqueKey(rpModeApiKey);
       addUniqueKey(getRPModeKey());
     } else {
+      addUniqueKey(userApiKey);
       for (const key of getChatCNRKeys()) addUniqueKey(key);
     }
 
