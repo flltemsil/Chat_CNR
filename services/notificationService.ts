@@ -9,7 +9,9 @@ import {
   orderBy,
   limit,
   onSnapshot,
-  updateDoc
+  updateDoc,
+  where,
+  or
 } from '../firebase';
 import { AppNotification, UserProfile } from '../types';
 
@@ -147,9 +149,13 @@ export const notificationService = {
   /**
    * Listen to recent broadcast announcements
    */
-  subscribeToBroadcasts(callback: (notifications: AppNotification[]) => void) {
+  subscribeToBroadcasts(userId: string, callback: (notifications: AppNotification[]) => void) {
     const q = query(
       collection(db, 'broadcast_notifications'),
+      or(
+        where('targetUid', '==', userId),
+        where('targetUid', '==', 'all')
+      ),
       orderBy('createdAt', 'desc'),
       limit(20)
     );

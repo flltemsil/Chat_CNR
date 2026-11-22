@@ -18,9 +18,9 @@ export default defineConfig(({ mode }) => {
           registerType: 'autoUpdate',
           injectRegister: 'script',
           manifest: {
-            name: 'Chat CNR Bilgi Merkezi',
-            short_name: 'Chat CNR',
-            description: 'Profesyonel Bilgi ve Chat Platformu - Doruk Ali Arslan tarafından geliştirildi.',
+            name: 'CNR',
+            short_name: 'CNR',
+            description: 'CNR AI assistant.',
             theme_color: '#0a0a0a',
             background_color: '#0a0a0a',
             display: 'standalone',

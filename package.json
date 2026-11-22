@@ -1,5 +1,5 @@
 {
-  "name": "chat_cnr-information-hub",
+  "name": "cnr-ai",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -11,7 +11,8 @@
     "lint": "tsc --noEmit",
     "build:desktop": "vite build && electron-builder",
     "build:android": "vite build && npx cap sync android",
-    "build:ios": "vite build && npx cap sync ios"
+    "build:ios": "vite build && npx cap sync ios",
+    "admin:set-claim": "tsx scripts/set-admin-claim.ts"
   },
   "dependencies": {
     "@google/genai": "^1.50.1",

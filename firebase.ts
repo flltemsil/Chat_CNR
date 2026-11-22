@@ -24,7 +24,9 @@ import {
   getDocs, 
   increment, 
   serverTimestamp, 
-  updateDoc 
+  updateDoc,
+  where,
+  or
 } from 'firebase/firestore';
 
 const host = typeof window !== "undefined" ? window.location.hostname : "";
@@ -117,6 +119,8 @@ export {
   getDocs, 
   increment, 
   serverTimestamp, 
-  updateDoc 
+  updateDoc,
+  where,
+  or
 };
 export type { FirebaseUser };
