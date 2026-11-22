@@ -1,6 +1,6 @@
-# Chat_CNR
+# CNR
 
-Chat_CNR, Doruk Ali Arslan tarafından geliştirilen çok dilli bir yapay zekâ sohbet uygulamasıdır. Bu depo; web arayüzünü, API katmanını, Firebase entegrasyonunu ve yardımcı servisleri içerir.
+CNR, çok dilli bir yapay zekâ asistanı uygulamasıdır. Bu depo; web arayüzünü, API katmanını, Firebase entegrasyonunu ve yardımcı servisleri içerir.
 
 ## Mevcut özellikler
 
@@ -11,7 +11,7 @@ Chat_CNR, Doruk Ali Arslan tarafından geliştirilen çok dilli bir yapay zekâ 
 - Ayrı uzun sohbet, rol yapma ve görsel üretim yapılandırmaları
 - Google GenAI sağlayıcısı üzerinden model erişimi
 
-> Model sağlayıcısı ve model sürümü dağıtım yapılandırmasına bağlıdır. Chat_CNR uygulama ve ürün markasıdır; kullanılan temel modelin kaynağı teknik olarak doğru şekilde belirtilmelidir.
+> Model sağlayıcısı ve model sürümü dağıtım yapılandırmasına bağlıdır. CNR uygulama ve ürün markasıdır; kullanılan temel modelin kaynağı teknik olarak doğru şekilde belirtilmelidir.
 
 ## Geliştirme
 
@@ -48,8 +48,8 @@ Firestore kuralları `firestore.rules` dosyasındadır. Kurallar artık varsayı
 
 **Önemli geçiş notu:** Güvenli Firestore kurallarını canlı Firebase projesine uygulamadan önce aşağıdaki adımları tamamlayın:
 
-1. Firebase Admin SDK kullanan güvenilir bir ortamdan kurucu hesabına `admin: true` custom claim atayın.
-2. Kurucu hesabından çıkış yapıp tekrar giriş yaparak yeni ID token alın.
+1. Firebase Admin SDK kullanan güvenilir bir ortamdan yetkili yönetici hesabına `admin: true` custom claim atayın.
+2. Yönetici hesabından çıkış yapıp tekrar giriş yaparak yeni ID token alın.
 3. Yönetici paneli, kullanıcı profili oluşturma, kullanım sayaçları ve bildirim akışlarını test edin.
 4. Firestore Emulator veya ayrı bir test Firebase projesinde kuralları doğrulayın.
 5. Ancak testler başarılı olduktan sonra canlı projeye dağıtın.
