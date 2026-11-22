@@ -167,6 +167,7 @@ app.post("/api/chat", requireFirebaseAuth, async (req, res) => {
     model,
     language = "tr",
     conversationMode = "standard",
+    useGoogleSearch = false,
     longChatApiKey,
     rpModeApiKey
   } = req.body;
@@ -310,7 +311,7 @@ Do not claim that you have a proprietary neural architecture, a one-million-toke
     for (let i = 0; i < primaryCandidateKeys.length; i++) {
       const currentKey = primaryCandidateKeys[i];
       try {
-        const response = await generateWithKey(currentKey, true) as any;
+        const response = await generateWithKey(currentKey, useGoogleSearch === true) as any;
         let usedSources: any[] = [];
         const metadata = response.candidates?.[0]?.groundingMetadata || response.groundingMetadata;
         if (metadata?.groundingChunks) {
