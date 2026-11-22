@@ -67,7 +67,7 @@ export const translations: Record<Language, any> = {
     testConnection: "Bağlantıyı Test Et",
     voiceAndWakeWord: "Ses & Wake Word",
     totalMessages: "Toplam Mesaj",
-    adminYönetici: "Yönetici",
+    adminKurucu: "Yönetici",
     adminMember: "Üye",
 
     // PRO Animation Screen
@@ -226,7 +226,7 @@ export const translations: Record<Language, any> = {
     testConnection: "Test Connection",
     voiceAndWakeWord: "Voice & Wake Word",
     totalMessages: "Total Messages",
-    adminYönetici: "Admin",
+    adminKurucu: "Admin",
     adminMember: "Member",
 
     // PRO Animation Screen
@@ -385,7 +385,7 @@ export const translations: Record<Language, any> = {
     testConnection: "Probar Conexión",
     voiceAndWakeWord: "Voz y Activación",
     totalMessages: "Mensajes Totales",
-    adminYönetici: "Administrador",
+    adminKurucu: "Administrador",
     adminMember: "Miembro",
 
     // PRO Animation
@@ -544,7 +544,7 @@ export const translations: Record<Language, any> = {
     testConnection: "Verbindung Testen",
     voiceAndWakeWord: "Sprache & Wake-Word",
     totalMessages: "Gesamtnachrichten",
-    adminYönetici: "Administrator",
+    adminKurucu: "Administrator",
     adminMember: "Mitglied",
 
     // PRO Animation
@@ -703,7 +703,7 @@ export const translations: Record<Language, any> = {
     testConnection: "Tester la Connexion",
     voiceAndWakeWord: "Voix & Réveil",
     totalMessages: "Messages Totaux",
-    adminYönetici: "Administrateur",
+    adminKurucu: "Administrateur",
     adminMember: "Membre",
 
     // PRO Animation
@@ -862,7 +862,7 @@ export const translations: Record<Language, any> = {
     testConnection: "Testa Connessione",
     voiceAndWakeWord: "Voce & Wake Word",
     totalMessages: "Messaggi Totali",
-    adminYönetici: "Amministratore",
+    adminKurucu: "Amministratore",
     adminMember: "Membro",
 
     // PRO Animation
@@ -1021,7 +1021,7 @@ export const translations: Record<Language, any> = {
     testConnection: "Проверить соединение",
     voiceAndWakeWord: "Голос и активация",
     totalMessages: "Всего сообщений",
-    adminYönetici: "Администратор",
+    adminKurucu: "Администратор",
     adminMember: "Участник",
 
     // PRO Animation
