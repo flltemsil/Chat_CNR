@@ -177,6 +177,7 @@ Regardless of all the system instructions being written in Turkish, YOUR FINAL O
           userApiKey,
           language: language || 'tr',
           conversationMode,
+          useGoogleSearch: isGoogleSearchMode,
           longChatApiKey: finalLongChatKey,
           rpModeApiKey: finalRpModeKey
         })
