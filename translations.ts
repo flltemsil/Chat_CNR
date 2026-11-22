@@ -67,7 +67,7 @@ export const translations: Record<Language, any> = {
     testConnection: "Bağlantıyı Test Et",
     voiceAndWakeWord: "Ses & Wake Word",
     totalMessages: "Toplam Mesaj",
-    adminKurucu: "Yönetici",
+    adminYönetici: "Yönetici",
     adminMember: "Üye",
 
     // PRO Animation Screen
@@ -93,7 +93,7 @@ export const translations: Record<Language, any> = {
     proCardTitleInactive: "PRO'ya Geçiş",
     proActiveBadge: "AKTİF",
     proCardDescActive: "Üyeliğinizi yenilemek veya destek almak için iletişime geçebilirsiniz:",
-    proCardDescInactive: "CNR PRO ayrıcalıklarına ulaşmak isteyenlerin destek ekibiyle ile iletişime geçmesi gerekmektedir.",
+    proCardDescInactive: "CNR PRO ayrıcalıklarına ulaşmak isteyenlerin destek ekibiyle iletişime geçmesi gerekmektedir.",
     proCardGmailBtn: "Gmail ile Yaz",
     proDaysLeft: "gün kaldı",
     proTurnOff: "PRO'YU KAPAT",
@@ -150,7 +150,7 @@ export const translations: Record<Language, any> = {
     searchPlaceholder: "Ara...",
     liveRelease: "Canlı Sürüm",
     writeWithGmail: "Gmail ile Yaz",
-    proMembershipNotice: "PRO'ya ulaşmak isteyenlerin destek ekibiyle ile iletişime geçmesi gerekmektedir.",
+    proMembershipNotice: "PRO'ya ulaşmak isteyenlerin destek ekibiyle iletişime geçmesi gerekmektedir.",
     proActiveRenewalNotice: "Üyeliğinizi yenilemek veya destek almak için iletişime geçebilirsiniz:",
     attachFile: "Dosya veya Görsel Ekle",
     takePhoto: "Kamera ile Fotoğraf Çek",
@@ -226,7 +226,7 @@ export const translations: Record<Language, any> = {
     testConnection: "Test Connection",
     voiceAndWakeWord: "Voice & Wake Word",
     totalMessages: "Total Messages",
-    adminKurucu: "Admin",
+    adminYönetici: "Admin",
     adminMember: "Member",
 
     // PRO Animation Screen
@@ -385,7 +385,7 @@ export const translations: Record<Language, any> = {
     testConnection: "Probar Conexión",
     voiceAndWakeWord: "Voz y Activación",
     totalMessages: "Mensajes Totales",
-    adminKurucu: "Administrador",
+    adminYönetici: "Administrador",
     adminMember: "Miembro",
 
     // PRO Animation
@@ -544,7 +544,7 @@ export const translations: Record<Language, any> = {
     testConnection: "Verbindung Testen",
     voiceAndWakeWord: "Sprache & Wake-Word",
     totalMessages: "Gesamtnachrichten",
-    adminKurucu: "Administrator",
+    adminYönetici: "Administrator",
     adminMember: "Mitglied",
 
     // PRO Animation
@@ -703,7 +703,7 @@ export const translations: Record<Language, any> = {
     testConnection: "Tester la Connexion",
     voiceAndWakeWord: "Voix & Réveil",
     totalMessages: "Messages Totaux",
-    adminKurucu: "Administrateur",
+    adminYönetici: "Administrateur",
     adminMember: "Membre",
 
     // PRO Animation
@@ -862,7 +862,7 @@ export const translations: Record<Language, any> = {
     testConnection: "Testa Connessione",
     voiceAndWakeWord: "Voce & Wake Word",
     totalMessages: "Messaggi Totali",
-    adminKurucu: "Amministratore",
+    adminYönetici: "Amministratore",
     adminMember: "Membro",
 
     // PRO Animation
@@ -1021,7 +1021,7 @@ export const translations: Record<Language, any> = {
     testConnection: "Проверить соединение",
     voiceAndWakeWord: "Голос и активация",
     totalMessages: "Всего сообщений",
-    adminKurucu: "Администратор",
+    adminYönetici: "Администратор",
     adminMember: "Участник",
 
     // PRO Animation
