@@ -434,7 +434,7 @@ const App: React.FC = () => {
               </div>
               <div className="flex flex-col md:flex-row md:items-baseline gap-2 md:gap-3">
                 <h1 className="text-4xl font-black text-white tracking-tighter uppercase italic">
-                  Chat_CNR
+                  CNR
                 </h1>
                 <span className="text-[10px] font-bold text-blue-400 border border-blue-400/30 bg-blue-400/10 px-2 py-0.5 rounded-md uppercase tracking-wider shadow-[0_0_15px_rgba(96,165,250,0.3)]">
                   ADVANCED AI
@@ -1694,7 +1694,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser, language, setLanguage 
     const modelMsg: Message = {
       id: (Date.now() + 1).toString(),
       role: "model",
-      text: `"${promptText}" için görsel Chat_CNR (PİCTURE_AI) motoru ile başarıyla üretildi.`,
+      text: `"${promptText}" için görsel CNR (PİCTURE_AI) motoru ile başarıyla üretildi.`,
       imageUrl: imageUrl,
       timestamp: new Date(),
     };
@@ -2169,7 +2169,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser, language, setLanguage 
               <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/20 shrink-0">
                 <Brain size={18} className="text-white" />
               </div>
-              <h1 className={`font-bold text-lg tracking-tight ${theme === "dark" ? "text-white" : "text-zinc-900"}`}>Chat_CNR</h1>
+              <h1 className={`font-bold text-lg tracking-tight ${theme === "dark" ? "text-white" : "text-zinc-900"}`}>CNR</h1>
             </div>
             <button
               onClick={() => setIsSidebarOpen(false)}
@@ -2249,20 +2249,11 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser, language, setLanguage 
                 {user?.isPro ? (
                   <>{t.proCardDescActive || "Üyeliğinizi yenilemek veya destek almak için iletişime geçebilirsiniz:"}</>
                 ) : (
-                  <>{t.proCardDescInactive || "Chat_CNR PRO ayrıcalıklarına ulaşmak isteyenlerin dorukaliarslan20@gmail.com ile iletişime geçmesi gerekmektedir."}</>
+                  <>{t.proCardDescInactive || "PRO üyeliği için destek ekibiyle iletişime geçin."}</>
                 )}
               </p>
 
-              <a
-                href="https://mail.google.com/mail/?view=cm&fs=1&to=dorukaliarslan20@gmail.com&su=Chat_CNR%20Pro%20%C3%9Cyelik%20Talebi&body=Merhaba,%20Chat_CNR%20Pro%20%C3%BCyeli%C4%9Fi%20almak%20istiyorum."
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-xs font-bold transition-all bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white shadow-md shadow-amber-500/20 active:scale-[0.98]"
-              >
-                <Mail size={13} />
-                <span>{t.writeWithGmail || "Gmail ile İletişime Geç"}</span>
-                <ExternalLink size={12} className="opacity-70 ml-auto" />
-              </a>
+              
             </div>
 
             <div className="space-y-1">
@@ -2400,7 +2391,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser, language, setLanguage 
                   <Sparkles size={20} className="sm:w-6 sm:h-6" fill="currentColor" />
                 </span>
                 <h1 className="text-base sm:text-lg font-bold tracking-tight">
-                  Chat_CNR
+                  CNR
                 </h1>
               </div>
             </div>
@@ -2554,23 +2545,14 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser, language, setLanguage 
                         </div>
                         <div className="space-y-0.5">
                           <p className="text-[11px] sm:text-xs font-black uppercase tracking-wider text-amber-500">
-                            Chat_CNR PRO
+                            CNR PRO
                           </p>
                           <p className="text-xs leading-relaxed opacity-90">
-                            {t.proMembershipNotice || "PRO'ya ulaşmak isteyenlerin dorukaliarslan20@gmail.com ile iletişime geçmesi gerekmektedir."}
+                            {t.proMembershipNotice || "PRO üyeliği için destek ekibiyle iletişime geçin."}
                           </p>
                         </div>
                       </div>
-                      <a
-                        href="https://mail.google.com/mail/?view=cm&fs=1&to=dorukaliarslan20@gmail.com&su=Chat_CNR%20Pro%20%C3%9Cyelik%20Talebi&body=Merhaba,%20Chat_CNR%20Pro%20%C3%BCyeli%C4%9Fi%20almak%20istiyorum."
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="w-full sm:w-auto shrink-0 flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-600 text-white transition-all shadow-md shadow-amber-500/20 active:scale-95 text-center"
-                      >
-                        <Mail size={13} />
-                        <span>{t.writeWithGmail || "Gmail ile Yaz"}</span>
-                        <ExternalLink size={12} className="opacity-75" />
-                      </a>
+                      
                     </motion.div>
                   </div>
                 </motion.div>
@@ -2793,10 +2775,10 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser, language, setLanguage 
               <div className={`text-sm p-4 rounded-xl ${theme === "dark" ? "bg-zinc-800/50" : "bg-blue-50 text-blue-800"}`}>
                 <p>
                   {language === 'de' 
-                    ? `Ihr Chat_CNR-Erlebnis läuft auf ${user?.isPro ? "PRO" : "Standard"}-Niveau weiter. Ihre täglichen Interaktionen werden mit höchster Privatsphäre und Geschwindigkeit verarbeitet.`
+                    ? `Ihr CNR-Erlebnis läuft auf ${user?.isPro ? "PRO" : "Standard"}-Niveau weiter. Ihre täglichen Interaktionen werden mit höchster Privatsphäre und Geschwindigkeit verarbeitet.`
                     : (language === 'tr' 
-                      ? `Chat_CNR deneyiminiz ${user?.isPro ? "PRO" : "Standart"} seviyesinde devam ediyor. Günlük etkileşimleriniz gizlilik ve hız odaklı işlenmektedir.`
-                      : `Your Chat_CNR experience continues at ${user?.isPro ? "PRO" : "Standard"} level. Your daily interactions are processed with privacy and speed.`)}
+                      ? `CNR deneyiminiz ${user?.isPro ? "PRO" : "Standart"} seviyesinde devam ediyor. Günlük etkileşimleriniz gizlilik ve hız odaklı işlenmektedir.`
+                      : `Your CNR experience continues at ${user?.isPro ? "PRO" : "Standard"} level. Your daily interactions are processed with privacy and speed.`)}
                 </p>
               </div>
             </div>
@@ -3133,7 +3115,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser, language, setLanguage 
                           <span
                             className={`text-[10px] px-2 py-0.5 rounded-lg font-black uppercase tracking-widest ${user.email === OWNER_EMAIL ? "bg-amber-500 text-black" : "bg-zinc-800 text-zinc-400"}`}
                           >
-                            {user.email === OWNER_EMAIL ? "Kurucu" : "Member"}
+                            {user.email === OWNER_EMAIL ? "Admin" : "Member"}
                           </span>
                         </div>
                       </div>
@@ -3529,7 +3511,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser, language, setLanguage 
                         </div>
                         <div>
                           <p className="text-sm font-bold flex items-center gap-2">
-                            Chat_CNR
+                            CNR
                             <span className="text-[11px] px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400 font-mono font-bold">
                               v{APP_VERSION}
                             </span>
@@ -3706,7 +3688,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser, language, setLanguage 
                   transition={{ duration: 1.5, ease: "easeOut" }}
                   className="text-4xl md:text-6xl font-black text-white tracking-tighter uppercase italic drop-shadow-2xl"
                 >
-                  Chat_CNR
+                  CNR
                 </motion.h1>
                 
                 <motion.div
