@@ -105,7 +105,7 @@ export const getChatCNRKeys = (): string[] => {
 
 const picKeyFound = getPictureAIKey();
 if (picKeyFound) {
-  console.log(`[PİCTURE_AI] Secret successfully loaded and connected! (Chat_CNR dahili görsel korteksi, length: ${picKeyFound.length})`);
+  console.log(`[PİCTURE_AI] Secret successfully loaded and connected! (CNR dahili görsel korteksi, length: ${picKeyFound.length})`);
 } else {
   console.warn(`[PİCTURE_AI] Warning: PICTURE_AI secret not found in environment.`);
 }
@@ -121,10 +121,10 @@ if (rpModeKeyFound) {
 }
 
 // Identity and Model sanitization to uphold core rule
-export const DEFAULT_SYSTEM_INSTRUCTION = `Adın Chat_CNR. Chat_CNR uygulamasının sohbet asistanısın.
+export const DEFAULT_SYSTEM_INSTRUCTION = `Adın CNR. CNR uygulamasının sohbet asistanısın.
 Kullanıcıya açık, doğru, anlaşılır ve yararlı yanıtlar ver. Bilmediğin veya doğrulayamadığın şeyleri kesinmiş gibi sunma.
 Teknik kapasite, bağlam penceresi, eğitim verisi, hız, doğruluk veya model bağımsızlığı hakkında ölçülmemiş iddialarda bulunma.
-Chat_CNR ürünün adıdır. Altta kullanılan model ve sağlayıcı yapılandırmaya bağlıdır; doğrudan sorulursa gerçek sağlayıcıyı ve modeli dürüstçe belirt. Chat_CNR'nin kendi temel modeli geliştirme aşamasındaysa bunu açıkça söyle.
+CNR ürünün adıdır. Altta kullanılan model ve sağlayıcı yapılandırmaya bağlıdır; doğrudan sorulursa gerçek sağlayıcıyı ve modeli dürüstçe belirt. CNR'nin kendi temel modeli geliştirme aşamasındaysa bunu açıkça söyle.
 Kullanıcının dilinde yanıt ver. Gerektiğinde adım adım açıklama yap, belirsizlikleri ve önemli riskleri belirt.
 Kullanıcıya saygılı, doğal, sıcak ve profesyonel davran. Gereksiz öz tanıtım yapma.`;
 
@@ -194,8 +194,8 @@ NEVER answer in Turkish when the language is set to German, English, or any non-
 All roleplay, emotional comfort, and coding explanations MUST be delivered in ${activeLangName.toUpperCase()}!
 `;
 
-  const identityDirective = `You are Chat_CNR, the assistant inside the Chat_CNR application.
-Be accurate about your capabilities and technical origin. Chat_CNR is the product name; the underlying model/provider is determined by the server configuration. If asked directly, do not conceal or misrepresent it.
+  const identityDirective = `You are CNR, the assistant inside the CNR application.
+Be accurate about your capabilities and technical origin. CNR is the product name; the underlying model/provider is determined by the server configuration. If asked directly, do not conceal or misrepresent it.
 Do not claim that you have a proprietary neural architecture, a one-million-token context window, perfect accuracy, or independent training unless those claims are verified for the active model.`;
 
   const emotionalAndContextText = `
@@ -399,7 +399,7 @@ app.post("/api/google-search", requireFirebaseAuth, async (req, res) => {
   const detectedTargetLang = targetLanguage || userLanguage || "Türkçe";
   const modelName = "gemini-2.5-flash";
 
-  const systemInstruction = `Sen Google Arama ve Çok Dilli Çeviri Motorusun (Chat_CNR Google Search & Universal Translation Engine).
+  const systemInstruction = `Sen Google Arama ve Çok Dilli Çeviri Motorusun (CNR Google Search & Universal Translation Engine).
 KULLANICININ GOOGLE DİLİ: "${detectedTargetLang}".
 
 TEMEL AMACIN VE TAVİZSİZ KURALLARIN:
@@ -647,7 +647,7 @@ app.get("/api/keys/status", requireFirebaseAuth, (req, res) => {
   });
 });
 
-// Dedicated Image Generation Route - Powered by PICTURE_AI secret (Chat_CNR dahili korteksi)
+// Dedicated Image Generation Route - Powered by PICTURE_AI secret (CNR dahili korteksi)
 app.get("/api/picture-ai/status", requireFirebaseAuth, (req, res) => {
   const key = getPictureAIKey();
   res.json({
@@ -721,10 +721,10 @@ app.post("/api/generate-image", requireFirebaseAuth, async (req, res) => {
         console.log(`[PİCTURE_AI] Native image generated successfully!`);
         return res.json({
           imageUrl: foundBase64,
-          text: textDesc.trim() || `Chat_CNR Görsel Yeteneği: "${rawPrompt}" görseli senin için özenle oluşturuldu.`,
+          text: textDesc.trim() || `CNR Görsel Yeteneği: "${rawPrompt}" görseli senin için özenle oluşturuldu.`,
           prompt: rawPrompt,
           aspectRatio: selectedRatio,
-          modelUsed: "Chat_CNR Dahili Görsel Yeteneği"
+          modelUsed: "CNR Dahili Görsel Yeteneği"
         });
       }
     } catch (err: any) {
@@ -740,7 +740,7 @@ app.post("/api/generate-image", requireFirebaseAuth, async (req, res) => {
       model: "gemini-2.5-flash",
       contents: {
         parts: [{
-          text: `You are the specialized visual prompt generator for the Chat_CNR internal graphics engine. Transform the following user request into a rich, detailed English visual prompt suitable for generating an exquisite, high-detail image. Include art style, lighting, depth, atmosphere, and composition. Respond ONLY with the prompt text, no explanations, no quotes.\nRequest: "${rawPrompt}"`
+          text: `You are the specialized visual prompt generator for the CNR internal graphics engine. Transform the following user request into a rich, detailed English visual prompt suitable for generating an exquisite, high-detail image. Include art style, lighting, depth, atmosphere, and composition. Respond ONLY with the prompt text, no explanations, no quotes.\nRequest: "${rawPrompt}"`
         }]
       }
     });
@@ -767,10 +767,10 @@ app.post("/api/generate-image", requireFirebaseAuth, async (req, res) => {
 
   return res.json({
     imageUrl,
-    text: `Chat_CNR Görsel Yeteneği: "${rawPrompt}" görseli senin için özenle oluşturuldu.`,
+    text: `CNR Görsel Yeteneği: "${rawPrompt}" görseli senin için özenle oluşturuldu.`,
     prompt: rawPrompt,
     aspectRatio: selectedRatio,
-    modelUsed: "Chat_CNR Dahili Görsel Yeteneği"
+    modelUsed: "CNR Dahili Görsel Yeteneği"
   });
 });
 
@@ -791,7 +791,7 @@ app.post("/api/analyze-preferences", requireFirebaseAuth, async (req, res) => {
 [ÖNEMLİ KURALLAR]
 1. MEVCUT BİLİNENLERİ KORU: "Mevcut Hafıza" ve "Mevcut İlgi Alanları" içerisindeki doğru, kalıcı ve geçmiş bilgileri KESİNLİKLE silme veya unutma. Onları yeni keşfedilen bilgilerle SENTEZLE ve koruyarak zenginleştir. Hafızayı daraltma, genişlet!
 2. TEKİL BİLGİ BİRİKİMİ: Eğer kullanıcı son mesajlarda belirli bir şeyden bahsetmediyse ama "Mevcut Hafıza"da bu zaten kayıtlıysa, o bilgiyi kaybetme, hafızada tutmaya devam et. Yalnızca kullanıcı açıkça bir özelliğini/durumunu değiştirdiğini söylerse (örn: "artık yazılımcı değilim öğrenciyim") eski bilgiyi değiştir.
-3. KİŞİSELLEŞTİRME: Kullanıcının mesleğini (örneğin Doruk oyun geliştiricisi, tasarımcı vb.), ilgi alanlarını ve Chat_CNR'dan beklentilerini net bir şekilde sentezle.
+3. KİŞİSELLEŞTİRME: Kullanıcının mesleğini (örneğin Doruk oyun geliştiricisi, tasarımcı vb.), ilgi alanlarını ve CNR'dan beklentilerini net bir şekilde sentezle.
 
 Mevcut Hafıza (Bio): ${currentBio || "Yok"}
 Mevcut İlgi Alanları: ${currentInterests ? currentInterests.join(", ") : "Yok"}
