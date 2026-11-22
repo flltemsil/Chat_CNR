@@ -81,7 +81,6 @@ import {
 } from "./firebase";
 import { UserProfile } from "./types";
 
-const OWNER_EMAIL = "dorukaliarslan20@gmail.com";
 const BANNED_EMAILS = ["b4164370@gmail.com"];
 const STORAGE_KEY = "chat_cnr_sessions_v2";
 const USER_KEY = "chat_cnr_user_v2";
@@ -301,19 +300,21 @@ const App: React.FC = () => {
     });
 
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      console.log("Auth state changed:", firebaseUser?.email);
+      console.log("Auth state changed:", Boolean(firebaseUser));
       // Removed clearTimeout(timeout) so it is guaranteed to unlock if operations hang within auth check
       try {
         if (firebaseUser) {
+          const tokenResult = await firebaseUser.getIdTokenResult();
+          const isAdmin = tokenResult.claims.admin === true;
           const profile = await profileService.getProfile(firebaseUser.uid);
           if (profile) {
-            setUser(profile);
+            setUser({ ...profile, role: isAdmin ? "admin" : "user" });
             // Update last login (non-blocking)
             profileService
               .updateProfile(firebaseUser.uid, { lastLogin: new Date() })
               .catch((e) => console.error("Update profile error", e));
           } else {
-            const role = firebaseUser.email === OWNER_EMAIL ? "admin" : "user";
+            const role = isAdmin ? "admin" : "user";
             const newProfile = await profileService.createUserProfile(
               firebaseUser.uid,
               firebaseUser.email || "",
@@ -333,7 +334,7 @@ const App: React.FC = () => {
             uid: firebaseUser.uid,
             email: firebaseUser.email || "",
             name: firebaseUser.displayName || "Kullanıcı",
-            role: firebaseUser.email === OWNER_EMAIL ? "admin" : "user",
+            role: (await firebaseUser.getIdTokenResult()).claims.admin === true ? "admin" : "user",
             interests: [],
             bio: "",
             phone: "",
@@ -999,7 +1000,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser, language, setLanguage 
   };
 
   const checkLimit = (type: "messages" | "images") => {
-    if (user?.email === OWNER_EMAIL) return true;
+    if (user?.role === "admin") return true;
     const limit = type === "messages" ? LIMITS.MESSAGES : LIMITS.IMAGES;
     const current =
       type === "messages" ? dailyUsage.messages : dailyUsage.images;
@@ -3113,9 +3114,9 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser, language, setLanguage 
                             {user.email || "Kullanıcı"}
                           </p>
                           <span
-                            className={`text-[10px] px-2 py-0.5 rounded-lg font-black uppercase tracking-widest ${user.email === OWNER_EMAIL ? "bg-amber-500 text-black" : "bg-zinc-800 text-zinc-400"}`}
+                            className={`text-[10px] px-2 py-0.5 rounded-lg font-black uppercase tracking-widest ${user.role === "admin" ? "bg-amber-500 text-black" : "bg-zinc-800 text-zinc-400"}`}
                           >
-                            {user.email === OWNER_EMAIL ? "Admin" : "Member"}
+                            {user.role === "admin" ? "Admin" : "Member"}
                           </span>
                         </div>
                       </div>
