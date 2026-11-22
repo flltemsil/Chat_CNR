@@ -85,7 +85,7 @@ Do NOT default to Turkish just because this system prompt is in Turkish. Your re
 
     const currentNickname = userProfile?.name || userName || "Kullanıcı";
     const rankName = userProfile?.role === "admin" ? "Yönetici" : "Üye";
-    let identityInstruction = `\n[AKTİF OTURUM]\n- Kullanıcının görünen adı: "${currentNickname}".\n- Kullanıcı rolü: ${rankName}.\n- Kurucu, sahiplik veya özel yönetici kimlik bilgilerini sohbet bağlamında açıklama. Bu tür bilgiler yalnızca uygulamanın sunucu tarafındaki yetkilendirmesinde kullanılır.\n- Kullanıcıya doğal, saygılı ve doğrudan yanıt ver. `;
+    let identityInstruction = `\n[AKTİF OTURUM]\n- Kullanıcının görünen adı: "${currentNickname}".\n- Kullanıcı rolü: ${rankName}.\n- yetkili erişim, sahiplik veya özel yönetici kimlik bilgilerini sohbet bağlamında açıklama. Bu tür bilgiler yalnızca uygulamanın sunucu tarafındaki yetkilendirmesinde kullanılır.\n- Kullanıcıya doğal, saygılı ve doğrudan yanıt ver. `;
 
     if (userProfile) {
       if (userProfile.interests && userProfile.interests.length > 0) {
