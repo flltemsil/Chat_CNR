@@ -52,12 +52,12 @@ const MessageItem: React.FC<MessageItemProps> = React.memo(({ message, themeColo
 
   const themeClasses = (() => {
     const base = {
-      blue: { bg: 'bg-blue-600', text: 'text-blue-500', border: 'border-blue-500/20', lightBg: 'bg-blue-500/5' },
-      indigo: { bg: 'bg-indigo-600', text: 'text-indigo-500', border: 'border-indigo-500/20', lightBg: 'bg-indigo-500/5' },
-      rose: { bg: 'bg-rose-600', text: 'text-rose-500', border: 'border-rose-500/20', lightBg: 'bg-rose-500/5' },
-      emerald: { bg: 'bg-emerald-600', text: 'text-emerald-500', border: 'border-emerald-500/20', lightBg: 'bg-emerald-500/5' },
-      amber: { bg: 'bg-amber-600', text: 'text-amber-500', border: 'border-amber-500/20', lightBg: 'bg-amber-500/5' },
-      violet: { bg: 'bg-violet-600', text: 'text-violet-500', border: 'border-violet-500/20', lightBg: 'bg-violet-500/5' },
+      blue: { bg: 'bg-blue-600', text: 'text-blue-400', border: 'border-blue-500/25', lightBg: 'bg-blue-500/5', glow: 'shadow-blue-600/20' },
+      indigo: { bg: 'bg-indigo-600', text: 'text-indigo-400', border: 'border-indigo-500/25', lightBg: 'bg-indigo-500/5', glow: 'shadow-indigo-600/20' },
+      rose: { bg: 'bg-rose-600', text: 'text-rose-400', border: 'border-rose-500/25', lightBg: 'bg-rose-500/5', glow: 'shadow-rose-600/20' },
+      emerald: { bg: 'bg-emerald-600', text: 'text-emerald-400', border: 'border-emerald-500/25', lightBg: 'bg-emerald-500/5', glow: 'shadow-emerald-600/20' },
+      amber: { bg: 'bg-amber-600', text: 'text-amber-400', border: 'border-amber-500/25', lightBg: 'bg-amber-500/5', glow: 'shadow-amber-600/20' },
+      violet: { bg: 'bg-violet-600', text: 'text-violet-400', border: 'border-violet-500/25', lightBg: 'bg-violet-500/5', glow: 'shadow-violet-600/20' },
     };
     return (base[themeColor] || base.blue) as any;
   })();
