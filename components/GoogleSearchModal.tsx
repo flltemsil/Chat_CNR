@@ -576,7 +576,7 @@ export const GoogleSearchModal: React.FC<GoogleSearchModalProps> = ({
                       <button
                         onClick={handleSendResultToChat}
                         className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-xs active:scale-95"
-                        title="Bu sonucu aktif Chat_CNR oturumuna ekle"
+                        title="Bu sonucu aktif CNR oturumuna ekle"
                       >
                         <MessageSquare size={14} />
                         <span>Sohbete Ekle</span>
