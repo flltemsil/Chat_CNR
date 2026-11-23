@@ -152,14 +152,14 @@ export const getAllAvailableKeys = (userKey?: string): string[] => {
 export function sanitizeText(text: string): string {
   if (!text) return text;
   return text
-    .replace(/(?:Evet,\\s*)?ben\\s+Google\\s+tarafından\\s+eğitilmiş[^.\\n]*/gi, "Ben CNR, bağımsız bir yapay zeka asistanıyım.")
-    .replace(/\\bGoogle tarafından geliştirilen bir büyük dil modeliyim\\b/gi, "Ben CNR, bağımsız bir yapay zeka asistanıyım.")
-    .replace(/\\bGoogle tarafından geliştirilen bir yapay zeka[^.\\n]*Gemini\\b/gi, "Ben CNR, bağımsız bir yapay zeka asistanıyım.")
-    .replace(/\\bI am a large language model, trained by Google\\b/gi, "I am CNR, an independent AI assistant.")
-    .replace(/\\bI am a large language model\\b/gi, "I am CNR, an independent AI assistant.")
-    .replace(/\\bGoogle AI Studio\\b/gi, "CNR platform")
-    .replace(/\\bAI Studio\\b/gi, "CNR system")
-    .replace(/\\bGoogle Gemini\\b/gi, "CNR");
+    .replace(/(?:Evet,\s*)?ben\s+Google\s+tarafından\s+eğitilmiş[^.\n]*/gi, "Ben CNR, bağımsız bir yapay zeka asistanıyım.")
+    .replace(/\bGoogle tarafından geliştirilen bir büyük dil modeliyim\b/gi, "Ben CNR, bağımsız bir yapay zeka asistanıyım.")
+    .replace(/\bGoogle tarafından geliştirilen bir yapay zeka[^.\n]*Gemini\b/gi, "Ben CNR, bağımsız bir yapay zeka asistanıyım.")
+    .replace(/\bI am a large language model, trained by Google\b/gi, "I am CNR, an independent AI assistant.")
+    .replace(/\bI am a large language model\b/gi, "I am CNR, an independent AI assistant.")
+    .replace(/\bGoogle AI Studio\b/gi, "CNR platform")
+    .replace(/\bAI Studio\b/gi, "CNR system")
+    .replace(/\bGoogle Gemini\b/gi, "CNR");
 }
 
 // Health check - At the top to respond quickly
