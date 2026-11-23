@@ -362,7 +362,7 @@ const App: React.FC = () => {
 
   if (isAuthLoading) {
     return (
-      <div className="min-h-screen bg-[#131314] flex items-center justify-center">
+      <div className="min-h-screen bg-[#09090b] flex items-center justify-center">
         <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
       </div>
     );
@@ -370,7 +370,7 @@ const App: React.FC = () => {
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center h-screen bg-[#131314] text-white p-6 text-center">
+      <div className="flex flex-col items-center justify-center h-screen bg-[#09090b] text-white p-6 text-center">
         <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mb-6">
           <X size={32} className="text-red-500" />
         </div>
@@ -415,7 +415,7 @@ const App: React.FC = () => {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-[#131314] flex flex-col items-center justify-center p-4 font-['Inter'] relative overflow-y-auto custom-scrollbar">
+      <div className="min-h-screen bg-[#09090b] flex flex-col items-center justify-center p-4 font-['Inter'] relative overflow-y-auto custom-scrollbar">
         {/* Background Decorative Elements */}
         <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-600/10 blur-[120px] rounded-full pointer-events-none" />
         <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-purple-600/10 blur-[120px] rounded-full pointer-events-none" />
@@ -580,7 +580,7 @@ const App: React.FC = () => {
                 <div className="w-full border-t border-zinc-800"></div>
               </div>
               <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-[#131314] px-4 text-zinc-600 font-bold tracking-widest leading-none">
+                <span className="bg-[#09090b] px-4 text-zinc-600 font-bold tracking-widest leading-none">
                   Uygulama Olarak İndir
                 </span>
               </div>
@@ -2156,12 +2156,12 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser, language, setLanguage 
 
   return (
     <div
-      className={`flex h-[100dvh] overflow-hidden font-['Inter'] transition-all duration-700 ${theme === "dark" ? "bg-[#131314] text-zinc-100" : "bg-zinc-50 text-zinc-900"} `}
+      className={`flex h-[100dvh] overflow-hidden font-['Inter'] transition-all duration-700 ${theme === "dark" ? "bg-[#09090b] text-zinc-100" : "bg-zinc-50 text-zinc-900"} `}
     >
       {/* Sidebar */}
-      <aside className={`fixed inset-y-0 left-0 z-[60] w-[85vw] max-w-[300px] lg:w-[280px] transition-all duration-500 ease-[0.23, 1, 0.32, 1] lg:relative lg:translate-x-0 ${isSidebarOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full"} ${theme === "dark" ? "bg-[#0a0a0b] border-r border-zinc-800/60" : "bg-[#f8f9fa] border-r border-zinc-200"}`}>
+      <aside className={`fixed inset-y-0 left-0 z-[60] w-[85vw] max-w-[300px] lg:w-[280px] transition-all duration-500 ease-[0.23, 1, 0.32, 1] lg:relative lg:translate-x-0 ${isSidebarOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full"} ${theme === "dark" ? "bg-[#0c0c0e] border-r border-zinc-800/40" : "bg-[#f8f9fa] border-r border-zinc-200"}`}>
         <div className="flex flex-col h-full overflow-hidden pt-[env(safe-area-inset-top,0)] pb-[env(safe-area-inset-bottom,0)]">
-          <div className={`px-4 sm:px-6 py-4 sm:py-5 border-b flex items-center justify-between ${theme === "dark" ? "border-zinc-800/50" : "border-zinc-200"}`}>
+          <div className={`px-4 sm:px-6 py-4 sm:py-5 border-b flex items-center justify-between ${theme === "dark" ? "border-zinc-800/40" : "border-zinc-200"}`}>
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/20 shrink-0">
                 <Brain size={18} className="text-white" />
@@ -2182,7 +2182,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser, language, setLanguage 
             <button
               id="new-chat-btn"
               onClick={createNewSession}
-              className="w-full flex items-center justify-center gap-3 bg-blue-600 hover:bg-blue-500 text-white py-3 px-4 rounded-xl font-bold transition-all shadow-xl shadow-blue-500/10 active:scale-[0.98]"
+              className="w-full flex items-center justify-center gap-3 bg-blue-600 hover:bg-blue-500 text-white py-3 px-4 rounded-xl font-bold transition-all shadow-lg shadow-blue-600/25 active:scale-[0.98]"
             >
               <Plus size={18} />
               <span className="text-sm">{t.newChat || (language === 'de' ? "Neuer Chat" : (language === 'tr' ? "Yeni Sohbet" : "New Chat"))}</span>
@@ -2320,7 +2320,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser, language, setLanguage 
           </div>
           
           {/* User Profile Section */}
-          <div className={`p-4 border-t ${theme === "dark" ? "border-zinc-800/50 bg-[#070707]" : "border-zinc-200 bg-zinc-50/50"}`}>
+          <div className={`p-4 border-t ${theme === "dark" ? "border-zinc-800/40 bg-[#08080a]" : "border-zinc-200 bg-zinc-50/50"}`}>
             <button
               onClick={() => setIsProfileOpen(true)}
               className={`w-full flex items-center justify-between p-3 rounded-xl transition-all ${theme === "dark" ? "hover:bg-zinc-900/50 border border-transparent hover:border-zinc-800" : "hover:bg-white border border-transparent hover:border-zinc-200 hover:shadow-sm"}`}
@@ -2379,7 +2379,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser, language, setLanguage 
           {/* Header */}
           <header className={`h-14 sm:h-16 flex items-center justify-between px-2.5 sm:px-6 sticky top-0 z-40 backdrop-blur-xl border-b transition-colors pt-[env(safe-area-inset-top,0)] ${
             theme === "dark" 
-              ? "bg-[#131314]/90 border-zinc-800/60 text-zinc-100" 
+              ? "bg-[#09090b]/90 border-zinc-800/40 text-zinc-100" 
               : "bg-white/95 border-zinc-200/80 text-zinc-900 shadow-2xs"
           }`}>
             <div className="flex items-center gap-2 sm:gap-3 overflow-hidden shrink-0">
@@ -2639,7 +2639,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser, language, setLanguage 
 
           {/* Footer */}
           <footer className={`px-2.5 sm:px-4 md:px-8 transition-colors duration-300 py-2 sm:py-3.5 pb-[max(env(safe-area-inset-bottom,0px),0.75rem)] border-t ${
-            theme === "dark" ? "bg-[#131314]/95 border-zinc-800/60 backdrop-blur-lg" : "bg-white/95 border-zinc-200/80 backdrop-blur-lg"
+            theme === "dark" ? "bg-[#09090b]/95 border-zinc-800/40 backdrop-blur-lg" : "bg-white/95 border-zinc-200/80 backdrop-blur-lg"
           }`}>
 
             <div className="max-w-4xl mx-auto w-full">
@@ -2667,7 +2667,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser, language, setLanguage 
                 <div
                   className={`flex-1 border-2 rounded-2xl sm:rounded-3xl p-1.5 sm:p-2.5 md:p-3 flex flex-col transition-all duration-300 shadow-inner relative overflow-hidden group ${
                     theme === "dark"
-                      ? "bg-[#131314] border-zinc-800 focus-within:border-blue-600/40"
+                      ? "bg-[#09090b] border-zinc-800 focus-within:border-blue-600/40"
                       : "bg-zinc-50 border-zinc-200 focus-within:border-blue-500/30"
                   }`}
                 >
@@ -2775,11 +2775,11 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser, language, setLanguage 
               </div>
               
               <div className="grid grid-cols-2 gap-4 mb-6">
-                <div className={`p-4 rounded-2xl ${theme === "dark" ? "bg-[#131314]" : "bg-zinc-50"} flex flex-col items-center justify-center`}>
+                <div className={`p-4 rounded-2xl ${theme === "dark" ? "bg-[#09090b]" : "bg-zinc-50"} flex flex-col items-center justify-center`}>
                    <div className="text-3xl font-bold text-blue-500">{sessions.length}</div>
                    <div className="text-sm opacity-70 mt-1">{language === 'de' ? "Chats" : (language === 'tr' ? "Sohbet" : "Chats")}</div>
                 </div>
-                <div className={`p-4 rounded-2xl ${theme === "dark" ? "bg-[#131314]" : "bg-zinc-50"} flex flex-col items-center justify-center`}>
+                <div className={`p-4 rounded-2xl ${theme === "dark" ? "bg-[#09090b]" : "bg-zinc-50"} flex flex-col items-center justify-center`}>
                    <div className="text-3xl font-bold text-purple-500">
                      {sessions.reduce((acc, curr) => acc + (curr.messages?.length || 0), 0)}
                    </div>
@@ -2812,7 +2812,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser, language, setLanguage 
                 <button onClick={() => setIsLibraryOpen(false)} className={`p-2 rounded-full ${theme === "dark" ? "hover:bg-zinc-800" : "hover:bg-zinc-100"}`}><X size={18} /></button>
               </div>
               
-              <div className={`flex-1 flex flex-col items-center justify-center text-center p-8 rounded-2xl ${theme === "dark" ? "bg-[#131314]" : "bg-zinc-50"}`}>
+              <div className={`flex-1 flex flex-col items-center justify-center text-center p-8 rounded-2xl ${theme === "dark" ? "bg-[#09090b]" : "bg-zinc-50"}`}>
                  <Sparkles size={48} className="text-zinc-500 mb-4 opacity-50" />
                  <h3 className="text-lg font-medium mb-2">
                    {language === 'de' ? "Ihre Bibliothek bald hier!" : (language === 'tr' ? "Kitaplığınız Yakında Burada!" : "Your Library Coming Soon!")}
@@ -3092,7 +3092,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser, language, setLanguage 
             <div
               className={`w-full max-w-md border rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] ${theme === "dark" ? "bg-[#121212] border-zinc-800 text-white" : "bg-white border-zinc-200 text-zinc-900"}`}
             >
-              <div className="flex items-center justify-between p-6 border-b border-zinc-800/50">
+              <div className="flex items-center justify-between p-6 border-b border-zinc-800/40">
                 <h2 className="text-xl font-bold flex items-center gap-2">
                   <Settings size={20} className="text-blue-400" />
                   {t.settings}
