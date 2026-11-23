@@ -86,7 +86,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ user, isOpen, onClose, onUp
         animate={{ opacity: 1, scale: 1, y: 0 }}
         className="w-full max-w-lg bg-[#0a0a0a] border border-zinc-800/80 rounded-[2.5rem] shadow-[0_32px_128px_rgba(0,0,0,0.8)] overflow-hidden"
       >
-        <div className="flex items-center justify-between p-8 border-b border-zinc-800/50">
+        <div className="flex items-center justify-between p-8 border-b border-zinc-800/40">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 bg-blue-600/10 rounded-[1.25rem] flex items-center justify-center border border-blue-500/20 shadow-[0_0_20px_rgba(37,99,235,0.1)]">
               <ShieldCheck size={24} className="text-blue-500" />
@@ -174,7 +174,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ user, isOpen, onClose, onUp
           </div>
 
           {/* AI Chat Memory Section */}
-          <div className="space-y-5 pt-6 border-t border-zinc-800/50">
+          <div className="space-y-5 pt-6 border-t border-zinc-800/40">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-xl bg-violet-600/10 flex items-center justify-center border border-violet-500/20 shadow-[0_0_15px_rgba(139,92,246,0.1)]">
@@ -261,7 +261,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ user, isOpen, onClose, onUp
           </div>
         </div>
 
-        <div className="p-8 bg-[#070707] border-t border-zinc-800/50 flex gap-4">
+        <div className="p-8 bg-[#070707] border-t border-zinc-800/40 flex gap-4">
           <button 
             onClick={onClose}
             className="flex-1 px-6 py-4 bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-white rounded-2xl font-bold transition-all border border-zinc-800 uppercase text-[12px] tracking-widest"
