@@ -311,7 +311,7 @@ export const ImageGenerationModal: React.FC<ImageGenerationModalProps> = ({
                   />
                   <a
                     href={generatedImage}
-                    download={`chat_cnr_${Date.now()}.png`}
+                    download={`cnr_${Date.now()}.png`}
                     className="absolute top-3 right-3 bg-black/60 hover:bg-black/80 backdrop-blur-md text-white p-2 rounded-xl transition-all shadow-md"
                     title={language === "tr" ? "İndir" : "Download"}
                   >
@@ -335,7 +335,7 @@ export const ImageGenerationModal: React.FC<ImageGenerationModalProps> = ({
                   </button>
                   <a
                     href={generatedImage}
-                    download={`chat_cnr_${Date.now()}.png`}
+                    download={`cnr_${Date.now()}.png`}
                     className={`py-2 px-3 rounded-xl border text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors ${
                       isDark 
                         ? "border-zinc-700 bg-zinc-800 hover:bg-zinc-700 text-zinc-200" 
