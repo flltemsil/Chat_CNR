@@ -255,7 +255,7 @@ export const GoogleSearchModal: React.FC<GoogleSearchModalProps> = ({
       <div
         className={`w-full max-w-3xl max-h-[92vh] flex flex-col rounded-3xl border shadow-2xl overflow-hidden transition-all duration-300 ${
           theme === 'dark'
-            ? 'bg-[#131314] border-zinc-800 text-white'
+            ? 'bg-[#09090b] border-zinc-800 text-white'
             : 'bg-white border-zinc-200 text-zinc-900'
         }`}
       >
