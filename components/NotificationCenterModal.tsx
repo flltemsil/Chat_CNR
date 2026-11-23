@@ -61,7 +61,7 @@ export const NotificationCenterModal: React.FC<NotificationCenterModalProps> = (
           : 'Browser notifications successfully enabled! 🎉'
       );
       notificationService.showLocalNotification(
-        isTr ? 'Chat_CNR Bildirimleri Aktif! 🎉' : 'Chat_CNR Notifications Enabled! 🎉',
+        isTr ? 'CNR Bildirimleri Aktif! 🎉' : 'CNR Notifications Enabled! 🎉',
         {
           body: isTr
             ? 'Artık aylık hatırlatıcıları ve yeni yapay zeka duyurularını anında alacaksınız.'
