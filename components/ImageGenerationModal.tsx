@@ -132,7 +132,7 @@ export const ImageGenerationModal: React.FC<ImageGenerationModalProps> = ({
               <div>
                 <div className="flex items-center gap-2">
                   <h2 className="text-base sm:text-lg font-bold tracking-tight">
-                    {language === "tr" ? "Chat_CNR Görsel Stüdyosu" : "Chat_CNR Visual Studio"}
+                    {language === "tr" ? "CNR Görsel Stüdyosu" : "CNR Visual Studio"}
                   </h2>
                   <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/20 flex items-center gap-1">
                     <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping" />
@@ -141,8 +141,8 @@ export const ImageGenerationModal: React.FC<ImageGenerationModalProps> = ({
                 </div>
                 <p className="text-xs text-zinc-500">
                   {language === "tr" 
-                    ? "Chat_CNR'ın zihnine tam entegre yerleşik görsel ve sanat korteksi"
-                    : "Built-in visual and artistic cortex deeply interwoven with Chat_CNR"}
+                    ? "CNR'ın zihnine tam entegre yerleşik görsel ve sanat korteksi"
+                    : "Built-in visual and artistic cortex deeply interwoven with CNR"}
                 </p>
               </div>
             </div>
