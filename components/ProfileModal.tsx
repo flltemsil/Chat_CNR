@@ -206,8 +206,8 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ user, isOpen, onClose, onUp
 
             <p className="text-[11px] text-zinc-500 leading-relaxed font-medium">
               {language === 'tr' 
-                ? 'Chat_CNR, konuştuğunuz konuları ve tercihlerinizi her 2 mesajda bir arka planda analiz ederek hafızasına kaydeder ve yanıtları size özel hale getirir.' 
-                : 'Chat_CNR analyzes past topics and preferences in the background every 2 messages to build a custom profile and personalize future responses.'}
+                ? 'CNR, konuştuğunuz konuları ve tercihlerinizi her 2 mesajda bir arka planda analiz ederek hafızasına kaydeder ve yanıtları size özel hale getirir.' 
+                : 'CNR analyzes past topics and preferences in the background every 2 messages to build a custom profile and personalize future responses.'}
             </p>
 
             {/* Manual Fact Training */}
