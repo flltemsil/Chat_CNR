@@ -18,20 +18,20 @@ export default defineConfig(({ mode }) => {
           registerType: 'autoUpdate',
           injectRegister: 'script',
           manifest: {
-            name: 'Chat CNR Bilgi Merkezi',
-            short_name: 'Chat CNR',
-            description: 'Profesyonel Bilgi ve Chat Platformu - Doruk Ali Arslan tarafından geliştirildi.',
+            name: 'CNR',
+            short_name: 'CNR',
+            description: 'CNR — bağımsız yapay zeka asistanı.',
             theme_color: '#0a0a0a',
             background_color: '#0a0a0a',
             display: 'standalone',
-            id: 'com.dorukaliarslan.chatcnr',
+            id: 'com.cnr.app',
             iarc_rating_id: 'e5c6a1e3-1b2c-3d4e-5f6a-1b2c3d4e5f6a',
             prefer_related_applications: false,
             related_applications: [
               {
                 platform: 'play',
-                url: 'https://play.google.com/store/apps/details?id=com.dorukaliarslan.chatcnr',
-                id: 'com.dorukaliarslan.chatcnr'
+                url: 'https://play.google.com/store/apps/details?id=com.cnr.app',
+                id: 'com.cnr.app'
               }
             ],
             lang: 'tr-TR',

@@ -1,6 +1,6 @@
 {
-  "appId": "com.chatcnr.app",
-  "appName": "Chat_CNR",
+  "appId": "com.cnr.app",
+  "appName": "CNR",
   "webDir": "dist",
   "bundledWebRuntime": false,
   "server": {

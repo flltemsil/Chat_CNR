@@ -1,5 +1,5 @@
 {
-  "name": "Chat_CNR Information Hub",
+  "name": "CNR",
   "description": "A high-precision, multi-disciplinary AI assistant powered by stable high-performance models with real-time Google Search grounding.",
   "requestFramePermissions": [
     "geolocation",
