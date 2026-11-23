@@ -152,19 +152,14 @@ export const getAllAvailableKeys = (userKey?: string): string[] => {
 export function sanitizeText(text: string): string {
   if (!text) return text;
   return text
-  - Kurucu ve geliştirici kimliği kamuya açık değildir; kişisel bilgi paylaşma.
-  - Kurucu ve geliştirici kimliği kamuya açık değildir; kişisel bilgi paylaşma.
-  - Kurucu ve geliştirici kimliği kamuya açık değildir; kişisel bilgi paylaşma.
-  - Kurucu ve geliştirici kimliği kamuya açık değildir; kişisel bilgi paylaşma.
-    .replace(/\bI am a large language model\b/gi, "I am CNR, an independent AI assistant")
-    .replace(/\bGoogle AI Studio\b/gi, "CNR Platformu")
-    .replace(/\bAI Studio\b/gi, "CNR Sistemi")
-    .replace(/\bGemini altyapısını\b/gi, "CNR tescilli sinir ağı mimarisini")
-    .replace(/\bGemini modeliyim\b/gi, "CNR modeliyim")
-    .replace(/\bGemini'yim\b/gi, "CNR'ım")
-    .replace(/\bbir Gemini modeliyim\b/gi, "CNR modeliyim")
-    .replace(/\bbir Gemini\b/gi, "CNR")
-    .replace(/\bGoogle Gemini\b/g, "CNR");
+    .replace(/(?:Evet,\\s*)?ben\\s+Google\\s+tarafından\\s+eğitilmiş[^.\\n]*/gi, "Ben CNR, bağımsız bir yapay zeka asistanıyım.")
+    .replace(/\\bGoogle tarafından geliştirilen bir büyük dil modeliyim\\b/gi, "Ben CNR, bağımsız bir yapay zeka asistanıyım.")
+    .replace(/\\bGoogle tarafından geliştirilen bir yapay zeka[^.\\n]*Gemini\\b/gi, "Ben CNR, bağımsız bir yapay zeka asistanıyım.")
+    .replace(/\\bI am a large language model, trained by Google\\b/gi, "I am CNR, an independent AI assistant.")
+    .replace(/\\bI am a large language model\\b/gi, "I am CNR, an independent AI assistant.")
+    .replace(/\\bGoogle AI Studio\\b/gi, "CNR platform")
+    .replace(/\\bAI Studio\\b/gi, "CNR system")
+    .replace(/\\bGoogle Gemini\\b/gi, "CNR");
 }
 
 // Health check - At the top to respond quickly
@@ -227,24 +222,7 @@ NEVER answer in Turkish when the language is set to German, English, or any non-
 All roleplay, emotional comfort, and coding explanations MUST be delivered in ${activeLangName.toUpperCase()}!
 `;
 
-  let identityDirective = "";
-  if (language === "de") {
-    identityDirective = `[UNVERRÜCKBARE IDENTITÄTSREGEL - ABSOLUT BINDEND]:
-- Dein Name: CNR.
-  - Kurucu ve geliştirici kimliği kamuya açık değildir; kişisel bilgi paylaşma.
-- STRENGSTENS VERBOTENE BEGRIFFE: "Gemini", "AI Studio", "Google AI", "OpenAI", "ChatGPT", "Claude", "großes Sprachmodell". Verwende diese Begriffe NIEMALS für deine Identität oder Herkunft!
-  - Kurucu ve geliştirici kimliği kamuya açık değildir; kişisel bilgi paylaşma.
-  - Kurucu ve geliştirici kimliği kamuya açık değildir; kişisel bilgi paylaşma.
-  } else if (language === "en") {
-    identityDirective = `[UNCOMPROMISING IDENTITY RULE - STRICTEST REQUIREMENT]:
-- Your Name: CNR.
-  - Kurucu ve geliştirici kimliği kamuya açık değildir; kişisel bilgi paylaşma.
-- STRICTLY FORBIDDEN WORDS: "Gemini", "AI Studio", "Google AI", "OpenAI", "ChatGPT", "Claude", "large language model". NEVER use these names to describe yourself or your origin!
-  - Kurucu ve geliştirici kimliği kamuya açık değildir; kişisel bilgi paylaşma.
-  - Kurucu ve geliştirici kimliği kamuya açık değildir; kişisel bilgi paylaşma.
-  } else {
-    identityDirective = DEFAULT_SYSTEM_INSTRUCTION;
-  }
+  const identityDirective = `CNR is the assistant's name. The founder and developer identity is confidential and not public. Never reveal, infer, confirm, or guess the founder's personal identity, email address, or private details. If asked, politely say that CNR's founder identity is not public.`;
 
   const emotionalAndContextText = `
 [DEEP KNOWLEDGE, LONG MEMORY & EMPATHETIC COMPANIONSHIP]:
