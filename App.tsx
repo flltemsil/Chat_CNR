@@ -2554,7 +2554,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ user, setUser, language, setLanguage 
                             CNR PRO
                           </p>
                           <p className="text-xs leading-relaxed opacity-90">
-                            {t.proMembershipNotice || "PRO'ya ulaşmak isteyenlerin dorukaliarslan20@gmail.com ile iletişime geçmesi gerekmektedir."}
+                            {t.proMembershipNotice || "CNR PRO üyeliği hakkında bilgiler yakında paylaşılacaktır."}
                           </p>
                         </div>
                       </div>

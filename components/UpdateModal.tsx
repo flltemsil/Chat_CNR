@@ -84,8 +84,8 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({
 
         <p className={`text-xs leading-relaxed mb-4 ${isDark ? 'text-zinc-400' : 'text-zinc-600'}`}>
           {isTr 
-            ? 'Chat_CNR en son sürümüyle yenilendi. Bu güncelleme web, mobil ve APK kullanıcılarının tamamına (Ücretsiz & PRO) yöneliktir.' 
-            : 'Chat_CNR has been updated with the latest release. This update is for all users (Free & PRO) across web, mobile, and APK.'}
+            ? 'CNR en son sürümüyle yenilendi. Bu güncelleme web, mobil ve APK kullanıcılarının tamamına (Ücretsiz & PRO) yöneliktir.' 
+            : 'CNR has been updated with the latest release. This update is for all users (Free & PRO) across web, mobile, and APK.'}
         </p>
 
         {/* Release notes */}
