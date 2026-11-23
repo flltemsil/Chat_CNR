@@ -27,13 +27,15 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <style>
         :root {
-            --accent: #2563eb;
-            --accent-glow: rgba(37, 99, 235, 0.15);
-            --bg: #030303;
-            --surface: #0a0a0a;
-            --border: rgba(255, 255, 255, 0.06);
-            --text-main: #f8fafc;
-            --text-dim: #94a3b8;
+            --accent: #3b82f6;
+            --accent-glow: rgba(59, 130, 246, 0.18);
+            --bg: #09090b;
+            --surface: #0f0f12;
+            --elevated: #16161a;
+            --border: rgba(255, 255, 255, 0.07);
+            --text-main: #f4f4f5;
+            --text-dim: #a1a1aa;
+            --radius-lg: 1.25rem;
         }
 
         html, body {
@@ -48,7 +50,7 @@
             /* Prevent rubber band scrolling on iOS */
             position: fixed;
             -webkit-overflow-scrolling: touch;
-            letter-spacing: -0.01em;
+            letter-spacing: -0.011em;\n            -webkit-font-smoothing: antialiased;\n            -moz-osx-font-smoothing: grayscale;
         }
 
         #root {
@@ -61,7 +63,9 @@
             padding-bottom: env(safe-area-inset-bottom);
             padding-left: env(safe-area-inset-left);
             padding-right: env(safe-area-inset-right);
-            background: radial-gradient(circle at 50% 0%, rgba(37, 99, 235, 0.05) 0%, transparent 50%);
+            background:
+              radial-gradient(ellipse 80% 50% at 50% -20%, rgba(59, 130, 246, 0.08), transparent),
+              var(--bg);
         }
 
         .loading-screen {
@@ -70,7 +74,7 @@
             align-items: center;
             justify-content: center;
             height: 100%;
-            gap: 24px;
+            gap: 20px;
             background: var(--bg);
         }
 
@@ -80,12 +84,27 @@
             border: 2px solid rgba(255,255,255,0.05);
             border-top-color: var(--accent);
             border-radius: 50%;
-            animation: spin 0.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+            animation: spin 0.75s cubic-bezier(0.4, 0, 0.2, 1) infinite;
             box-shadow: 0 0 20px var(--accent-glow);
         }
 
         @keyframes spin {
             to { transform: rotate(360deg); }
+        }
+
+        /* Premium scrollbar */
+        .custom-scrollbar::-webkit-scrollbar { width: 5px; height: 5px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(255,255,255,0.08);
+            border-radius: 99px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: rgba(255,255,255,0.14);
+        }
+        :focus-visible {
+            outline: 2px solid rgba(59,130,246,0.75);
+            outline-offset: 2px;
         }
 
         /* Markdown Styles - Unified Infrastructure Look */
