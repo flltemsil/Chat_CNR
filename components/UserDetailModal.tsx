@@ -93,7 +93,7 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
     setIsSendingNotif(true);
     try {
       await notificationService.sendBroadcastNotification(
-        `Chat_CNR: ${user.name}`,
+        `CNR: ${user.name}`,
         notifMessage.trim(),
         'monthly',
         'dorukaliarslan20@gmail.com',
@@ -241,7 +241,7 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
               ? (language === 'tr' ? 'Kullanıcı bugün henüz uygulamayı açmadı veya oturum açmadı.' : 'User has not opened the app today yet.')
               : todayVisits === 1
               ? (language === 'tr' ? 'Kullanıcı bugün uygulamayı 1 kez açıp kullandı.' : 'User opened and used the app 1 time today.')
-              : (language === 'tr' ? `Kullanıcı bugün Chat_CNR'ı tam ${todayVisits} kez ziyaret edip oturum açtı.` : `User visited and opened Chat_CNR ${todayVisits} times today.`)}
+              : (language === 'tr' ? `Kullanıcı bugün CNR'ı tam ${todayVisits} kez ziyaret edip oturum açtı.` : `User visited and opened CNR ${todayVisits} times today.`)}
           </p>
 
           {/* Mini 5-Day Activity Visualizer */}
@@ -362,8 +362,8 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
                 onClick={() =>
                   setNotifMessage(
                     language === 'tr'
-                      ? `Chat_CNR Aylık Hatırlatıcı: Yeni yapay zeka özellikleri ve sesli Hey CNR asistanı sizi bekliyor! 🚀`
-                      : `Chat_CNR Monthly Reminder: New AI capabilities and voice Hey CNR assistant await you! 🚀`
+                      ? `CNR Aylık Hatırlatıcı: Yeni yapay zeka özellikleri ve sesli Hey CNR asistanı sizi bekliyor! 🚀`
+                      : `CNR Monthly Reminder: New AI capabilities and voice Hey CNR assistant await you! 🚀`
                   )
                 }
                 className="text-[11px] text-blue-400 hover:underline font-medium"
@@ -394,7 +394,7 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
         {/* Footer Actions */}
         <div className="pt-5 mt-2 flex items-center justify-between border-t border-zinc-800/40">
           <a
-            href={`mailto:${user.email}?subject=Chat_CNR%20Info`}
+            href={`mailto:${user.email}?subject=CNR%20Info`}
             className="text-xs font-semibold text-zinc-400 hover:text-white flex items-center gap-1.5 transition-colors"
           >
             <Mail size={13} />
