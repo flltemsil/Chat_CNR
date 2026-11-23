@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Message, ThemeColor, AppearanceMode, Language } from '../types';
-import { Search, User, Cpu, Volume2, Download, ExternalLink, Brain, ThumbsUp, ThumbsDown, RefreshCcw, Layers } from 'lucide-react';
+import { Search, User, Sparkles, Volume2, Download, ExternalLink, Brain, ThumbsUp, ThumbsDown, RefreshCcw, Layers } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { translations } from '../translations';
 
@@ -69,15 +69,15 @@ const MessageItem: React.FC<MessageItemProps> = React.memo(({ message, themeColo
       transition={{ duration: 0.3, ease: [0.23, 1, 0.32, 1] }}
       className={`flex w-full mb-3.5 sm:mb-6 ${isUser ? 'justify-end' : 'justify-start'}`}
     >
-      <div className={`flex max-w-[96%] sm:max-w-[88%] md:max-w-[85%] ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
+      <div className={`flex max-w-[96%] sm:max-w-[88%] md:max-w-[82%] gap-2.5 sm:gap-3 ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
         {/* Avatar */}
         {isUser ? (
-          <div className={`hidden sm:flex flex-shrink-0 h-9 w-9 rounded-xl items-center justify-center border transition-all ${themeClasses.bg} border-white/10 ml-3`}>
-            <User size={18} className="text-white" />
+          <div className={`hidden sm:flex flex-shrink-0 h-9 w-9 rounded-2xl items-center justify-center border transition-all ${themeClasses.bg} border-white/10 shadow-lg ${themeClasses.glow} ml-3`}>
+            <User size={16} className="text-white" />
           </div>
         ) : (
-          <div className={`flex-shrink-0 h-7 w-7 sm:h-9 sm:w-9 rounded-lg sm:rounded-xl flex items-center justify-center border transition-all mr-2 sm:mr-3 mt-0.5 ${
-            isDark ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200'
+          <div className={`flex-shrink-0 h-8 w-8 sm:h-9 sm:w-9 rounded-xl sm:rounded-2xl flex items-center justify-center border transition-all mt-0.5 ${
+            isDark ? 'bg-zinc-900/90 border-zinc-700/80 backdrop-blur-md text-zinc-200' : 'bg-white border-zinc-200 text-zinc-600 shadow-sm'
           }`}>
             <Cpu size={15} className={`sm:hidden ${themeClasses.text}`} />
             <Cpu size={18} className={`hidden sm:inline ${themeClasses.text}`} />
@@ -86,21 +86,21 @@ const MessageItem: React.FC<MessageItemProps> = React.memo(({ message, themeColo
         
         {/* Content */}
         <div className={`flex flex-col max-w-full min-w-0 ${isUser ? 'items-end' : 'items-start'}`}>
-          <div className={`px-3.5 py-2.5 sm:px-5 sm:py-4 rounded-2xl sm:rounded-[1.5rem] text-[14px] sm:text-[15px] leading-relaxed transition-all duration-500 ease-[0.23, 1, 0.32, 1] group relative max-w-full overflow-x-auto custom-scrollbar ${
+          <div className={`px-3.5 py-2.5 sm:px-5 sm:py-4 rounded-2xl sm:rounded-[1.35rem] text-[14px] sm:text-[15px] leading-relaxed transition-all duration-500 ease-[0.23, 1, 0.32, 1] group relative max-w-full overflow-x-auto custom-scrollbar ${
             isUser 
               ? `${themeClasses.bg} text-white rounded-tr-sm border border-white/10 shadow-[0_10px_30px_rgba(37,99,235,0.15)]` 
-              : `${isDark ? 'bg-[#111111]/90 backdrop-blur-sm text-zinc-100 border-zinc-800/70 shadow-[0_8px_30px_rgba(0,0,0,0.2)]' : 'bg-white text-zinc-900 border-zinc-200 shadow-xs'} border rounded-tl-sm`
+              : `${isDark ? 'bg-zinc-900/75 backdrop-blur-xl text-zinc-100 border-zinc-800/80 shadow-[0_8px_32px_rgba(0,0,0,0.25)]' : 'bg-white text-zinc-900 border-zinc-200 shadow-xs'} border rounded-tl-sm`
           }`}>
             {!isUser && (message.isDeep || message.grounded === true) && (
               <div className="flex flex-wrap items-center gap-2 mb-3 animate-in fade-in slide-in-from-bottom-2">
                 {message.isDeep && (
-                  <div className="flex items-center gap-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 text-[10px] font-black text-white px-2.5 py-1 rounded-md shadow-lg shadow-purple-500/20 border border-white/10 uppercase tracking-widest">
+                  <div className="flex items-center gap-1.5 bg-gradient-to-r from-violet-600 to-indigo-600 text-[10px] font-bold text-white px-2.5 py-1 rounded-lg shadow-lg shadow-violet-500/25 border border-white/10 uppercase tracking-widest">
                     <Brain size={12} className="animate-pulse" />
                     <span>{t.deepMode}</span>
                   </div>
                 )}
                 {message.grounded === true && (
-                  <div className="flex items-center gap-1.5 bg-emerald-500/10 text-[10px] font-black text-emerald-500 px-2.5 py-1 rounded-md border border-emerald-500/20 uppercase tracking-widest">
+                  <div className="flex items-center gap-1.5 bg-emerald-500/10 text-[10px] font-bold text-emerald-400 px-2.5 py-1 rounded-lg border border-emerald-500/20 uppercase tracking-widest">
                     <Search size={12} />
                     <span>CNR Search</span>
                   </div>
@@ -135,7 +135,7 @@ const MessageItem: React.FC<MessageItemProps> = React.memo(({ message, themeColo
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-4">
                   <a 
                     href={message.imageUrl} 
-                    download={`chat_cnr_${message.id}.png`}
+                    download={`cnr_${message.id}.png`}
                     className="bg-white/10 backdrop-blur-2xl hover:bg-white/20 text-white flex items-center gap-2 px-4 py-2 rounded-xl border border-white/20 transition-all text-xs font-bold uppercase tracking-widest"
                   >
                     <Download size={14} />
