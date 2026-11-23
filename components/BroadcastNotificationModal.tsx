@@ -30,7 +30,7 @@ export const BroadcastNotificationModal: React.FC<BroadcastNotificationModalProp
   userCount,
 }) => {
   const isTr = language === 'tr';
-  const defaultTitle = isTr ? 'Chat_CNR Aylık Hatırlatıcı 🌟' : 'Chat_CNR Monthly Reminder 🌟';
+  const defaultTitle = isTr ? 'CNR Aylık Hatırlatıcı 🌟' : 'CNR Monthly Reminder 🌟';
   const defaultMsg = isTr
     ? 'Yeni yapay zeka güncellemeleri, sesli "Hey CNR" özellikleri ve akıllı araçlar sizi bekliyor! Sohbete katılmak için tıklayın.'
     : 'New AI model updates, "Hey CNR" voice features, and intelligent tools are waiting for you! Tap to chat.';
@@ -47,7 +47,7 @@ export const BroadcastNotificationModal: React.FC<BroadcastNotificationModalProp
     {
       label: isTr ? '📅 Standart Aylık Hatırlatıcı' : '📅 Standard Monthly Reminder',
       type: 'monthly' as const,
-      title: isTr ? 'Chat_CNR Aylık Hatırlatıcı 🌟' : 'Chat_CNR Monthly Reminder 🌟',
+      title: isTr ? 'CNR Aylık Hatırlatıcı 🌟' : 'CNR Monthly Reminder 🌟',
       msg: isTr
         ? 'Yeni yapay zeka modelleri, sesli "Hey CNR" özellikleri ve aylık geliştirmeler sizi bekliyor! Sohbete dönmek için tıklayın.'
         : 'New AI models, voice "Hey CNR" features, and monthly upgrades are here! Tap to start chatting.',
@@ -55,15 +55,15 @@ export const BroadcastNotificationModal: React.FC<BroadcastNotificationModalProp
     {
       label: isTr ? '🚀 Yeni Sürüm & Özellik Duyurusu' : '🚀 Release & Feature Announcement',
       type: 'announcement' as const,
-      title: isTr ? 'Chat_CNR Yeni Özellikler Yayında! 🚀' : 'Chat_CNR New Features Released! 🚀',
+      title: isTr ? 'CNR Yeni Özellikler Yayında! 🚀' : 'CNR New Features Released! 🚀',
       msg: isTr
         ? 'Uygulamamıza sesli uyandırma (Hey CNR), gelişmiş profil analizi ve yeni araçlar eklendi.'
-        : 'Voice wake word (Hey CNR), advanced profile analysis, and new tools have been added to Chat_CNR.',
+        : 'Voice wake word (Hey CNR), advanced profile analysis, and new tools have been added to CNR.',
     },
     {
       label: isTr ? '👑 PRO Üyelik & Ayrıcalıklar' : '👑 PRO Membership & Privileges',
       type: 'monthly' as const,
-      title: isTr ? 'Chat_CNR PRO ile Sınırsız Güç 👑' : 'Unlimited Power with Chat_CNR PRO 👑',
+      title: isTr ? 'CNR PRO ile Sınırsız Güç 👑' : 'Unlimited Power with CNR PRO 👑',
       msg: isTr
         ? 'Sınırsız mesajlaşma ve en güncel yapay zeka zekası için PRO avantajlarını inceleyin.'
         : 'Explore PRO privileges for unlimited messages and the fastest, smartest AI models.',
@@ -215,7 +215,7 @@ export const BroadcastNotificationModal: React.FC<BroadcastNotificationModalProp
               required
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder={isTr ? 'Örn: Chat_CNR Aylık Hatırlatıcı' : 'e.g. Chat_CNR Monthly Reminder'}
+              placeholder={isTr ? 'Örn: CNR Aylık Hatırlatıcı' : 'e.g. CNR Monthly Reminder'}
               className={`w-full px-4 py-2.5 rounded-xl text-sm border transition-all focus:outline-none focus:ring-2 focus:ring-amber-500/50 ${
                 theme === 'dark'
                   ? 'bg-zinc-900 border-zinc-800 text-white'
