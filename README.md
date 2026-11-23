@@ -1,6 +1,6 @@
 # CNR
 
-Bu proje, **Doruk Ali Arslan** tarafından geliştirilmiş, yüksek doğruluklu ve çok fonksiyonlu bir yapay zeka bilgi merkezidir. Modern web teknolojileri ile inşa edilmiş olup, hem web hem de yerel uygulama (Desktop/Mobile) olarak çalışmaya uygundur.
+Bu proje, web ve yerel uygulama (masaüstü/mobil) olarak çalışabilen CNR yapay zekâ asistanıdır. Modern web teknolojileriyle geliştirilmiş; sohbet, sesli yanıt, görsel analiz ve tema seçenekleri sunar.
 
 ## 🛡️ Güvenlik ve Bütünlük (Full Protection Mode)
 Bu uygulama, izinsiz kod değişikliklerine ve telif hakkı ihlallerine karşı **Tam Koruma Modu** ile korunmaktadır. 
@@ -18,7 +18,7 @@ Bu uygulama, izinsiz kod değişikliklerine ve telif hakkı ihlallerine karşı 
 
 1. Projeyi klonlayın:
    ```bash
-   git clone https://github.com/kullanici-adiniz/chat-cnr.git
+   git clone https://github.com/kullanici-adiniz/Chat_CNR.git
    ```
 2. Bağımlılıkları yükleyin:
    ```bash
@@ -34,5 +34,5 @@ Bu uygulama, izinsiz kod değişikliklerine ve telif hakkı ihlallerine karşı 
    ```
 
 ---
-**Geliştirici:** Doruk Ali Arslan  
+**Ürün:** CNR  
 **Sürüm:** 1.0.0 (2026)
